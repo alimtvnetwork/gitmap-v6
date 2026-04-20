@@ -659,10 +659,10 @@ function Resolve-DeployTarget {
             $activeDir = Split-Path $resolvedActive -Parent
             $activeDirName = Split-Path $activeDir -Leaf
 
-            # The binary lives in <deploy-target>/gitmap-cli/gitmap.exe (v3.6.0+),
-            # or in legacy <deploy-target>/gitmap/gitmap.exe (pre-v3.6.0).
-            # Either way, the deploy target is the parent of that subfolder.
-            if ($activeDirName -eq "gitmap-cli" -or $activeDirName -eq "gitmap") {
+            # The binary lives in <deploy-target>/$AppSubdir/gitmap.exe (or
+            # any legacy folder name in $LegacyAppSubdirs from the manifest).
+            # Either way the deploy target is the parent of that subfolder.
+            if (Test-KnownAppSubdir $activeDirName) {
                 $deployTarget = Split-Path $activeDir -Parent
                 Write-Info "Deploy target: detected from PATH -> $deployTarget"
 
@@ -702,12 +702,12 @@ function Deploy-Binary {
     # Migrate any legacy unwrapped layout (DFD-3) BEFORE we resolve $appDir.
     Repair-DeployLayout -DeployTarget $target -BinaryName $Config.binaryName
 
-    # Deploy into nested gitmap-cli/ subfolder (DFD-1, renamed in v3.6.0
-    # from "gitmap" to remove visual collision with the binary name).
-    $appDir = Join-Path $target "gitmap-cli"
+    # Deploy into nested $AppSubdir/ subfolder (DFD-1). Folder name comes
+    # from gitmap/constants/deploy-manifest.json (single source of truth).
+    $appDir = Join-Path $target $script:AppSubdir
     if (-not (Test-Path $appDir)) {
         New-Item -ItemType Directory -Path $appDir -Force | Out-Null
-        Write-Info "Created gitmap-cli app directory"
+        Write-Info "Created $($script:AppSubdir) app directory"
     }
 
     # Pre-deploy cleanup (DFD-6) — runs BEFORE the new binary is copied
@@ -828,32 +828,36 @@ function Repair-DeployLayout {
         [string]$BinaryName
     )
 
-    $appDir = Join-Path $DeployTarget "gitmap-cli"
-    $legacySubdir = Join-Path $DeployTarget "gitmap"
-    $legacySubBinary = Join-Path $legacySubdir $BinaryName
+    $appDir = Join-Path $DeployTarget $script:AppSubdir
     $newBinary = Join-Path $appDir $BinaryName
 
-    # Migration 1: rename legacy gitmap\ subfolder to gitmap-cli\.
-    if ((Test-Path $legacySubBinary) -and (-not (Test-Path $newBinary))) {
-        Write-Info "Layout: migrating legacy '$legacySubdir' -> '$appDir' (v3.6.0 rename)"
-        try {
-            if (-not (Test-Path $appDir)) {
-                Move-Item -Path $legacySubdir -Destination $appDir -Force -ErrorAction Stop
-                Write-Info "Layout: rename complete"
+    # Migration 1: rename any legacy app folder to $AppSubdir.
+    foreach ($legacy in $script:LegacyAppSubdirs) {
+        $legacySubdir = Join-Path $DeployTarget $legacy
+        if ($legacySubdir -eq $appDir) { continue }
+        $legacySubBinary = Join-Path $legacySubdir $BinaryName
+
+        if ((Test-Path $legacySubBinary) -and (-not (Test-Path $newBinary))) {
+            Write-Info "Layout: migrating legacy '$legacySubdir' -> '$appDir'"
+            try {
+                if (-not (Test-Path $appDir)) {
+                    Move-Item -Path $legacySubdir -Destination $appDir -Force -ErrorAction Stop
+                    Write-Info "Layout: rename complete"
+                }
+            } catch {
+                Write-Warn "Layout: rename failed ($_); leaving legacy folder in place"
             }
-        } catch {
-            Write-Warn "Layout: rename failed ($_); leaving legacy folder in place"
-        }
-    } elseif ((Test-Path $legacySubdir) -and (Test-Path $newBinary)) {
-        # Both exist after a previous half-migration — drop the empty legacy folder.
-        try {
-            $remaining = Get-ChildItem -Path $legacySubdir -Force -ErrorAction SilentlyContinue
-            if (-not $remaining -or $remaining.Count -eq 0) {
-                Remove-Item $legacySubdir -Force -Recurse -ErrorAction Stop
-                Write-Info "Layout: removed empty legacy folder $legacySubdir"
+        } elseif ((Test-Path $legacySubdir) -and (Test-Path $newBinary)) {
+            # Both exist after a previous half-migration — drop the empty legacy folder.
+            try {
+                $remaining = Get-ChildItem -Path $legacySubdir -Force -ErrorAction SilentlyContinue
+                if (-not $remaining -or $remaining.Count -eq 0) {
+                    Remove-Item $legacySubdir -Force -Recurse -ErrorAction Stop
+                    Write-Info "Layout: removed empty legacy folder $legacySubdir"
+                }
+            } catch {
+                Write-Warn "Layout: could not remove legacy folder $legacySubdir : $_"
             }
-        } catch {
-            Write-Warn "Layout: could not remove legacy folder $legacySubdir : $_"
         }
     }
 
@@ -1300,6 +1304,7 @@ function Invoke-Tests {
 
 # -- Main ------------------------------------------------------
 Show-Banner
+Get-DeployManifest
 $config = Load-Config
 
 if ($Test) {
