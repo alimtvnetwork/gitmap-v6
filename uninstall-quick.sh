@@ -186,6 +186,66 @@ remove_data_folder() {
 }
 
 # ---------------------------------------------------------------------------
+# Exhaustive PATH sweep — find EVERY `gitmap` still on PATH and remove it.
+# Catches stray binaries the canonical self-uninstall and install-dir sweep
+# missed (manual copies in ~/bin, /usr/local/bin shims, etc.).
+# ---------------------------------------------------------------------------
+
+find_all_gitmap_on_path() {
+    # `command -v` returns only the first match; iterate PATH dirs explicitly.
+    local IFS=':'
+    local seen=""
+    for d in $PATH; do
+        [ -z "$d" ] && continue
+        for name in gitmap gitmap.exe; do
+            local candidate="$d/$name"
+            if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+                # de-dupe via newline-delimited seen list
+                case "$(printf '\n%s\n' "$seen")" in
+                    *$'\n'"$candidate"$'\n'*) ;;
+                    *) seen="${seen}${candidate}\n"; printf '%s\n' "$candidate" ;;
+                esac
+            fi
+        done
+    done
+}
+
+remove_stray_binaries() {
+    local found
+    found="$(find_all_gitmap_on_path)"
+    if [ -z "$found" ]; then
+        info "no stray gitmap binaries found on PATH"
+        return
+    fi
+
+    local count
+    count="$(printf '%s\n' "$found" | grep -c .)"
+    info "found $count gitmap binary location(s):"
+    printf '%s\n' "$found" | while IFS= read -r b; do info "  - $b"; done
+
+    printf '%s\n' "$found" | while IFS= read -r bin; do
+        [ -z "$bin" ] && continue
+        if rm -f "$bin" 2>/dev/null; then
+            ok "removed $bin"
+        else
+            # Try with sudo if it's in a system path.
+            case "$bin" in
+                /usr/*|/opt/*)
+                    if sudo rm -f "$bin" 2>/dev/null; then
+                        ok "removed $bin (sudo)"
+                    else
+                        err "could not remove $bin (try: sudo rm -f $bin)"
+                    fi
+                    ;;
+                *)
+                    err "could not remove $bin (check permissions)"
+                    ;;
+            esac
+        fi
+    done
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
