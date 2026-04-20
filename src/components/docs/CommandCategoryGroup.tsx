@@ -35,7 +35,7 @@ const CommandCategoryGroup = ({ label, description, icon, commands, defaultOpen 
         )}
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {icon && <span className="text-base">{icon}</span>}
-          <span className="font-mono font-semibold text-sm text-foreground">{label}</span>
+          <span className="font-sans font-semibold text-sm text-foreground">{label}</span>
           <span className="text-xs text-muted-foreground">({commands.length})</span>
         </div>
         <span className="text-xs text-muted-foreground truncate hidden sm:inline">{description}</span>
