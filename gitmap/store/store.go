@@ -75,6 +75,15 @@ func openDBAt(dbPath string) (*DB, error) {
 // column additions → seed data. Every v15 step is idempotent and a no-op on
 // fresh installs.
 func (db *DB) Migrate() error {
+	// Fast path: skip the entire pipeline when the persisted schema
+	// version marker matches the current target. This makes every
+	// gitmap subcommand that calls openDB() pay only one Setting SELECT
+	// instead of the full v15 phase walk. See migrate_schemaversion.go
+	// for the marker semantics and bump policy.
+	if db.isSchemaUpToDate() {
+		return nil
+	}
+
 	db.migrateLegacyIDs()
 
 	if err := db.migrateV15Repo(); err != nil {
@@ -165,7 +174,15 @@ func (db *DB) Migrate() error {
 		return err
 	}
 
-	return db.SeedTaskTypes()
+	if err := db.SeedTaskTypes(); err != nil {
+		return err
+	}
+
+	// Stamp the marker LAST so any earlier failure leaves the previous
+	// (or empty) marker in place, ensuring the next run retries.
+	db.writeSchemaVersion(constants.SchemaVersionCurrent)
+
+	return nil
 }
 
 // addColumnIfNotExists runs an ALTER TABLE ADD COLUMN statement.
