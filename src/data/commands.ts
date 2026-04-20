@@ -118,6 +118,23 @@ export const commands: CommandDef[] = [
   },
   {
     category: "scanning",
+    name: "scan gd", alias: "scan github-desktop", description: "Register every repo under the current scan root in GitHub Desktop, sequentially + idempotent (planned v3.35.0)",
+    usage: "gitmap scan gd  (or: gitmap scan github-desktop)",
+    flags: [],
+    examples: [
+      { command: "cd D:\\projects && gitmap scan gd", description: "Register every repo under D:\\projects in Desktop" },
+      { command: "gitmap scan github-desktop", description: "Long form" },
+      { command: "gitmap s gd", description: "Inherits the existing s alias for scan" },
+    ],
+    seeAlso: [
+      { name: "scan", description: "Use --github-desktop on a fresh scan to discover + register in one pass" },
+      { name: "desktop-sync", description: "Legacy: register every tracked repo globally (no scan-root scoping)" },
+      { name: "scan all", description: "Bulk re-scan every known root first" },
+      { name: "sf list", description: "Inspect the ScanFolder table" },
+    ],
+  },
+  {
+    category: "scanning",
     name: "desktop-sync", alias: "ds", description: "Register all tracked repos with GitHub Desktop",
     usage: "gitmap desktop-sync",
     examples: [

@@ -29,6 +29,7 @@ Current version: v3.21.0 (schema-version fast-path + db-migrate --force + post-u
 - [Parallel Pull](mem://features/parallel-pull) — `gitmap pull --parallel <N>` worker pool with mutex-guarded BatchProgress. `--only-available` intersects targets via FindNext (fail-open). (v3.10.0)
 - [Scan All](mem://features/scan-all) — `gitmap scan all` / `scan a` re-scans every ScanFolder root via N=4 worker pool, prompts to prune missing roots, exit codes 0/1/2/3. Spec 100. (planned v3.33.0)
 - [Pull All](mem://features/pull-all) — `gitmap pull all` / `p all` / `pull a` updates every repo under CWD scan root via N=4 worker pool. run.ps1 (Win) / run.sh (Unix) replaces git pull. Strict ScanFolder match, no prefix fallback. Spec 101. (planned v3.34.0)
+- [Scan GD](mem://features/scan-gd) — `gitmap scan gd` / `scan github-desktop` registers every repo under CWD scan root in GitHub Desktop. Sequential, idempotent. Coexists with existing `--github-desktop` flag. Spec 102. (planned v3.35.0)
 - [Code Constraints](mem://style/code-constraints) — Strict rules for code style, structure, and pull requests
 - [Code Quality Process](mem://style/code-quality-improvement-process) — Architectural principles and resilience patterns
 - [README Branding](mem://style/readme-branding) — Strict layout and linking requirements for the project author section
