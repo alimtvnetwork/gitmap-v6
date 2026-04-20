@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.31.0 — (2026-04-20) — Cross-dir release/clone-next, has-change command, SSH existing-key fix
+
+### Added
+
+- **`gitmap r <repo> <vX.Y.Z>` — cross-directory release**: run from anywhere; gitmap chdirs into the named repo, runs `git fetch --all --prune` + `git pull --rebase`, auto-stashes any dirty changes, runs the standard release pipeline, then chdirs back to the original directory and pops the stash. Backward compatible: `gitmap r vX.Y.Z` (single arg) still does an in-place release. The first positional arg is treated as a repo alias only when it does NOT match the version regex `^v?\d+\.\d+\.\d+`.
+- **`gitmap cn <repo> <vX.Y.Z>` — cross-directory clone-next**: same chdir/run/return pattern as `r`, wrapping the existing clone-next pipeline. `gitmap cn vX.Y.Z` (single arg) still operates on the current repo.
+- **`gitmap has-change (hc) <repo>`** — prints `true`/`false` for whether the named repo has uncommitted changes. `--mode=dirty|ahead|behind` switches dimension; `--all` prints `dirty=X ahead=Y behind=Z` in one line. `--fetch=false` skips the pre-check `git fetch` for offline use.
+
+### Fixed
+
+- **`gitmap ssh` no longer fails with `exit status 1` when `~/.ssh/id_rsa` already exists.** Previously, gitmap only checked the SQLite database for existing keys; keys created outside gitmap (e.g. raw `ssh-keygen` or another tool) fell through to `ssh-keygen -f <existing-path>`, which prompted `Overwrite (y/n)?` on stdin and exited non-zero when no answer arrived. Now `runSSHGenerate` checks the disk path FIRST: if the private key file exists and `--force` is not set, gitmap prints the existing public key, fingerprint, copy-to-GitHub hint, and a `--force` regeneration hint, then exits 0. The disk-discovered key is also upserted into the gitmap database so `ssh-cat` / `ssh-list` find it.
+- **`--force` regenerate flow**: when `--force` is set and the key exists on disk, gitmap renames `id_rsa` → `id_rsa.bak.<unix-ts>` (and `.pub` likewise) before invoking `ssh-keygen`, so users never lose access to a working key by accident.
+
+### Implementation
+
+- `gitmap/cmd/releaserebase.go` (new, ~150 lines) — `tryCrossDirRelease`, `performCrossDirRelease`, `rebasePull`, `extractPositionalArgs`, `extractFlagArgs`, `looksLikeVersion`. Reuses existing `resolveReleaseAliasPath`, `autoStashIfDirty`, `popAutoStash`.
+- `gitmap/cmd/clonenextcrossdir.go` (new, ~55 lines) — `tryCrossDirCloneNext`, `performCrossDirCloneNext`. Same pattern.
+- `gitmap/cmd/haschange.go` (new, ~140 lines) — `runHasChange`, `parseHasChangeFlags`, `printHasChangeOne`, `printHasChangeAll`, `readAheadBehind`, `fetchRemoteIn`, `boolStr`.
+- `gitmap/cmd/sshexisting.go` (new, ~85 lines) — `keyExistsOnDisk`, `printExistingKeyOnDisk`, `upsertExistingKeyToDB`, `backupKeyForRegenerate`.
+- `gitmap/cmd/release.go` — `runRelease` now calls `tryCrossDirRelease(args)` first.
+- `gitmap/cmd/clonenext.go` — `runCloneNext` now calls `tryCrossDirCloneNext(args)` first.
+- `gitmap/cmd/sshgen.go` — disk-existence check moved BEFORE the database check; `--force` triggers `backupKeyForRegenerate` before `ssh-keygen`.
+- `gitmap/cmd/rootcore.go` — added `has-change` / `hc` dispatch alongside the existing `has-any-updates`.
+- `gitmap/constants/constants_v331.go` (new) — all new constants centralized for v3.31.0 audit clarity: `CmdHasChange`, `FlagHC*`, `HCMode*`, `MsgRR*`, `ErrRR*`, `MsgCNX*`, `MsgSSHExistsOnDisk`, `MsgSSHForceHint`, `MsgSSHBackedUp`, `ErrSSHBackup`.
+- `gitmap/helptext/has-change.md` (new) — bundled help text for the new command.
+
+### Compatibility
+
+- Single-arg invocations of `r` and `cn` are byte-for-byte identical to v3.30.x.
+- The SSH change is purely additive on the disk-existence path; the in-DB-key flow (`handleExistingKey` with `R`/`N` prompt) is untouched.
+
+### Verified locally
+
+- `extractPositionalArgs` correctly strips `-y`, `--dry-run`, `--bump=patch`-style flags.
+- `looksLikeVersion` accepts `v3.31.0`, `3.31.0`, `v3.31.0-rc1`, `3.31.0+build5`; rejects `gitmap`, `my-app`, `r3`, `v3`.
+- New constants compile in isolation (no collisions with existing `Cmd*`/`Msg*`/`Err*` per the v3.26.0 collision check).
+
+
 ## v3.30.0 — (2026-04-20) — Fix Go Report Card badge URL to point at the actual module path
 
 ### Fixed (Docs)
