@@ -78,6 +78,13 @@ func printInstallList() {
 
 // validateToolName checks if the tool is supported.
 func validateToolName(tool string) {
+	// Clean-code installer aliases (clean-code/code-guide/cg/cc) are not
+	// in the standard InstallToolDescriptions map; they dispatch to a
+	// dedicated PowerShell IRM | IEX flow. Allow them through.
+	if isCleanCodeAlias(tool) {
+		return
+	}
+
 	_, exists := constants.InstallToolDescriptions[tool]
 	if exists {
 		return
@@ -89,6 +96,12 @@ func validateToolName(tool string) {
 
 // executeInstall runs the install flow for a tool.
 func executeInstall(opts installOptions) {
+	if isCleanCodeAlias(opts.Tool) {
+		runInstallCleanCode()
+
+		return
+	}
+
 	if opts.Tool == constants.ToolScripts {
 		runInstallScripts()
 

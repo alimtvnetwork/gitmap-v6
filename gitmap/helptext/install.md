@@ -61,6 +61,25 @@ Settings are extracted from a bundled zip to `%APPDATA%\Notepad++`.
 
 Copies: `install.ps1`, `install.sh`, `run.ps1`, `run.sh`, `uninstall.ps1`, `Get-LastRelease.ps1`.
 
+## Coding Guidelines
+
+| Command       | Aliases              | Description                                              |
+|---------------|----------------------|----------------------------------------------------------|
+| clean-code    | code-guide, cg, cc   | Install alimtvnetwork coding-guidelines (v15) one-liner  |
+
+All four invocations dispatch to the same flow:
+
+    $ gitmap install clean-code
+    $ gitmap install code-guide
+    $ gitmap i cg
+    $ gitmap i cc
+
+Each runs:
+
+    irm https://raw.githubusercontent.com/alimtvnetwork/coding-guidelines-v15/main/install.ps1 | iex
+
+Requires PowerShell on PATH (Windows: `powershell` ships by default; Linux/macOS: install `pwsh` 7+).
+
 ## Prerequisites
 
 - Windows: Chocolatey or Winget in PATH
