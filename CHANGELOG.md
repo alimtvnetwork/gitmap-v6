@@ -1,5 +1,24 @@
 # Changelog
 
+## v3.19.0 — (2026-04-20) — Bare release auto-bumps minor + scan-dir multi-repo release
+
+### Added (release)
+
+- **Bare `gitmap release` / `gitmap r` inside a git repo** now auto-bumps the **MINOR** segment of the last release (read from `.gitmap/release/latest.json`, falling back to local git tags via the existing `resolveLatestVersion` chain). It prints `Auto-bump: vX.Y.Z → vX.(Y+1).0 (minor)` and prompts `Proceed with this release? [y/N]`. `gitmap r -y` skips the prompt and proceeds.
+- **Bare `gitmap release` / `gitmap r` from a scan-dir** (cwd is NOT a git repo, no `--version`/`--bump`/`--commit`/`--branch` supplied) walks the tree with `scanner.ScanDir`, keeps only repos that already have a `.gitmap/release/latest.json`, prints a single summary table (`• <relpath>   <current> → <next>`), prompts ONCE, and then releases each repo by chdir-ing into it and reusing the existing `release.Execute` workflow with `Bump=minor, Yes=true`. Failures are aggregated and reported at the end without aborting the batch. The previous fallback to `runReleaseSelf` still fires when no scan candidates are found.
+
+### Files
+
+- New: `gitmap/cmd/releaseautobump.go` — `peekNextMinorVersion`, `confirmAutoBump`, `shouldAutoBumpMinor`, `readYesNo`.
+- New: `gitmap/cmd/releasescan.go` — `tryRunReleaseScanDir`, `planScanReleaseTargets`, `executeScanReleasePlan`.
+- Edited: `gitmap/cmd/release.go` — flag parsing moved earlier so the auto-bump branch can read `-y`; new `applyBareReleaseAutoBump` helper.
+- Edited: `gitmap/constants/constants_release.go` — new `MsgReleaseAutoBump*` and `MsgReleaseScan*` strings.
+
+### Notes
+
+- The auto-bump path is deliberately conservative: it only fires when the user supplies **none** of `--version` / `--bump` / `--commit` / `--branch`, so existing scripted invocations are unaffected.
+- Scan-dir mode reuses the v3.17.0 `Release.RepoId` FK pipeline (`persistReleaseToDB` per release), so multi-repo runs populate the FK correctly per repo.
+
 ## v3.18.0 — (2026-04-20) — uninstall-quick PowerShell HOME fix
 
 ### Fixed (uninstall)
