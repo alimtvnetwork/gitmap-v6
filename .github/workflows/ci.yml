@@ -250,7 +250,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [sha-check, lint, vulncheck, generate-check, cmd-naming-check, test]
+    needs: [sha-check, lint, vulncheck, generate-check, cmd-naming-check, constants-naming-check, test]
     if: always()
     steps:
       - name: Already validated
