@@ -28,6 +28,7 @@ directory, on any OS.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--verbose` | false | Print extra context about what was checked. |
+| `--force` | false | Clear the persisted `schema_version` marker first, forcing the full migration pipeline to re-run even when the fast-path would normally skip it. |
 
 ## When to run it
 
@@ -43,6 +44,8 @@ directory, on any OS.
 
     gitmap db-migrate
     gitmap dbm --verbose
+    gitmap db-migrate --force
+    gitmap dbm --force --verbose
 
 ## Errors
 

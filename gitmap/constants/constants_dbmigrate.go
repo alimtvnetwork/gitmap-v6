@@ -13,6 +13,18 @@ const (
 	FlagDBMigrateVerbose = "verbose"
 	FlagDescDBMigrateV   = "Print every migration step (otherwise summary only)"
 
+	// --force clears the persisted schema_version marker before Migrate()
+	// runs, forcing the full v15 phase pipeline to re-execute even when the
+	// fast-path would otherwise skip it. Useful when a previous run stamped
+	// the marker but a downstream issue (corrupt seed, manual edit, partial
+	// restore) means the schema actually needs re-walking — without paying
+	// the full cost of `gitmap db-reset --confirm`.
+	FlagDBMigrateForce = "force"
+	FlagDescDBMigrateF = "Clear the schema_version marker first, forcing the full migration pipeline to re-run"
+
+	MsgDBMigrateForceClear  = "  ▸ --force: cleared schema_version marker (full pipeline will re-run).\n"
+	WarnDBMigrateForceClear = "  ⚠ --force: could not clear schema_version marker: %v\n"
+
 	MsgDBMigrateRunning = "▸ Running gitmap database migrations...\n"
 	MsgDBMigrateDoneFmt = "  ✓ Migrations complete (%d tables ensured, %d steps applied, %d warnings).\n"
 	MsgDBMigrateStepFmt = "    • %s\n"
