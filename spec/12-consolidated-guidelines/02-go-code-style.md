@@ -52,19 +52,23 @@ Every literal used for comparison, defaults, or messages goes in `constants`.
 | Constants | PascalCase | `DefaultBranch` |
 | Files | Lowercase, single word | `terminal.go` |
 
-## `cmd/` Helper Naming — Collision Guard
+## `constants/` Naming — Domain Prefix Required
 
-Every file in `gitmap/cmd/` shares one Go namespace, so generic helper names collide across files (e.g. two `func invokeRelease(...)` declarations break the build). Enforced by `.github/scripts/check-cmd-naming.sh` in CI.
+Every **new** constant in `gitmap/constants/` must start with one of five canonical prefixes. Enforced by `.github/scripts/check-constants-naming.sh` against a grandfathered baseline (`.github/scripts/constants-baseline.txt`); legacy prefixes (`Doctor*`, `Git*`, `Tool*`, `Term*`, `Choco*`, `Brew*`, `Apt*`, `Hint*`, …) are exempt only because they pre-date the rule.
 
-| Verb prefix | Rule | Example |
-|-------------|------|---------|
-| `executeXxx` | Canonical handler, **one per top-level command**. Noun = the command itself. | `executeRelease`, `executeClone`, `executeScan` |
-| `handleXxx` | Canonical sub-handler for a command branch. | `handleChangelogOpen`, `handleCompletionList` |
-| `invokeXxx` | Helper. **Must** carry a domain-narrowing suffix after the noun. | `invokeAliasRelease` (not `invokeRelease`) |
-| `persistXxx` | Helper. **Must** name the persisted entity + sink. | `persistReleaseToDB` (not `persistAll`) |
-| `runOneXxx` | Per-item loop helper. **Must** name the item type. | `runOnePullJob`, `runOneScanRelease` (not `runOne`) |
+| Prefix | Use for | Example |
+|--------|---------|---------|
+| `CmdXxx` | Command names and aliases | `CmdScan`, `CmdReleaseAlias` |
+| `MsgXxx` | User-facing strings, format templates, prompts | `MsgReleaseScanHeader`, `MsgPullDone` |
+| `ErrXxx` | Error messages and Go-idiomatic sentinel errors | `ErrNoDatabase`, `ErrLatestBranchNoRefs` |
+| `FlagXxx` | Flag names and descriptions | `FlagDryRun`, `FlagDescBump` |
+| `DefaultXxx` | Default values used when no override is provided | `DefaultBranch`, `DefaultReleaseDir` |
 
-**Forbidden** (CI fails): bare `invoke()`, `persist()`, `runOne()`, and `(invoke|persist|runOne)+(Release|Task|Job|Item|All|One|Cmd)` combinations. The trailing noun must be project-specific so the function's scope is unambiguous from its name alone.
+After an approved rename pass, regenerate the baseline:
+
+```bash
+bash .github/scripts/check-constants-naming.sh --regenerate-baseline
+```
 
 ## Error Handling
 
