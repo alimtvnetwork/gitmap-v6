@@ -1,8 +1,36 @@
 # Changelog
 
+## Unreleased — schema-version fast-path, `db-migrate --force`, post-update force-migrate, last-release detector fix, `gitmap install clean-code`
+
+> Pending the next `gitmap r` minor bump (per the rule that any code change must bump at least minor). Once cut, this section will be renamed to the resolved `vX.Y.0` heading. Run `gitmap r` (no args, auto-bumps minor) to perform the bump and write `.gitmap/release/vX.Y.0.json` + `latest.json` — those metadata files are never edited by hand.
+
+### Added (schema-version fast-path)
+
+- **One-time schema-version marker** persisted in the existing `Setting` table under key `schema_version` (value = stringified int). `Migrate()` short-circuits when the on-disk marker equals `constants.SchemaVersionCurrent`, so every subcommand that calls `openDB()` pays only one `Setting` SELECT instead of re-walking the full v15 phase pipeline (the source of the "Migrating GoProjectMetadata → ..." spam users were seeing on every command). The marker is stamped LAST after a successful Migrate() so partial failures retry next run; legacy databases (no `Setting` table or pre-integer-PK rows) read 0 and run the full pipeline exactly once.
+- **`gitmap db-migrate --force`** clears the persisted `schema_version` marker before `Migrate()` so the full v15 pipeline re-runs even when the fast-path would otherwise skip it. Useful when a previous run stamped the marker but a downstream issue (corrupt seed, manual edit, partial restore) means the schema actually needs re-walking — without paying the full cost of `gitmap db-reset --confirm`. Failures are warned, never fatal.
+- **`runPostUpdateMigrate` always force-clears the marker** before invoking `Migrate()`. After a binary swap from `gitmap update`, the new binary now re-walks the FULL pipeline once, eliminating the failure mode where a freshly-shipped migration step gets skipped because the on-disk marker (written by the previous binary) already equals `SchemaVersionCurrent` for the OLD binary. Cost: one extra full pipeline run, exactly once per update — every subsequent command takes the fast-path again.
+
+### Fixed (run.ps1 last-release detector)
+
+- **`gitmap/scripts/Get-LastRelease.ps1` now treats the deployed binary's `version` output as the authoritative source of truth.** Previously it queried `list-versions` first (which could return empty/stderr-only output after a fresh deploy and bleed PowerShell's `$Matches` capture into the `version` regex), so the post-build summary printed `Last release: v (binary)` — a literal `v` with no semver. The script now (1) calls `& $Binary version` first and only accepts a real `\d+\.\d+\.\d+` capture, (2) resets `$Matches = $null` between regex calls so stale captures cannot leak, (3) reads the current `.gitmap/release/latest.json` location first (with legacy `.release/latest.json` only as fallback), and (4) refuses to print anything that does not match `^v\d+\.\d+\.\d+$` — falling back to `unknown` rather than a malformed string.
+
+### Files (this section)
+
+- New: `gitmap/store/migrate_schemaversion.go` — `readSchemaVersion`, `writeSchemaVersion`, `isSchemaUpToDate` backed by the existing `Setting` key/value table.
+- Edited: `gitmap/store/store.go` — `Migrate()` returns immediately when the marker matches; stamps the marker LAST on a successful full pipeline run.
+- Edited: `gitmap/constants/constants_settings.go` — adds `SettingSchemaVersion`, `SchemaVersionCurrent` (with bump-policy doc comment), and three log strings (`MsgSchemaVersionUpToDateFmt`, `MsgSchemaVersionAdvanceFmt`, `WarnSchemaVersionWriteFmt`).
+- Edited: `gitmap/cmd/dbmigrate.go` — `parseDBMigrateFlags` returns `(verbose, force)`; new `clearSchemaVersionMarker(db *store.DB)` helper; `runPostUpdateMigrate` now calls `clearSchemaVersionMarker` before `Migrate()` so the post-update worker always re-walks the full pipeline.
+- Edited: `gitmap/constants/constants_dbmigrate.go` — adds `FlagDBMigrateForce`, `FlagDescDBMigrateF`, `MsgDBMigrateForceClear`, `WarnDBMigrateForceClear`.
+- Edited: `gitmap/helptext/db-migrate.md` — documents the new `--force` flag and adds two examples.
+- Edited: `gitmap/scripts/Get-LastRelease.ps1` — Strategy A (`gitmap version`) now wins over Strategy B (`list-versions`); `$Matches` is reset between regex calls; `Get-ReleaseFromJSON` checks `.gitmap/release/latest.json` first, legacy `.release/latest.json` second; final guard requires strict `^v\d+\.\d+\.\d+$` before printing.
+
+### Notes
+
+- Bump policy for `SchemaVersionCurrent`: bump on ANY structural change to `Migrate()` — new `CREATE TABLE`, new `ALTER TABLE`, new v15 phase, new seed call, new ID rename. Do NOT bump for cosmetic changes (comments, log strings, code moves that produce identical SQL). The marker is cleared by `gitmap db-reset` and by `migrateLegacyIDs()` when it rebuilds the Repos table, so any database requiring genuine repair always re-runs the full pipeline regardless of the marker value.
+
 ## Unreleased — `gitmap install clean-code` PowerShell IRM | IEX coding-guidelines installer
 
-> Pending the next `gitmap r` minor bump (per the rule that any code change must bump at least minor). Once cut, this section will be renamed to the resolved `vX.Y.0` heading.
+> Drafted earlier in the same Unreleased window; will be folded into the same `vX.Y.0` heading at release time.
 
 ### Added (install)
 
