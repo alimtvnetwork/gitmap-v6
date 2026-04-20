@@ -1,5 +1,21 @@
 # Changelog
 
+## v3.24.0 — (2026-04-20) — suppress git CRLF/LF cosmetic warnings during release
+
+### Fixed (release stderr noise)
+
+- **`gitmap r` no longer prints `warning: in the working copy of '...', LF will be replaced by CRLF the next time Git touches it`** for every staged file. On Windows repos with `core.autocrlf=true`, every release commit was emitting this warning once per touched file (e.g. `.gitmap/release/latest.json`, `.gitmap/release/vX.Y.Z.json`), drowning the real progress lines. The `runGitCmd` helper now pipes git's stderr through `filteredStderrWriter` (new file `gitmap/release/gitstderrfilter.go`), which line-buffers stderr and silently drops any line containing a substring listed in `constants.GitStderrNoisePatterns`. All other git stderr output (real errors, hint lines, push results) is forwarded unchanged.
+
+### Files (this section)
+
+- New: `gitmap/release/gitstderrfilter.go` — `filteredStderrWriter` (line-buffered, multi-pattern, with `Flush()` for un-terminated trailing data).
+- Edited: `gitmap/release/gitops.go` — `runGitCmd` wraps `os.Stderr` with `newFilteredStderr` and flushes after `cmd.Run()`.
+- Edited: `gitmap/constants/constants_git.go` — adds `GitStderrNoisePatterns []string` (currently the single CRLF/LF warning) with a doc comment explaining the "guaranteed-not-an-error" admission rule for new entries.
+
+### Notes
+
+- Only `runGitCmd` is filtered (it's the writer used by `stageAll`, `stageFiles`, `commitStaged`, `CreateBranch`, `CreateTag`, `rollback`, etc.). `runGitCmdCombined` deliberately keeps full output because callers parse it for `non-fast-forward` detection.
+
 ## v3.22.0 — (2026-04-20) — `gitmap r` auto-registers cwd repo when missing
 
 ### Fixed (release persistence)
