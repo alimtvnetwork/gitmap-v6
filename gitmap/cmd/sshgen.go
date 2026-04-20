@@ -61,6 +61,13 @@ func runSSHGenerate(args []string) {
 
 		return
 	}
+	if keyExistsOnDisk(keyPath) && force {
+		if err := backupKeyForRegenerate(keyPath); err != nil {
+			fmt.Fprintf(os.Stderr, constants.ErrSSHBackup, err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stdout, constants.MsgSSHBackedUp, keyPath)
+	}
 
 	if db.SSHKeyExists(name) && !force {
 		if !handleExistingKey(db, name, &keyPath) {

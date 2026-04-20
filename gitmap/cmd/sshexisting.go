@@ -87,8 +87,5 @@ func backupKeyForRegenerate(keyPath string) error {
 	return nil
 }
 
-// _ keeps backupKeyForRegenerate exported within the package so the linter
-// does not flag it as dead code while the --force regenerate flow is being
-// wired into parseSSHGenFlags. Remove once consumed.
-var _ = backupKeyForRegenerate
+// (backupKeyForRegenerate is consumed by sshgen.go in the --force branch.)
 var _ = exec.Command
