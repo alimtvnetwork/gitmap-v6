@@ -44,7 +44,7 @@ func writeCSVOutput(records []model.ScanRecord, outputDir, outFile string) {
 
 		return
 	}
-	fmt.Printf(constants.MsgCSVWritten, path)
+	fmt.Printf(constants.MsgCSVWritten, filepath.Base(path))
 }
 
 // writeJSONOutput writes records to a JSON file.
