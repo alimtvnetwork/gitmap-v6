@@ -126,8 +126,9 @@ trap 'rm -f "$current"' EXIT
 extract_constants > "$current"
 
 # New constants = in current, NOT in baseline.
-# `comm -23` requires both inputs sorted (they are: -u above + sorted baseline).
-new_consts=$(comm -23 "$current" <(sort -u "$BASELINE_FILE"))
+# `comm -23` requires both inputs sorted in the SAME locale — force C locale
+# on both sides so byte-order matches the `LC_ALL=C sort -u` in extract_constants.
+new_consts=$(LC_ALL=C comm -23 "$current" <(LC_ALL=C sort -u "$BASELINE_FILE"))
 
 if [ -z "$new_consts" ]; then
   echo "No new constants added since baseline."
