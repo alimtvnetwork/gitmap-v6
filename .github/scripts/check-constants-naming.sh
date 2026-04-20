@@ -56,6 +56,12 @@ fi
 # then end-of-line (iota grouping). Inside multi-line raw strings (delimited
 # by backticks) we skip everything.
 extract_constants() {
+  # IMPORTANT: this awk script must be portable across BOTH gawk and mawk.
+  # GitHub Actions Ubuntu runners ship mawk as /usr/bin/awk, and mawk does
+  # NOT support gawk's 3-argument match(string, regex, array) form — using
+  # it causes a silent parse failure that makes the whole CI step exit 1
+  # with no `::error::` output. We therefore use only POSIX-portable awk:
+  # 2-arg match() + RSTART / RLENGTH + substr().
   awk '
     BEGIN { in_const = 0; in_rawstr = 0 }
     {
@@ -70,18 +76,36 @@ extract_constants() {
       if (match(line, /^[[:space:]]*const[[:space:]]*\(/)) { in_const = 1; next }
       if (in_const && match(line, /^[[:space:]]*\)/))      { in_const = 0; next }
 
-      # Single-line const declaration outside a block.
-      if (match(line, /^[[:space:]]*const[[:space:]]+([A-Z][A-Za-z0-9]+)/, m)) {
-        print m[1]; next
+      # Strip leading whitespace.
+      sub(/^[[:space:]]+/, "", line)
+
+      # Single-line const declaration outside a block: peel "const ".
+      out_of_block_decl = 0
+      if (match(line, /^const[[:space:]]+/)) {
+        out_of_block_decl = 1
+        line = substr(line, RSTART + RLENGTH)
+      } else if (!in_const) {
+        # Outside a block and no leading "const " keyword — skip.
+        next
       }
 
-      # Inside a const block: first token must be a PascalCase identifier
-      # followed by `=`, `Type =`, or end-of-line (iota continuation).
-      if (in_const && match(line, /^[[:space:]]+([A-Z][A-Za-z0-9]+)([[:space:]]+[A-Za-z0-9_.]+)?[[:space:]]*(=|$|\/\/)/, m)) {
-        print m[1]
+      # Now line should start with a PascalCase identifier.
+      if (!match(line, /^[A-Z][A-Za-z0-9]+/)) { next }
+      name = substr(line, RSTART, RLENGTH)
+      rest = substr(line, RSTART + RLENGTH)
+
+      # For block entries we require the rest to be `=`, `<type> =`, end of
+      # line (iota continuation), or a comment. For peeled "const Name ..."
+      # lines we accept anything (single-line consts always have `=`).
+      if (out_of_block_decl) { print name; next }
+
+      sub(/^[[:space:]]+[A-Za-z0-9_.]+/, "", rest) # optional type
+      sub(/^[[:space:]]*/, "", rest)
+      if (rest == "" || substr(rest, 1, 1) == "=" || substr(rest, 1, 2) == "//") {
+        print name
       }
     }
-  ' "$CONST_DIR"/*.go | sort -u
+  ' "$CONST_DIR"/*.go | LC_ALL=C sort -u
 }
 
 # regenerate mode: rewrite the baseline file from current source.
