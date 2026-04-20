@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.13.3 — (2026-04-20) — Codebase-wide UK→US spelling sweep
+
+### Fixed
+
+- **UK English residue eliminated across source files** — Audit scanned every `*.go`, `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.sh`, `*.ps1` (excluding `node_modules`, `.git`, `.gitmap`, `dist`, `build`) for ~80 UK spelling patterns (colour, optimise, organise, analyse, fibre, behaviour, honour, favour, realise, recognise, normalise, summarise, finalise, utilise, customise, artefact, catalogue, dialogue, licence, defence, traveller, etc.). Found 9 remaining hits and converted to US English:
+  - `install-quick.ps1`, `install-quick.sh`, `run.ps1` (3 files): `behaviour → behavior` in script comments.
+  - `src/pages/ClearReleaseJSON.tsx`: 7 occurrences of `behaviour → behavior` (object keys + JSX accessor + heading + table column header), plus `Normalised → Normalized` in edge-case data row. Object keys, accessors, and visible UI text remain consistent.
+- **Intentionally preserved**: `cancelled` / `cancelling` (GitHub Actions CI terminology — `cancel-in-progress` is the official feature name), `analyses` (valid US English plural of "analysis"), `grey` (UI status descriptor matching GitHub's grey-icon convention), historical CHANGELOG/spec/memory entries (immutable record).
+
+### Verified
+
+- Re-ran the audit grep across the same file set; zero remaining matches for the UK pattern set under audit.
+
 ## v3.13.2 — (2026-04-20) — Pre-commit hook enhanced
 
 ### Changed

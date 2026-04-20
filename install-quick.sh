@@ -141,7 +141,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Baseline install flow (unchanged behaviour).
+# Baseline install flow (unchanged behavior).
 # ---------------------------------------------------------------------------
 
 prompt_dir() {

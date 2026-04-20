@@ -140,7 +140,7 @@ if ($alreadyDelegated) {
 }
 
 # ---------------------------------------------------------------------------
-# Baseline install flow (unchanged behaviour).
+# Baseline install flow (unchanged behavior).
 # ---------------------------------------------------------------------------
 
 function Read-InstallDir([string]$default) {

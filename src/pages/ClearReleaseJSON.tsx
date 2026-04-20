@@ -14,13 +14,13 @@ const flags = [
 ];
 
 const edgeCases = [
-  { scenario: "No version argument", behaviour: "Print usage message and exit 1" },
-  { scenario: "Invalid version string (e.g. abc)", behaviour: "Print error with invalid input and exit 1" },
-  { scenario: "File does not exist", behaviour: "Print 'no release file found' error and exit 1" },
-  { scenario: "File is read-only", behaviour: "os.Remove fails; print removal error and exit 1" },
-  { scenario: "--dry-run with missing file", behaviour: "Same missing-file error — dry-run still validates existence" },
-  { scenario: "--dry-run with valid file", behaviour: "Print preview message and exit 0; file untouched" },
-  { scenario: "Partial version v2", behaviour: "Normalised to v2.0.0; targets .gitmap/release/v2.0.0.json" },
+  { scenario: "No version argument", behavior: "Print usage message and exit 1" },
+  { scenario: "Invalid version string (e.g. abc)", behavior: "Print error with invalid input and exit 1" },
+  { scenario: "File does not exist", behavior: "Print 'no release file found' error and exit 1" },
+  { scenario: "File is read-only", behavior: "os.Remove fails; print removal error and exit 1" },
+  { scenario: "--dry-run with missing file", behavior: "Same missing-file error — dry-run still validates existence" },
+  { scenario: "--dry-run with valid file", behavior: "Print preview message and exit 0; file untouched" },
+  { scenario: "Partial version v2", behavior: "Normalized to v2.0.0; targets .gitmap/release/v2.0.0.json" },
 ];
 
 const exitCodes = [
@@ -108,9 +108,9 @@ const ClearReleaseJSONPage = () => {
           </ul>
         </section>
 
-        {/* Behaviour */}
+        {/* Behavior */}
         <section>
-          <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Behaviour</h2>
+          <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Behavior</h2>
 
           <h3 className="text-lg font-mono font-medium mb-2 mt-4">Normal Mode</h3>
           <CodeBlock code={`# Remove release metadata for v2.20.0
@@ -131,14 +131,14 @@ gitmap clear-release-json v2.20.0 --dry-run
               <thead>
                 <tr className="bg-muted/50">
                   <th className="text-left px-4 py-2 font-mono font-medium">Scenario</th>
-                  <th className="text-left px-4 py-2 font-mono font-medium">Behaviour</th>
+                  <th className="text-left px-4 py-2 font-mono font-medium">Behavior</th>
                 </tr>
               </thead>
               <tbody>
                 {edgeCases.map((ec) => (
                   <tr key={ec.scenario} className="border-t border-border">
                     <td className="px-4 py-2 text-foreground">{ec.scenario}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{ec.behaviour}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{ec.behavior}</td>
                   </tr>
                 ))}
               </tbody>

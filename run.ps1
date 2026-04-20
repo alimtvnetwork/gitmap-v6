@@ -1035,7 +1035,7 @@ function Remove-FromUserPath {
 
 # -- Migrate a stale active gitmap binary off-target (DFD-8) ---
 # When the binary on PATH lives outside the resolved deploy target, the
-# old behaviour was to copy the new build *into* the stale location,
+# old behavior was to copy the new build *into* the stale location,
 # preserving the wrong path forever. Instead: delete the stale binary,
 # remove its parent dir if it is now empty, and strip its directory
 # from the user PATH.
@@ -1317,7 +1317,7 @@ if (-not $NoDeploy) {
                 Write-Info "Active:   $activeResolved"
                 Write-Info "Deployed: $deployedResolved"
 
-                # New behaviour (DFD-8): do NOT copy the new build into the
+                # New behavior (DFD-8): do NOT copy the new build into the
                 # stale location — that perpetuates the wrong path. Delete
                 # the stale binary, prune empty parents, and strip the dir
                 # from user PATH. The deployed dir is already on PATH via
