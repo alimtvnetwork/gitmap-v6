@@ -12,8 +12,9 @@ func TestDeriveDeployAppDir(t *testing.T) {
 		selfPath string
 		want     string
 	}{
-		{name: "path binary outside gitmap dir", selfPath: "E:/bin-run/gitmap.exe", want: "E:/gitmap"},
-		{name: "path binary already in gitmap dir", selfPath: "E:/gitmap/gitmap.exe", want: "E:/gitmap"},
+		{name: "path binary outside gitmap-cli dir", selfPath: "E:/bin-run/gitmap.exe", want: "E:/gitmap-cli"},
+		{name: "path binary already in gitmap-cli dir", selfPath: "E:/gitmap-cli/gitmap.exe", want: "E:/gitmap-cli"},
+		{name: "path binary already in legacy gitmap dir", selfPath: "E:/gitmap/gitmap.exe", want: "E:/gitmap"},
 		{name: "empty path", selfPath: "", want: ""},
 	}
 
