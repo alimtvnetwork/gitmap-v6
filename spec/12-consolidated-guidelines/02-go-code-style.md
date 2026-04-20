@@ -52,6 +52,20 @@ Every literal used for comparison, defaults, or messages goes in `constants`.
 | Constants | PascalCase | `DefaultBranch` |
 | Files | Lowercase, single word | `terminal.go` |
 
+## `cmd/` Helper Naming — Collision Guard
+
+Every file in `gitmap/cmd/` shares one Go namespace, so generic helper names collide across files (e.g. two `func invokeRelease(...)` declarations break the build). Enforced by `.github/scripts/check-cmd-naming.sh` in CI.
+
+| Verb prefix | Rule | Example |
+|-------------|------|---------|
+| `executeXxx` | Canonical handler, **one per top-level command**. Noun = the command itself. | `executeRelease`, `executeClone`, `executeScan` |
+| `handleXxx` | Canonical sub-handler for a command branch. | `handleChangelogOpen`, `handleCompletionList` |
+| `invokeXxx` | Helper. **Must** carry a domain-narrowing suffix after the noun. | `invokeAliasRelease` (not `invokeRelease`) |
+| `persistXxx` | Helper. **Must** name the persisted entity + sink. | `persistReleaseToDB` (not `persistAll`) |
+| `runOneXxx` | Per-item loop helper. **Must** name the item type. | `runOnePullJob`, `runOneScanRelease` (not `runOne`) |
+
+**Forbidden** (CI fails): bare `invoke()`, `persist()`, `runOne()`, and `(invoke|persist|runOne)+(Release|Task|Job|Item|All|One|Cmd)` combinations. The trailing noun must be project-specific so the function's scope is unambiguous from its name alone.
+
 ## Error Handling
 
 Check errors immediately. Return errors up the stack. In `cmd` handlers: print and `os.Exit(1)`. Never `panic` for expected conditions.
