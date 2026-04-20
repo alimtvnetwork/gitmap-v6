@@ -1,0 +1,17 @@
+{
+  "version": "2.33.0",
+  "branch": "release/v2.33.0",
+  "sourceBranch": "main",
+  "commit": "ffa22e5f83a3fd7a1941595720acb903cb56075c",
+  "tag": "v2.33.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.33.0.",
+    "Fixed auto-commit push rejection when remote branch advances during release: added `pull --rebase` recovery with single retry.",
+    "Added 16-stage summary table with anchor links to verbose logging spec."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T12:02:31Z",
+  "isLatest": false
+}

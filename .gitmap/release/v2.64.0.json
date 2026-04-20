@@ -1,0 +1,17 @@
+{
+  "version": "2.64.0",
+  "branch": "release/v2.64.0",
+  "sourceBranch": "main",
+  "commit": "e617e3db9d612696b081a23d0cd9b2b3f125237a",
+  "tag": "v2.64.0",
+  "assets": [],
+  "changelog": [
+    "Added `gitmap install scripts` — clones gitmap scripts (install.ps1, install.sh, run.ps1, run.sh, etc.) to a local folder for easy access.",
+    "**Windows**: resolves the deploy drive from `powershell.json`, defaults to `D:\\gitmap-scripts`.",
+    "**Linux/macOS**: installs to `~/Desktop/gitmap-scripts`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-07T20:51:34Z",
+  "isLatest": false
+}

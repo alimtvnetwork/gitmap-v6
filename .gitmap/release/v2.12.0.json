@@ -1,0 +1,15 @@
+{
+  "version": "2.12.0",
+  "branch": "release/v2.12.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.12.0",
+  "assets": [],
+  "changelog": [
+    "Added global ⌘K command palette searching across commands, flags, and pages."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-14",
+  "isLatest": true
+}

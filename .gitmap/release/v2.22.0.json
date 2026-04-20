@@ -1,0 +1,20 @@
+{
+  "version": "2.22.0",
+  "branch": "release/v2.22.0",
+  "sourceBranch": "main",
+  "commit": "150edc413de469aea5f4463d8460fe0ab79afa72",
+  "tag": "v2.22.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.22.0.",
+    "Persisted zip group metadata in `.release/vX.Y.Z.json` via new `zipGroups` field on `ReleaseMeta`.",
+    "Documented `-A`/`--alias` flag in help text for `pull`, `exec`, `status`, and `cd` commands.",
+    "Added shell completion support for `alias` and `zip-group` subcommands across PowerShell, Bash, and Zsh.",
+    "Added `--list-aliases` and `--list-zip-groups` completion list flags with dynamic DB lookups.",
+    "Added unit tests for `collectZipGroupNames` covering persistent groups, ad-hoc bundles, and merged output."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-19T19:43:12Z",
+  "isLatest": false
+}

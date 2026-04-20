@@ -1,0 +1,16 @@
+{
+  "version": "2.31.0",
+  "branch": "release/v2.31.0",
+  "sourceBranch": "main",
+  "commit": "2c5b83f7ad6e429868c126b08a2e0841d6271c16",
+  "tag": "v2.31.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.31.0.",
+    "Added verbose logging to auto-commit step: logs version, file counts, staging, commit message, and push target."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T11:17:03Z",
+  "isLatest": false
+}

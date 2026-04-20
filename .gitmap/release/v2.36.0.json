@@ -1,0 +1,9 @@
+{
+  "version": "2.36.0",
+  "tag": "v2.36.0",
+  "branch": "release/v2.36.0",
+  "changelog": [
+    "Added automatic legacy directory migration on CLI startup.",
+    "Migrates gitmap-output/, .release/, .deployed/ into .gitmap/ subdirectories."
+  ]
+}

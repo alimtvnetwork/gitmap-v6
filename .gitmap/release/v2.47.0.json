@@ -1,0 +1,18 @@
+{
+  "version": "2.47.0",
+  "branch": "release/v2.47.0",
+  "sourceBranch": "main",
+  "commit": "e5e5acbd890530d5df07e2929ae15d117bcf165d",
+  "tag": "v2.47.0",
+  "assets": [],
+  "changelog": [
+    "Changed `release-self` primary alias from `rself` to `rs` (rescan moved to `rsc`).",
+    "Added SQLite DB fallback for source repo discovery (`source_repo_path` in Settings table).",
+    "Skip directory switch if already in the gitmap source repo directory.",
+    "Updated spec, helptext, React docs page, and commands catalog to reflect changes."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-03T18:53:55Z",
+  "isLatest": false
+}

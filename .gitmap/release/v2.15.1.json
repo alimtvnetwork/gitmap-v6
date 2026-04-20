@@ -1,0 +1,12 @@
+{
+  "version": "2.15.1",
+  "tag": "v2.15.1",
+  "branch": "main",
+  "features": [
+    "Fixed database path resolution: DB now lives at <binary-dir>/data/ instead of CWD-relative output dir",
+    "Added store.OpenDefault() and store.OpenDefaultProfile() for binary-relative database access",
+    "Added store/location.go with BinaryDataDir() using os.Executable + EvalSymlinks",
+    "Updated all 13 database callers across the codebase",
+    "Removed unused resolveAuditOutputDir and resolveDefaultOutputDir functions"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "2.14.0",
+  "tag": "v2.14.0",
+  "branch": "main",
+  "features": [
+    "Go release assets: automatic cross-compilation for 6 OS/arch targets",
+    "GitHub Releases API integration for asset upload (no gh CLI needed)",
+    "--compress flag wraps assets in .zip (Windows) or .tar.gz (Linux/macOS)",
+    "--checksums flag generates SHA256 checksums.txt for all release assets",
+    "--no-assets flag to skip automatic Go binary compilation",
+    "--targets flag for custom cross-compile target selection",
+    "Improved gitmap ls output with labeled fields and inline cd examples",
+    "Shell completion for release, release-branch, group, multi-group, and list commands",
+    "Fixed duplicate hints in gitmap ls <type> output"
+  ]
+}

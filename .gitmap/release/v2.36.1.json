@@ -1,0 +1,18 @@
+{
+  "version": "2.36.1",
+  "branch": "release/v2.36.1",
+  "sourceBranch": "main",
+  "commit": "f45da1e509a7ebc44ea993fa717a545f7e6da7f0",
+  "tag": "v2.36.1",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.36.1.",
+    "Added automatic database migration from legacy UUID TEXT IDs to INTEGER AUTOINCREMENT IDs.",
+    "Migration detects TEXT-typed `Id` column in `Repos` via `PRAGMA table_info`, rebuilds the table preserving data, and drops dependent FK tables (project detection, group-repo associations) for clean repopulation.",
+    "Fixed FK constraint violation (`787`) during `scan` when legacy UUID IDs were present in the `Repos` table."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T18:23:21Z",
+  "isLatest": false
+}

@@ -1,0 +1,15 @@
+{
+  "version": "2.82.0",
+  "branch": "release/v2.82.0",
+  "sourceBranch": "main",
+  "commit": "8efda28dfc5bb5aa1126a5fb4da9432f31deddbb",
+  "tag": "v2.82.0",
+  "assets": [],
+  "changelog": [
+    "Regenerated `package-lock.json` to sync with `package.json` — resolves CI `npm ci` failure caused by missing entries for testing libs, axios, framer-motion, vitest, and other dependencies added without a lockfile refresh."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T18:54:42Z",
+  "isLatest": false
+}

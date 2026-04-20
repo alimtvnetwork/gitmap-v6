@@ -1,0 +1,21 @@
+{
+  "version": "2.27.0",
+  "branch": "release/v2.27.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.27.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-22T00:00:00Z",
+  "isLatest": true,
+  "changelog": [
+    "Added doctor validation checks for config.json, database migration, lock file, and network connectivity.",
+    "Added TUI release trigger overlay with patch/minor/major/custom version bump selection.",
+    "Integrated batch progress tracking into pull, exec, and status commands with success/fail/skip counters.",
+    "Added BatchProgress tracker to cloner package with quiet mode for programmatic use.",
+    "Added TUI interaction tests covering tab switching, browser navigation, fuzzy search, and release triggers.",
+    "Added alias suggestion tests covering auto-suggestion, conflict detection, and idempotent re-runs.",
+    "Added batch progress format constants to constants_clone.go."
+  ]
+}

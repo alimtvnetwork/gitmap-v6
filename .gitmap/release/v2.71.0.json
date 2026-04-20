@@ -1,0 +1,20 @@
+{
+  "version": "2.71.0",
+  "branch": "release/v2.71.0",
+  "sourceBranch": "main",
+  "commit": "5ce52fba8ef97a52f3e9e33b8620e15ae8c2747f",
+  "tag": "v2.71.0",
+  "assets": [],
+  "changelog": [
+    "VS Code admin mode bypass: `openInVSCode` now uses a 3-tier launch strategy (`--reuse-window` → `--new-window` → `cmd /C start` detached) to handle the \"Another instance of Code is already running as administrator\" error.",
+    "Added `tryVSCodeReuse`, `tryVSCodeNewWindow`, and `tryVSCodeDetached` helper functions in `cmd/clonevscode.go`.",
+    "Added `ErrVSCodeAdminLock` constant for admin-mode warning message.",
+    "`gitmap update` PATH sync now includes full 3-step fallback: direct `Copy-Item`, rename-then-copy (`Move-Item` to `.old` + `Copy-Item` with rollback), and kill stale `gitmap.exe` processes via `Stop-Process` before final retry.",
+    "Updated `UpdatePSSync` PowerShell block in `constants/constants_update.go` with rename and kill-process recovery strategies.",
+    "Updated `spec/01-app/89-update-path-sync.md` to document all sync fallback steps and error scenarios."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T06:40:10Z",
+  "isLatest": false
+}

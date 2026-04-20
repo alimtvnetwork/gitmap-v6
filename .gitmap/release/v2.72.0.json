@@ -1,0 +1,18 @@
+{
+  "version": "2.72.0",
+  "branch": "release/v2.72.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.72.0",
+  "assets": [],
+  "changelog": [
+    "VS Code admin-mode bypass: `runVSCodeCommand` now captures `CombinedOutput` and waits for the process exit code instead of fire-and-forget, ensuring CLI errors are properly detected.",
+    "`tryVSCodeDetached` launches `Code.exe` with an isolated `--user-data-dir` (`%TEMP%\\gitmap-vscode-user-data`) to bypass the elevated single-instance lock.",
+    "Added `resolveVSCodeExecutable` with multi-path discovery (`LookPath`, CLI sibling, `LocalAppData`, `Program Files`, `Program Files (x86)`).",
+    "Extracted all VS Code constants into `constants/constants_vscode.go`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T07:00:00Z",
+  "isLatest": true
+}

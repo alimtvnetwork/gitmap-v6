@@ -1,0 +1,22 @@
+{
+  "version": "2.26.0",
+  "branch": "release/v2.26.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.26.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-22T00:00:00Z",
+  "isLatest": true,
+  "changelog": [
+    "Added 'prune' command (alias 'pr') for stale release branch cleanup.",
+    "Prune detects local release branches whose tags already exist.",
+    "Added '--dry-run' flag to preview stale branches without deleting.",
+    "Added '--confirm' flag to skip interactive confirmation prompt.",
+    "Added '--remote' flag to also delete remote release branches.",
+    "Prune prints a summary showing deleted vs kept branch counts.",
+    "Added prune help text and shell tab-completion support.",
+    "Added prune documentation page to the docs site."
+  ]
+}

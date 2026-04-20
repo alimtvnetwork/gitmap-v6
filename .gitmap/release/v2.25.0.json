@@ -1,0 +1,24 @@
+{
+  "version": "2.25.0",
+  "branch": "release/v2.25.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.25.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-22T00:00:00Z",
+  "isLatest": true,
+  "changelog": [
+    "Added 'ssh' command for SSH key pair generation and management.",
+    "SSH keys are stored by name in the database with public key content and fingerprint.",
+    "Added 'ssh cat' subcommand to display public keys for quick copying.",
+    "Added 'ssh list' subcommand to show all stored keys in an aligned table.",
+    "Added 'ssh delete' subcommand with optional --files flag to remove key files from disk.",
+    "Added 'ssh config' subcommand to regenerate managed ~/.ssh/config Host entries.",
+    "Auto-manages ~/.ssh/config with marker-bounded Host entries for multi-key setups.",
+    "Added '--ssh-key' / '-K' flag to 'clone' command for SSH key-based cloning via GIT_SSH_COMMAND.",
+    "Added shell tab-completion for SSH subcommands and key names (PowerShell, Bash, Zsh).",
+    "Added SSH documentation page to the docs site."
+  ]
+}

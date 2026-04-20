@@ -1,0 +1,20 @@
+{
+  "version": "2.78.0",
+  "branch": "release/v2.78.0",
+  "sourceBranch": "main",
+  "commit": "47fad069022e696ce9660254a940079215084f3f",
+  "tag": "v2.78.0",
+  "assets": [],
+  "changelog": [
+    "Console-safe handoff spec (`spec/08-generic-update/07-console-safe-handoff.md`) — documents the blocking `cmd.Run()` pattern that prevents terminal detachment during self-update on Windows.",
+    "Installer banner now displays version number (`gitmap installer v1.0.0`).",
+    "`install.ps1`: `Resolve-Version` now prints full HTTP status code, URL, response body, and potential causes on GitHub API failure instead of a generic error.",
+    "`gitmap-updater/cmd/github.go`: `fetchLatestTag` error output now includes URL, response body, and troubleshooting hints.",
+    "Standardized lowercase \"gitmap\" branding across all installer output messages.",
+    "`ShouldPrintInstallHint` now uses case-insensitive matching for GitHub repo URL detection."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T16:07:44Z",
+  "isLatest": false
+}

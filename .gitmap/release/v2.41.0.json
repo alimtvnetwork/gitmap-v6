@@ -1,0 +1,17 @@
+{
+  "version": "2.41.0",
+  "branch": "release/v2.41.0",
+  "sourceBranch": "main",
+  "commit": "a84d0a5cdbdd0f51e127a7df91409c18ad2b5c0d",
+  "tag": "v2.41.0",
+  "assets": [],
+  "changelog": [
+    "GitHub repo existence check and automatic creation before clone via GitHub API.",
+    "Requires `GITHUB_TOKEN` for repo creation; creates under org with user fallback.",
+    "Added `ParseOwnerRepo` utility for HTTPS and SSH remote URL parsing."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-03T17:54:14Z",
+  "isLatest": false
+}

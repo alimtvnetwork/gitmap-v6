@@ -1,0 +1,16 @@
+{
+  "version": "2.34.0",
+  "branch": "release/v2.34.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.34.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T00:00:00Z",
+  "isLatest": true,
+  "changelog": [
+    "Fixed list-releases to read .release/v*.json from the current repo first, falling back to the database only when no local files exist.",
+    "Added SourceRepo constant to release model for repo-sourced release records."
+  ]
+}

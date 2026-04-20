@@ -1,0 +1,12 @@
+{
+  "version": "2.13.0",
+  "tag": "v2.13.0",
+  "branch": "main",
+  "features": [
+    "Group activation: gitmap g <name> sets persistent active group",
+    "Multi-group (mg) command for batch operations across multiple groups",
+    "List type filtering: gitmap ls go|node|react|cpp|csharp|groups",
+    "Contextual helper hints after command output",
+    "Settings table for persistent key-value storage"
+  ]
+}

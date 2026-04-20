@@ -1,0 +1,44 @@
+graph TD
+    A["binary update"] --> B{"Source repo available?"}
+
+    B -->|YES| C["Source-Based Handoff"]
+    B -->|NO| D["Binary-Based Handoff"]
+
+    C --> C1["Copy self to temp: binary-update-PID.exe"]
+    C1 --> C2["Launch temp copy with update-runner"]
+    C2 --> C3["Parent waits synchronously via cmd.Run"]
+
+    C3 --> W["Worker Process starts"]
+    W --> W1["Generate temp PowerShell script with UTF-8 BOM"]
+    W1 --> W2["Script calls run.ps1 -Update"]
+    W2 --> W3["run.ps1: git pull, go build, deploy"]
+    W3 --> W4["Deploy: rename-first on ORIGINAL binary"]
+    W4 --> W5["Verify version before vs after"]
+    W5 --> W6["Cleanup temp copy and script"]
+
+    D --> D1["Delegate to standalone updater binary"]
+    D1 --> D2["Copy updater to updater-tmp-PID.exe"]
+    D2 --> D3["Launch tmp updater with update-worker"]
+    D3 --> D4["Download install.ps1 from release"]
+    D4 --> D5["Execute install.ps1: download, verify, install"]
+    D5 --> D6["Verify version"]
+    D6 --> D7["Cleanup temp updater"]
+
+    W6 --> E["Update Complete"]
+    D7 --> E
+
+    subgraph "Windows File Lock Resolution"
+        C1
+        C2
+        C3
+    end
+
+    subgraph "Worker: Different file, no lock conflict"
+        W
+        W1
+        W2
+        W3
+        W4
+        W5
+        W6
+    end

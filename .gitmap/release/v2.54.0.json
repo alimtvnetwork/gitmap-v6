@@ -1,0 +1,24 @@
+{
+  "version": "2.54.0",
+  "branch": "release/v2.54.0",
+  "sourceBranch": "main",
+  "commit": "5db99416a033fd90eb39346db91a9d08e414a97e",
+  "tag": "v2.54.0",
+  "assets": [],
+  "changelog": [
+    "`gitmap update` now validates the saved source repo path exists on disk before using it.",
+    "Falls back to the SQLite DB (`source_repo_path` setting) in the binary's `data/` folder.",
+    "Prompts the user interactively when both embedded and saved paths are missing or stale.",
+    "Successfully resolved paths are persisted to the DB for future runs.",
+    "New file `cmd/updaterepo.go` extracts path resolution helpers for the 200-line file limit.",
+    "Removed cross-platform binary builds from the main CI pipeline (`ci.yml`).",
+    "Binaries are now produced exclusively by the release pipeline (`release.yml`) on `release/**` branches and `v*` tags.",
+    "All workflows (`ci.yml`, `release.yml`, `vulncheck.yml`) now cancel in-progress runs when a new commit is pushed to the same branch.",
+    "Concurrency groups use `github.ref` so different branches run independently.",
+    "Code Red audit complete: standardized 35+ error constants and updated 36 call sites across constants/, cmd/, release/, and store/ — every file/path error now includes exact path, failure reason, and (operation: ...) suffix."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-07T16:52:55Z",
+  "isLatest": false
+}

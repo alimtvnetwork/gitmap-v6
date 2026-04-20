@@ -1,0 +1,9 @@
+{
+  "version": "2.35.1",
+  "tag": "v2.35.1",
+  "branch": "release/v2.35.1",
+  "changelog": [
+    "Added legacy UUID data detection to all remaining DB query paths.",
+    "All DB query errors from legacy string-based IDs now show a recovery prompt."
+  ]
+}

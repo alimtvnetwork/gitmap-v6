@@ -1,0 +1,11 @@
+{
+  "version": "2.21.0",
+  "tag": "v2.21.0",
+  "branch": "release/v2.21.0",
+  "features": [
+    "Bumped compiled version constant to v2.21.0",
+    "Refactored assetsupload.go into githubapi.go, assetsupload.go, and remoteorigin.go",
+    "Rebuilt Project Detection docs page with pipeline, metadata deep-dive, DB schema, and package layout",
+    "Added unit tests for store/location.go covering symlink resolution and fallback behavior"
+  ]
+}

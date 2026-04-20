@@ -1,0 +1,18 @@
+{
+  "version": "2.30.0",
+  "branch": "release/v2.30.0",
+  "sourceBranch": "main",
+  "commit": "a5bc1ba99e5c6dfa798ef860f7940e41a7bf317f",
+  "tag": "v2.30.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.30.0.",
+    "Renamed TempReleases `Commit` column to `CommitSha` to avoid SQLite reserved keyword conflict.",
+    "Added automatic database migration (`ALTER TABLE RENAME COLUMN`) for existing TempReleases tables.",
+    "Added JSON struct tags to `model.TempRelease` for backward-compatible serialization."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T11:10:51Z",
+  "isLatest": false
+}

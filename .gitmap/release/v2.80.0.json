@@ -1,0 +1,20 @@
+{
+  "version": "2.80.0",
+  "branch": "release/v2.80.0",
+  "sourceBranch": "main",
+  "commit": "01d4df72eeabf00452bfc6f1ea3b55adf6ad1be0",
+  "tag": "v2.80.0",
+  "assets": [],
+  "changelog": [
+    "Hidden `set-source-repo` command — persists source repo path to DB so `gitmap update` always uses the correct location after repo moves.",
+    "Post-deploy repo path sync in `run.ps1` — automatically calls `set-source-repo` after every successful deploy to keep the DB current.",
+    "Repo path sync spec (`spec/08-generic-update/08-repo-path-sync.md`) — documents the post-deploy sync pattern for AI implementers.",
+    "Help file for `set-source-repo` command (`gitmap/helptext/set-source-repo.md`).",
+    "`go-winres` CI failure — moved `winres.json` from `gitmap/` to `gitmap/winres/` where `go-winres make` expects it.",
+    "Cross-references updated in `02f-self-update-orchestration.md` and `03-self-update-mechanism.md` to include repo path sync spec."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T16:26:25Z",
+  "isLatest": false
+}

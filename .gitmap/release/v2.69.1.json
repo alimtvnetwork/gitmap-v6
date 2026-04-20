@@ -1,0 +1,15 @@
+{
+  "version": "2.69.1",
+  "branch": "release/v2.69.1",
+  "sourceBranch": "main",
+  "commit": "bf938f742abf019eca27ab985bb642400948deeb",
+  "tag": "v2.69.1",
+  "assets": [],
+  "changelog": [
+    "*(pending)*"
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-09T23:55:50Z",
+  "isLatest": false
+}

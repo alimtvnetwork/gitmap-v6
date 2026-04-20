@@ -1,0 +1,17 @@
+{
+  "version": "2.9.0",
+  "branch": "release/v2.9.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.9.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-13T00:00:00Z",
+  "isLatest": false,
+  "changelog": [
+    "Completed flags and examples for all 22 command entries on the documentation site.",
+    "Added detailed flag tables and usage examples for seo-write, doctor, update, pull, version, history-reset, and db-reset.",
+    "Filled in flags and examples for 15 commands missing both: rescan, desktop-sync, status, latest-branch, release-branch, release-pending, changelog, group, list, diff-profiles, export, import, profile, bookmark, and stats."
+  ]
+}

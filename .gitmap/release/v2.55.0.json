@@ -1,0 +1,32 @@
+{
+  "version": "2.55.0",
+  "branch": "release/v2.55.0",
+  "sourceBranch": "main",
+  "commit": "914179bf4c0fabf581e1225d46abefab3e35fc95",
+  "tag": "v2.55.0",
+  "assets": [],
+  "changelog": [
+    "Created `spec/02-app-issues/13-release-pipeline-dist-directory.md` — documents `cd: dist` CI failure root cause and 4 prevention rules.",
+    "Created `spec/02-app-issues/14-security-hardening-gosec-fixes.md` — documents G305, G110, format verb, and Code Red fixes with prevention rules.",
+    "Added Post-Mortems page (`/post-mortems`) to docs site with category filters, version tags, and color-coded icons for all 15 documented issues.",
+    "Added \"Lessons Learned\" section to `spec/05-coding-guidelines/17-cicd-patterns.md` — never `cd` in CI, validate directories, pin tool versions.",
+    "Added Section 10 (Zip Extraction Security) to `spec/05-coding-guidelines/08-security-secrets.md` — mandatory G305/G110 checks.",
+    "Added Sections 7–8 to `spec/05-coding-guidelines/04-error-handling.md` — Code Red Rule and Format Verb Compliance.",
+    "Fixed PowerShell installer crash caused by `Invoke-WebRequest` progress bar rendering during `irm | iex`.",
+    "Added `$ProgressPreference = \"SilentlyContinue\"` to `install.ps1`.",
+    "Fixed versioned binary detection — installer now matches `gitmap-v*-windows-(amd64|arm64).exe` patterns from CI archives.",
+    "Wrapped installer `Main` function in `try/catch` with friendly error message and manual download fallback.",
+    "Replaced job-level `if` skipping with step-level conditionals in `ci.yml` so all jobs always report ✅ Success.",
+    "Previously, SHA-deduplicated runs showed grey \"skipped\" status which looked like failures; now cached SHAs print \"Already validated\" and exit green.",
+    "Updated `spec/05-coding-guidelines/29-ci-sha-deduplication.md` with the passthrough pattern documentation.",
+    "Pinned `golangci-lint` to `v1.64.8` in `ci.yml` to match `setup.sh`.",
+    "Added release dates to all changelog entries with available metadata (sourced from `.gitmap/release/*.json`).",
+    "Backfilled v2.54.1, v2.54.2, v2.54.3, and v2.53.0 entries in the docs site changelog data.",
+    "Removed duplicate Code Red content from v2.54.0 (now properly in v2.54.1).",
+    "Pinned `golangci-lint` to `v1.64.8` in `setup.sh` instead of `@latest`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-07T19:27:41Z",
+  "isLatest": false
+}

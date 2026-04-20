@@ -1,0 +1,56 @@
+# Project Memory
+
+## Core
+Strict code style: <200 lines/file, <15 lines/func, positive logic, pascal case constants, 'is/has' boolean prefixes.
+Zero-swallow error policy. Explicitly log errors to os.Stderr using standardized format. Use `errors.Is`.
+NEVER manually create, modify, or delete files within `.gitmap/release/` or `.gitmap/release-assets/`.
+No magic strings. Centralize in constants. All CLI IDs must be exclusively in `constants_cli.go`.
+Windows-first platform development strategy. Scripts must handle Windows encoding (UTF-8 BOM).
+Go v1.24.13. golangci-lint pinned to v1.64.8, govulncheck pinned to v1.1.4.
+SQLite connection pooling restricted to `SetMaxOpenConns(1)`.
+v15 DB schema: PascalCase + singular table names + `{TableName}Id` PKs + FKs match referenced PK + `IsX` boolean prefix + abbreviations as words (`SshKey`, `Csharp*`). SQLite reserved word `Group` double-quoted in DDL/DML.
+Unified `.gitmap/` directory structure at repository root for all artifacts.
+Clone-next flattens by default (v2.75.0+): clones into base name folder, tracks versions in RepoVersionHistory.
+Completion generator uses marker-comment opt-in (v3.0.0+): `// gitmap:cmd top-level` on const block, `// gitmap:cmd skip` per spec. CI `generate-check` enforces drift.
+v15 legacy compat shims (JSON `draft`/`preRelease` overlay + SQLite `Draft`/`PreRelease` column rename) are KEPT through v3.x; removal scheduled for v4.0.0.
+Current version: v3.12.1 (legacy Draft/PreRelease test cleanup + AST registry parity test + fresh 28-table ERD).
+
+## Memories
+- [v3.12.1 Session](mem://03-v3.12.1-session) — Legacy field migration, AST parity test, fresh ERD, v15 audit, version bump (v3.12.1)
+- [v15 Legacy Compat Audit](mem://02-v15-legacy-compat-audit) — Keep JSON overlay + SQLite column rename through v3.x, remove in v4.0.0
+- [v15 Rename Progress](mem://features/v15-rename-progress) — Phase 1 complete: all 22 tables singular + {Table}Id PKs + IsDraft/IsPreRelease + CSharp→Csharp (v3.5.0)
+- [Deploy Layout & Binary Readout](mem://features/deploy-layout-and-binary-readout) — Deploy folder is `gitmap-cli` (not `gitmap`). Bare `gitmap` prints Active/Deployed/Config triplet. PATH-detection reuses existing install location.
+- [Uninstall Quick Scripts](mem://features/uninstall-quick-scripts) — Root-level uninstall-quick.{ps1,sh} one-liners that delegate to `gitmap self-uninstall` with manual-sweep fallback. Cleans both `gitmap-cli/` and legacy `gitmap/`.
+- [Scan Folder & Version Probe Schema](mem://features/scan-folder-and-version-probe) — ScanFolder + VersionProbe tables, `gitmap sf add/list/rm` (v3.7.0)
+- [Version Probe](mem://features/version-probe) — Hybrid `git ls-remote` → shallow clone fallback. `gitmap probe [path|--all]`. Scan auto-tags repos with ScanFolderId. (v3.8.0)
+- [Find-Next](mem://features/find-next) — `gitmap find-next` / `fn` reads latest VersionProbe rows where IsAvailable=1. `--scan-folder <id>` filter, `--json` output. Read-only. (v3.9.0)
+- [Parallel Pull](mem://features/parallel-pull) — `gitmap pull --parallel <N>` worker pool with mutex-guarded BatchProgress. `--only-available` intersects targets via FindNext (fail-open). (v3.10.0)
+- [Code Constraints](mem://style/code-constraints) — Strict rules for code style, structure, and pull requests
+- [Code Quality Process](mem://style/code-quality-improvement-process) — Architectural principles and resilience patterns
+- [README Branding](mem://style/readme-branding) — Strict layout and linking requirements for the project author section
+- [Windows Environment](mem://constraints/windows-environment) — Long paths, short root recommendations for git
+- [PowerShell Encoding](mem://constraints/powershell-encoding) — ASCII punctuation, Virtual Terminal Processing, stdout vs stderr
+- [Navigation Helper](mem://features/navigation-helper) — Shell wrapper using GITMAP_SHELL_HANDOFF for cd/clone-next
+- [Command Help System](mem://features/command-help-system) — 120-line limit per help file, 3-8 line realistic simulations
+- [Clone-Next Flatten](mem://features/clone-next-flatten) — Default flatten: clone into base-name folder, version tracking in DB with RepoVersionHistory table (DONE v2.75.0)
+- [Clone Direct URL](mem://features/clone-direct-url) — gitmap clone accepts direct HTTPS/SSH URLs with optional folder name, auto-flattens versioned URLs
+- [Move & Merge Commands](mem://features/movemerge) — gitmap mv / merge-both / merge-left / merge-right with L/R/S/A/B/Q prompt + --prefer-* bypass + URL-side commit/push (v2.96.0)
+- [Release Alias](mem://features/release-alias) — gitmap as / release-alias (ra) / release-alias-pull (rap) with auto-stash labeled by alias-version-unixts, label-match pop for concurrent safety (v3.0.0)
+- [Self Install Uninstall](mem://features/self-install-uninstall) — gitmap self-install / self-uninstall manage the binary itself (separate from third-party install/uninstall). Embedded scripts via go:embed, Windows handoff, marker-block PATH cleanup
+- [Marker Comments](mem://features/marker-comments) — Decentralized opt-in for completion generator: `// gitmap:cmd top-level` + `// gitmap:cmd skip`, CI drift check enforces sync (v3.0.0)
+- [Database Architect](mem://tech/database-architecture) — Idempotent SQLite migrations, PascalCase schema helpers
+- [Database Constraints](mem://tech/database-constraints) — Recursive reconciliation pattern, explicitly re-query database IDs
+- [Database Location](mem://tech/database-location) — SQLite state anchored to binary execution path via filepath.EvalSymlinks
+- [Process Sync](mem://tech/process-synchronization) — Advisory file-based locking via gitmap.lock
+- [DB Migration Strategy](mem://tech/database-migration-strategy) — Graceful recovery for breaking schema changes, intercepting scan errors
+- [Static Analysis](mem://tech/static-analysis-security) — Linter setup, vulnerability response times, @latest installations prohibited
+- [Security Hardening](mem://tech/security-hardening) — Zip extraction path validation, io.LimitReader for decompression bombs
+- [Changelog System](mem://project/changelog-system) — Dual-mode Markdown/React changelog synced with local release metadata
+- [Flag Parsing Logic](mem://tech/flag-parsing-logic) — Reordering flags before args to bypass Go's default flag package limitations
+- [Go Namespace Rules](mem://tech/go-namespace-constraints) — Preventing redeclaration across files in the same Go package
+- [Vulnerability Mitigation](mem://tech/vulnerability-mitigation-strategy) — Bypassing GO-2026-4601 in Go 1.24 via custom http Request
+- [Config Pattern](mem://tech/config-pattern) — Three-layer configuration merge (defaults < config.json < CLI flags)
+- [Script Generation](mem://tech/script-generation) — PowerShell text/template encoding with UTF-8 BOM
+- [Constants Structure](mem://tech/constants-structure) — Avoiding redeclaration errors with unique suffixes and domain-specific files
+- [Code Red Error Mgmt](mem://tech/code-red-error-management) — Zero-swallow error policy and os.Stderr standardized format
+- [Internal Memory Standard](mem://project/internal-memory-standard) — Folder structure and file naming conventions for project planning

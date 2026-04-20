@@ -1,0 +1,17 @@
+{
+  "version": "2.56.1",
+  "branch": "release/v2.56.1",
+  "sourceBranch": "main",
+  "commit": "d6990def5fc9f84cd9cf8711ffed211d048ab1b4",
+  "tag": "v2.56.1",
+  "assets": [],
+  "changelog": [
+    "When the user provides a non-existent path during the `gitmap update` interactive prompt, the system now clones the gitmap source repository into that directory instead of rejecting it.",
+    "After a successful clone, the path is validated, saved to the SQLite Settings DB, and used for the update — no re-prompting on future runs.",
+    "Added `SourceRepoCloneURL`, `MsgUpdateCloning`, `MsgUpdateCloneOK`, and `ErrUpdateCloneFailed` constants."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-07T20:02:43Z",
+  "isLatest": false
+}

@@ -1,0 +1,20 @@
+{
+  "version": "2.36.3",
+  "branch": "release/v2.36.3",
+  "sourceBranch": "main",
+  "commit": "c72b2edf6f4da964c86fc8d1fbab0bda663b1f23",
+  "tag": "v2.36.3",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.36.3.",
+    "Refactored legacy directory migration into shared `localdirs` package for reuse across CLI startup and release workflow.",
+    "Release workflow now re-runs migration after returning to the original branch, preventing `.release/` from persisting when older branches restore tracked legacy files.",
+    "Auto-commit `classifyFiles` now treats legacy `.release/` paths as release files for silent commit handling.",
+    "Simplified doctor legacy directory check to always pass (migration handles cleanup automatically).",
+    "Removed unused legacy directory warning/fix constants from `constants_doctor.go`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-26T18:45:36Z",
+  "isLatest": false
+}

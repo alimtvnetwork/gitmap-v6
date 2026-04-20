@@ -1,0 +1,11 @@
+{
+  "version": "2.20.0",
+  "tag": "v2.20.0",
+  "branch": "release/v2.20.0",
+  "features": [
+    "Fixed double-nesting bug in OpenDefault() where profile config resolved to <binary>/data/data/profiles.json",
+    "Added DefaultDBPath() diagnostic helper to store/location.go",
+    "List command now prints resolved DB path when --verbose or when zero repos found",
+    "Created spec/01-app/44-list-db-diagnostic.md for path resolution contract"
+  ]
+}

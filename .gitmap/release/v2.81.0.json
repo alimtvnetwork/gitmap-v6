@@ -1,0 +1,16 @@
+{
+  "version": "2.81.0",
+  "branch": "release/v2.81.0",
+  "sourceBranch": "main",
+  "commit": "2d479e85e4b504a360e7e4b459d43a80e789f1ac",
+  "tag": "v2.81.0",
+  "assets": [],
+  "changelog": [
+    "`go-winres` CI icon size error — Windows `.ico` resources require images ≤256x256 but `icon.png` was 512x512. Created `icon-256.png` (LANCZOS resize) and updated `winres.json` to reference it.",
+    "Documented root cause and prevention in `spec/08-generic-update/09-winres-icon-constraint.md`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T16:53:38Z",
+  "isLatest": false
+}

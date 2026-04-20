@@ -1,0 +1,20 @@
+{
+  "version": "2.15.0",
+  "tag": "v2.15.0",
+  "branch": "main",
+  "features": [
+    "Cross-platform build support: run.sh (Linux/macOS) with full parity to run.ps1",
+    "Makefile with corrected flags matching run.sh argument format",
+    "GitHub Actions CI workflow: test on push, cross-compile 6 OS/arch targets",
+    "GitHub Actions Release workflow: auto-release on v* tags with compression and checksums",
+    "Spec document: spec/01-app/42-cross-platform.md",
+    "Interactive TUI mode (gitmap interactive / gitmap i) with Bubble Tea",
+    "TUI repo browser with fuzzy search and multi-select",
+    "TUI batch actions: pull, exec, status across selected repos",
+    "TUI group management: browse, create, delete groups interactively",
+    "TUI status dashboard with live repo status view",
+    "Spec document: spec/01-app/43-interactive-tui.md",
+    "Build System section added to Architecture docs page",
+    "Documentation site fully reflects all v2.14.0+ features"
+  ]
+}

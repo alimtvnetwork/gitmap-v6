@@ -1,0 +1,30 @@
+graph TD
+    A["update-cleanup command"] --> B["Resolve binary directory"]
+    B --> C["Scan directory for artifacts"]
+
+    C --> D{"Found .old backup?"}
+    D -->|YES| D1["Remove binary.exe.old"]
+    D -->|NO| E{"Found handoff copies?"}
+    D1 --> E
+
+    E -->|YES| E1["Remove binary-update-PID.exe"]
+    E -->|NO| F{"Found temp scripts?"}
+    E1 --> F
+
+    F -->|YES| F1["Remove binary-update-*.ps1 from temp dir"]
+    F -->|NO| G{"Found updater tmp copies?"}
+    F1 --> G
+
+    G -->|YES| G1["Remove updater-tmp-PID.exe"]
+    G -->|NO| H["Cleanup Complete"]
+    G1 --> H
+
+    subgraph "Artifact Sources"
+        I1["Rename-first deploy"] -.-> D
+        I2["Handoff mechanism"] -.-> E
+        I3["Worker script gen"] -.-> F
+        I4["Standalone updater"] -.-> G
+    end
+
+    style A fill:#22c55e,color:#fff
+    style H fill:#22c55e,color:#fff

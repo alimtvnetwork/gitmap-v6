@@ -1,0 +1,18 @@
+{
+  "version": "2.24.0",
+  "branch": "release/v2.24.0",
+  "sourceBranch": "main",
+  "commit": "238fa8c3f3a40bb802d2120be4335650c76b43f0",
+  "tag": "v2.24.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.24.0.",
+    "Moved release metadata writing from the release branch to the original branch, letting auto-commit handle `.release/` files after returning.",
+    "Removed `commitReleaseMeta` step from the release branch workflow; the release branch now only contains the branch, tag, and push.",
+    "Simplified `pushAndFinalize` to always complete without metadata writes (metadata is now the caller's responsibility)."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-20T00:52:41Z",
+  "isLatest": false
+}

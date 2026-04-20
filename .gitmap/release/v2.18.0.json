@@ -1,0 +1,11 @@
+{
+  "version": "2.18.0",
+  "tag": "v2.18.0",
+  "branch": "release/v2.18.0",
+  "features": [
+    "Third terminal demo on Batch Actions page showing batch status with dirty/clean state",
+    "Fixed missing os/exec import in release asset upload",
+    "Resolved deriveSlug redeclaration conflict in project repos output",
+    "Removed unused os import from audit command"
+  ]
+}

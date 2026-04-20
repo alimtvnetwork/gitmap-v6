@@ -1,0 +1,15 @@
+{
+  "version": "2.10.0",
+  "branch": "release/v2.10.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.10.0",
+  "assets": [],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-13T00:00:00Z",
+  "isLatest": true,
+  "changelog": [
+    "Version bump for next development cycle."
+  ]
+}

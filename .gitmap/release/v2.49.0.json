@@ -1,0 +1,23 @@
+{
+  "version": "2.49.0",
+  "branch": "release/v2.49.0",
+  "sourceBranch": "main",
+  "commit": "d2125edacf910c43a0294a69ad58058a4a7d1532",
+  "tag": "v2.49.0",
+  "assets": [],
+  "changelog": [
+    "Go binary cross-compilation is now opt-in: use `--bin` or `-b` to build executables during release.",
+    "Removed `--no-assets` flag (replaced by the inverse `--bin` flag).",
+    "`gitmap setup` now ensures `release-assets` and `.gitmap/release-assets` are in `.gitignore`.",
+    "Release workflow auto-appends missing release-related paths to `.gitignore` before each release.",
+    "Added `release-assets` and `.gitmap/release-assets` to `.gitignore` to prevent tracking build artifacts.",
+    "CI release workflow now triggers on `release/*` branch push (in addition to tags).",
+    "Each GitHub release includes: changelog entry, SHA256 checksums, release metadata table, and asset matrix.",
+    "Version-specific `install.ps1` script is auto-generated and attached to each release for one-liner install.",
+    "Pre-release versions (containing `-`) are automatically marked as prerelease on GitHub."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-06T21:35:48Z",
+  "isLatest": false
+}

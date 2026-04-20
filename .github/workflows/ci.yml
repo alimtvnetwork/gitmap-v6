@@ -1,0 +1,531 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  sha-check:
+    name: Check if already built
+    runs-on: ubuntu-latest
+    outputs:
+      already-built: ${{ steps.cache-check.outputs.cache-hit }}
+    steps:
+      - name: Check SHA cache
+        id: cache-check
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ci-passed
+          key: ci-passed-${{ github.sha }}
+          lookup-only: true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: sha-check
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already passed lint"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Go vet
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        run: go vet ./...
+
+      - name: golangci-lint
+        if: needs.sha-check.outputs.already-built != 'true'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: gitmap
+          args: --timeout=5m
+
+  generate-check:
+    # Guarantees that every Cmd* constant added to a scanned constants_*.go
+    # is reflected in completion/allcommands_generated.go. If a contributor
+    # forgets to run `go generate ./...`, this job fails with a diff so the
+    # tab-completion list never silently drifts from the source of truth.
+    name: Generate Drift Check
+    runs-on: ubuntu-latest
+    needs: sha-check
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already passed generate drift check"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Run go generate
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        run: go generate ./...
+
+      - name: Fail if generated files drifted
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        shell: bash
+        run: |
+          if ! git diff --exit-code; then
+            echo ""
+            echo "::error::Generated files are out of sync with constants."
+            echo "::error::Run 'cd gitmap && go generate ./...' locally and commit the result."
+            echo ""
+            echo "Drifted files:"
+            git diff --name-only
+            exit 1
+          fi
+          echo "✅ All generated files are in sync."
+
+  vulncheck:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: sha-check
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already passed vulncheck"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Install govulncheck
+        if: needs.sha-check.outputs.already-built != 'true'
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Run govulncheck
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        run: |
+          set +e
+          govulncheck ./... 2>&1 | tee /tmp/vulncheck.out
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            if grep "packages you import" /tmp/vulncheck.out | grep -qv "0 vulnerabilities in packages"; then
+              echo "::error::Third-party vulnerabilities detected"
+              exit 1
+            fi
+            echo "::warning::Only stdlib vulnerabilities found (no fix available in current Go version)"
+          fi
+
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    needs: [sha-check, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: unit
+            packages: ./clonenext/... ./cloner/... ./cmd/... ./config/... ./formatter/... ./mapper/... ./release/...
+          - name: store
+            packages: ./tests/store_test/...
+          - name: integration
+            packages: ./tests/cmd_test/... ./tests/constants_test/... ./tests/release_test/...
+          - name: tui
+            packages: ./tui/...
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already passed tests (${{ matrix.name }})"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Run tests
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          go test ${{ matrix.packages }} -v -count=1 -coverprofile=coverage-${{ matrix.name }}.out -covermode=atomic 2>&1 | tee test-output.txt
+          exit_code=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$exit_code" -ne 0 ]; then
+            echo ""
+            echo "========================================="
+            echo "  FAILED TESTS (${{ matrix.name }})"
+            echo "========================================="
+            grep -E -A 5 '^--- FAIL:' test-output.txt || true
+            echo "========================================="
+          fi
+
+          exit "$exit_code"
+
+      - name: Upload test results
+        if: always() && needs.sha-check.outputs.already-built != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.name }}
+          path: |
+            gitmap/test-output.txt
+            gitmap/coverage-${{ matrix.name }}.out
+          retention-days: 7
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [sha-check, lint, vulncheck, generate-check, test]
+    if: always()
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already passed all tests"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Download all test results
+        if: needs.sha-check.outputs.already-built != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: results
+
+      - name: Aggregate and report failures
+        if: needs.sha-check.outputs.already-built != 'true'
+        shell: bash
+        run: bash .github/scripts/test-summary.sh results
+
+      - name: Coverage report
+        if: always() && needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        shell: bash
+        run: |
+          echo ""
+          echo "========================================="
+          echo "  COVERAGE BY PACKAGE"
+          echo "========================================="
+
+          # Merge all coverage profiles
+          echo "mode: atomic" > combined-coverage.out
+          for f in ../results/test-results-*/coverage-*.out; do
+            if [ -f "$f" ]; then
+              grep -v '^mode:' "$f" >> combined-coverage.out 2>/dev/null || true
+            fi
+          done
+
+          if [ "$(wc -l < combined-coverage.out)" -le 1 ]; then
+            echo "No coverage data collected."
+            exit 0
+          fi
+
+          # Per-package breakdown
+          go tool cover -func=combined-coverage.out | \
+            awk '
+              /^total:/ { total=$NF; next }
+              {
+                pkg=$1; sub(/\/[^/]+$/, "", pkg)
+                if (!(pkg in seen)) { seen[pkg]=1; order[++n]=pkg }
+                split($NF, a, "%"); pct[pkg] += a[1]; cnt[pkg]++
+              }
+              END {
+                for (i=1; i<=n; i++) {
+                  p = order[i]
+                  avg = pct[p] / cnt[p]
+                  printf "  %-55s %5.1f%%\n", p, avg
+                }
+                printf "\n  %-55s %s\n", "Total", total
+              }
+            '
+
+          echo "========================================="
+
+      - name: Mark SHA as built
+        if: success() && needs.sha-check.outputs.already-built != 'true'
+        run: mkdir -p /tmp/ci-passed && echo "${{ github.sha }}" > /tmp/ci-passed/sha.txt
+
+      - name: Save SHA to cache
+        if: success() && needs.sha-check.outputs.already-built != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/ci-passed
+          key: ci-passed-${{ github.sha }}
+
+  build:
+    name: Build (${{ matrix.os }}-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: [sha-check, test-summary]
+    if: always() && needs.test-summary.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            ext: .exe
+          - os: windows
+            arch: arm64
+            ext: .exe
+          - os: linux
+            arch: amd64
+            ext: ""
+          - os: linux
+            arch: arm64
+            ext: ""
+          - os: darwin
+            arch: amd64
+            ext: ""
+          - os: darwin
+            arch: arm64
+            ext: ""
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already built (${{ matrix.os }}/${{ matrix.arch }})"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - uses: actions/setup-go@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      - name: Build binary
+        if: needs.sha-check.outputs.already-built != 'true'
+        working-directory: gitmap
+        run: |
+          VERSION="dev-${GITHUB_SHA::10}"
+          LDFLAGS="-s -w -X 'github.com/user/gitmap/constants.Version=$VERSION'"
+          OUTPUT="gitmap-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
+          echo "Building $OUTPUT..."
+          CGO_ENABLED=0 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags "$LDFLAGS" -o "$OUTPUT" .
+          echo "✅ Built $OUTPUT ($(du -h "$OUTPUT" | cut -f1))"
+
+      - name: Upload binary
+        if: needs.sha-check.outputs.already-built != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitmap-${{ matrix.os }}-${{ matrix.arch }}
+          path: gitmap/gitmap-*
+          retention-days: 14
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [sha-check, build]
+    if: always() && needs.build.result == 'success'
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "✅ SHA ${{ github.sha }} already built all targets"
+
+      - name: Download all binaries
+        if: needs.sha-check.outputs.already-built != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: gitmap-*
+          path: binaries
+
+      - name: Print build summary
+        if: needs.sha-check.outputs.already-built != 'true'
+        shell: bash
+        run: |
+          echo ""
+          echo "========================================="
+          echo "  BUILD SUMMARY"
+          echo "========================================="
+          echo ""
+          printf "  %-45s %s\n" "Binary" "Size"
+          printf "  %-45s %s\n" "---------------------------------------------" "--------"
+
+          total_size=0
+          count=0
+
+          for dir in binaries/gitmap-*; do
+            if [ ! -d "$dir" ]; then continue; fi
+            for file in "$dir"/*; do
+              if [ ! -f "$file" ]; then continue; fi
+              name=$(basename "$file")
+              size=$(stat --format="%s" "$file" 2>/dev/null || stat -f "%z" "$file" 2>/dev/null)
+              human=$(numfmt --to=iec --suffix=B "$size" 2>/dev/null || echo "${size}B")
+              printf "  %-45s %s\n" "$name" "$human"
+              total_size=$((total_size + size))
+              count=$((count + 1))
+            done
+          done
+
+          echo ""
+          total_human=$(numfmt --to=iec --suffix=B "$total_size" 2>/dev/null || echo "${total_size}B")
+          echo "  Total: $count binaries, $total_human"
+          echo "========================================="
+
+  deploy-dfd:
+    # Spec: spec/04-generic-cli/22-data-folder-deploy-and-cleanup.md
+    # Asserts DFD-1..DFD-9 do not regress by running the real entry
+    # scripts (run.sh on Ubuntu, run.ps1 on Windows) into a sandboxed
+    # HOME and verifying the resulting layout, PATH entry, and
+    # absence of *.old / drive-root shim leftovers.
+    name: Deploy DFD Parity (${{ matrix.os }})
+    needs: sha-check
+    if: needs.sha-check.outputs.already-built != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell: bash
+          - os: windows-latest
+            shell: pwsh
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: gitmap/go.mod
+          cache-dependency-path: gitmap/go.sum
+
+      # ---------------- Ubuntu: run.sh ----------------
+      - name: Run run.sh into sandbox HOME (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        env:
+          SANDBOX_HOME: ${{ github.workspace }}/dfd-sandbox
+        run: |
+          set -euo pipefail
+          mkdir -p "$SANDBOX_HOME/bin-run"
+          # Pre-seed legacy artifacts so cleanup (DFD-6) has something to remove.
+          touch "$SANDBOX_HOME/bin-run/gitmap.old"
+          touch "$SANDBOX_HOME/bin-run/gitmap-update-1234.old"
+          HOME="$SANDBOX_HOME" ./run.sh --no-pull --no-deploy=false --deploy-path "$SANDBOX_HOME/bin-run"
+
+      - name: Assert DFD-1/4/6 (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        env:
+          SANDBOX_HOME: ${{ github.workspace }}/dfd-sandbox
+        run: |
+          set -euo pipefail
+          DEPLOY="$SANDBOX_HOME/bin-run"
+          APP_DIR="$DEPLOY/gitmap"
+          BIN="$APP_DIR/gitmap"
+          fail() { echo "::error::DFD regression: $*"; exit 1; }
+
+          echo "=== DFD-1: wrapped layout <root>/gitmap/gitmap ==="
+          [ -d "$APP_DIR" ] || fail "DFD-1: missing wrapped folder $APP_DIR"
+          [ -x "$BIN" ]     || fail "DFD-1: missing or non-executable binary $BIN"
+          [ -d "$APP_DIR/data" ] || echo "::warning::data/ not present (may be expected on first run)"
+
+          echo "=== DFD-6: *.old and update temps purged from deploy folder ==="
+          if compgen -G "$DEPLOY/*.old" > /dev/null; then
+            ls "$DEPLOY"/*.old; fail "DFD-6: *.old files remain in $DEPLOY"
+          fi
+          if compgen -G "$DEPLOY/gitmap-update-*" > /dev/null; then
+            ls "$DEPLOY"/gitmap-update-*; fail "DFD-6: update temp files remain in $DEPLOY"
+          fi
+
+          echo "=== DFD-4: deploy folder registered in user shell profile ==="
+          PROFILE_HIT=0
+          for rc in "$SANDBOX_HOME/.bashrc" "$SANDBOX_HOME/.profile" "$SANDBOX_HOME/.zshrc"; do
+            if [ -f "$rc" ] && grep -qF "$APP_DIR" "$rc"; then
+              echo "  -> PATH entry found in $rc"
+              PROFILE_HIT=1
+            fi
+          done
+          [ "$PROFILE_HIT" = "1" ] || fail "DFD-4: $APP_DIR not added to any shell profile under $SANDBOX_HOME"
+
+          echo "All Ubuntu DFD assertions passed."
+
+      # ---------------- Windows: run.ps1 ----------------
+      - name: Run run.ps1 into sandbox HOME (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          SANDBOX_HOME: ${{ github.workspace }}\dfd-sandbox
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path "$env:SANDBOX_HOME\bin-run" | Out-Null
+          # Pre-seed legacy artifacts (DFD-6) and a fake drive-root shim (DFD-7).
+          New-Item -ItemType File -Force -Path "$env:SANDBOX_HOME\bin-run\gitmap.exe.old" | Out-Null
+          New-Item -ItemType File -Force -Path "$env:SANDBOX_HOME\bin-run\gitmap-update-9999.exe" | Out-Null
+          $shimDrive = (Get-Item $env:SANDBOX_HOME).PSDrive.Root
+          $shimPath  = Join-Path $shimDrive 'gitmap.exe'
+          # Only seed shim if drive-root is writable (not always the case on hosted runners).
+          try { New-Item -ItemType File -Force -Path $shimPath -ErrorAction Stop | Out-Null }
+          catch { Write-Host "  (drive-root shim seed skipped: $_)" }
+          $env:HOME = $env:SANDBOX_HOME
+          $env:USERPROFILE = $env:SANDBOX_HOME
+          .\run.ps1 -NoPull -DeployPath "$env:SANDBOX_HOME\bin-run"
+
+      - name: Assert DFD-1/4/6/7 (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          SANDBOX_HOME: ${{ github.workspace }}\dfd-sandbox
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $deploy = "$env:SANDBOX_HOME\bin-run"
+          $appDir = Join-Path $deploy 'gitmap'
+          $bin    = Join-Path $appDir 'gitmap.exe'
+          function Fail($msg) { Write-Host "::error::DFD regression: $msg"; exit 1 }
+
+          Write-Host "=== DFD-1: wrapped layout <root>\gitmap\gitmap.exe ==="
+          if (-not (Test-Path $appDir)) { Fail "DFD-1: missing wrapped folder $appDir" }
+          if (-not (Test-Path $bin))    { Fail "DFD-1: missing binary $bin" }
+
+          Write-Host "=== DFD-6: *.old and update temps purged from deploy folder ==="
+          $stale = Get-ChildItem -Path $deploy -Filter '*.old' -ErrorAction SilentlyContinue
+          if ($stale) { $stale | ForEach-Object { Write-Host $_.FullName }; Fail "DFD-6: *.old files remain" }
+          $upd = Get-ChildItem -Path $deploy -Filter 'gitmap-update-*' -ErrorAction SilentlyContinue
+          if ($upd) { $upd | ForEach-Object { Write-Host $_.FullName }; Fail "DFD-6: update temps remain" }
+
+          Write-Host "=== DFD-7: drive-root shim removed ==="
+          $shimDrive = (Get-Item $env:SANDBOX_HOME).PSDrive.Root
+          $shimPath  = Join-Path $shimDrive 'gitmap.exe'
+          if (Test-Path $shimPath) { Fail "DFD-7: drive-root shim $shimPath still exists" }
+
+          Write-Host "=== DFD-4: deploy folder registered on user PATH ==="
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($null -eq $userPath -or -not ($userPath.Split(';') -contains $appDir)) {
+            Fail "DFD-4: $appDir not present in user-scope PATH (got: $userPath)"
+          }
+
+          Write-Host "All Windows DFD assertions passed."

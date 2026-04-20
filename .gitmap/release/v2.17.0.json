@@ -1,0 +1,11 @@
+{
+  "version": "2.17.0",
+  "tag": "v2.17.0",
+  "branch": "release/v2.17.0",
+  "features": [
+    "Configurable dashboard auto-refresh interval via config.json dashboardRefresh field",
+    "30-second auto-refresh timer on TUI dashboard using Bubble Tea tea.Tick",
+    "Added --refresh flag to interactive command for CLI-level override",
+    "Refresh interval validated with fallback to 30s default when <= 0"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "2.45.0",
+  "branch": "release/v2.45.0",
+  "sourceBranch": "main",
+  "commit": "1fd4a6eb5de3d31db71a9a8ae779c0edf2acbd5c",
+  "tag": "v2.45.0",
+  "assets": [],
+  "changelog": [
+    "Updated CloneNext docs page with `--create-remote` flag, usage, and terminal example.",
+    "Added repo creation failure to error handling table on docs site."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-03T18:12:03Z",
+  "isLatest": false
+}

@@ -1,0 +1,17 @@
+{
+  "version": "2.23.0",
+  "branch": "release/v2.23.0",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v2.23.0",
+  "assets": [],
+  "changelog": [
+    "Bumped compiled version constant to v2.23.0.",
+    "Added `--notes` / `-N` flag to `release-branch` and `release-pending` commands, matching the `release` command.",
+    "Updated docs site Release page with metadata-first workflow diagram, release notes feature card, and `--notes` flag documentation."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-03-20T00:00:00Z",
+  "isLatest": true
+}

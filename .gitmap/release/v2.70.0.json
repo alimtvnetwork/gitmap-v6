@@ -1,0 +1,19 @@
+{
+  "version": "2.70.0",
+  "branch": "release/v2.70.0",
+  "sourceBranch": "main",
+  "commit": "01410d66dca4405f0f412e457c448a92cc8db83e",
+  "tag": "v2.70.0",
+  "assets": [],
+  "changelog": [
+    "`gitmap clone \u003curl\u003e` now auto-registers cloned repositories with GitHub Desktop by default (no manual prompt).",
+    "`gitmap clone \u003curl\u003e` automatically opens the cloned folder in VS Code (`code --reuse-window`), with `--new-window` fallback for admin-mode conflicts.",
+    "Added `isVSCodeAvailable()` detection via `exec.LookPath` in `cmd/clonevscode.go`.",
+    "`gitmap update` now auto-syncs the active PATH binary when it differs from the deployed binary, resolving the `[FAIL] Active PATH version does not match deployed version` error.",
+    "Added `Copy-Item` sync step with rename and kill-process fallbacks in the update PowerShell script."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-16T06:17:42Z",
+  "isLatest": false
+}

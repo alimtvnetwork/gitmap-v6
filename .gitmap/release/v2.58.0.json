@@ -1,0 +1,18 @@
+{
+  "version": "2.58.0",
+  "branch": "release/v2.58.0",
+  "sourceBranch": "main",
+  "commit": "934a3e3fb33f6416d36a1c21ce155ea0c6b03710",
+  "tag": "v2.58.0",
+  "assets": [],
+  "changelog": [
+    "Fixed `-y` / `--yes` flag being silently ignored when placed after the version argument (e.g., `gitmap release v2.55 -y`).",
+    "Root cause: Go's `flag` package stops parsing at the first non-flag argument, so flags after the version were never processed.",
+    "Added `reorderFlagsBeforeArgs()` helper in `releaseargs.go` — reorders CLI args so all flags precede positional arguments before `flag.Parse()`.",
+    "Affects `release`, `release-self` (`r`, `rs`), and all commands sharing `parseReleaseFlags`."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-07T20:07:44Z",
+  "isLatest": false
+}

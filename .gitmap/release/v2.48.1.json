@@ -1,0 +1,16 @@
+{
+  "version": "2.48.1",
+  "branch": "release/v2.48.1",
+  "sourceBranch": "main",
+  "commit": "af96b14948f48615340d591c29cf5ab032abb365",
+  "tag": "v2.48.1",
+  "assets": [],
+  "changelog": [
+    "`clone-next` now automatically changes into the newly cloned directory after removing the old folder.",
+    "Prints `→ Now in \u003ctarget\u003e` confirmation after navigating to the new clone."
+  ],
+  "draft": false,
+  "preRelease": false,
+  "createdAt": "2026-04-03T19:42:57Z",
+  "isLatest": false
+}
