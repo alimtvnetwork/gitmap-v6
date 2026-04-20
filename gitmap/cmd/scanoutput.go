@@ -72,7 +72,7 @@ func writeTextOutput(records []model.ScanRecord, outputDir string) {
 	}
 	defer file.Close()
 	formatter.WriteText(file, records)
-	fmt.Printf(constants.MsgTextWritten, path)
+	fmt.Printf(constants.MsgTextWritten, filepath.Base(path))
 }
 
 // writeFolderStructure writes a Markdown file showing the repo tree.
