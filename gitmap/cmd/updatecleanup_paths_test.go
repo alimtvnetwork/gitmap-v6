@@ -51,8 +51,8 @@ func TestCollectBackupCleanupDirsIncludesPathDerivedDeployAndBuild(t *testing.T)
 
 	dirs := collectBackupCleanupDirs("E:/bin-run/gitmap.exe", "/repo", config)
 	assertHasCleanupDir(t, dirs, "E:/bin-run")
-	assertHasCleanupDir(t, dirs, "E:/gitmap")
-	assertHasCleanupDir(t, dirs, "E:/bin-run/gitmap")
+	assertHasCleanupDir(t, dirs, "E:/gitmap-cli")
+	assertHasCleanupDir(t, dirs, "E:/bin-run/gitmap-cli")
 	assertHasCleanupDir(t, dirs, "/repo/bin")
 }
 
