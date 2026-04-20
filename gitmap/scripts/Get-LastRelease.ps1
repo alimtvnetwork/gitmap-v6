@@ -24,7 +24,7 @@ function Get-ReleaseFromBinary {
     param([string]$Binary)
 
     if ($Binary.Length -eq 0) {
-        $cmd = Get-Command gitmap -ErrorAction SilentlyContinue
+        $cmd = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($cmd -and (Test-Path $cmd.Source)) {
             $Binary = $cmd.Source
         }
