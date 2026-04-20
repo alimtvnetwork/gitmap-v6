@@ -205,6 +205,3 @@ func resolveTargetSource(flagTargets string, configTargets []model.ReleaseTarget
 
 	return "built-in defaults"
 }
-
-// persistReleaseToDB / resolveCurrentRepoID / releaseMetaToRecord live in
-// releasepersist.go to keep this file under the project's 200-line limit.
