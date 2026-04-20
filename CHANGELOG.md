@@ -1,6 +1,16 @@
 # Changelog
 
-## v3.17.0 — (2026-04-20) — Release table now FK-linked to Repo
+## v3.17.0 — (2026-04-20) — Release.RepoId FK + doctor duplicate-binary check + uninstall profile cleanup
+
+### Doctor
+
+- **New check: `checkDuplicateBinaries`** — detects when multiple `gitmap` binaries exist on PATH (e.g. a stale drive-root shim + the canonical `gitmap-cli/` install). Lists each binary as `[active]` or `[stale]` with its version, and prints a one-shot removal command (`Remove-Item` on Windows, `sudo rm` on Unix). This catches the root cause of the `uninstall-quick.ps1` "not recognized as a cmdlet" error before it happens.
+
+### Fixed (uninstall)
+
+- **`uninstall-quick.ps1` + `gitmap self-uninstall`** — now strip the `# gitmap shell completion` + `. '…completions.ps1'` dot-source lines from **all four** PowerShell profile files (PowerShell + WindowsPowerShell × profile.ps1 + Microsoft.PowerShell_profile.ps1). Previously only the marker-block was removed from a single profile, leaving stale dot-source lines that errored on every new terminal after uninstall.
+
+### Schema (BREAKING)
 
 ### Schema (BREAKING)
 
