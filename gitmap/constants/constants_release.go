@@ -41,6 +41,36 @@ const (
 	FlagDescNotes           = "Release notes or title for the release"
 )
 
+// Bare-release auto-bump messages (v3.19.0).
+//
+// When `gitmap release` / `gitmap r` is run with no version and no --bump,
+// gitmap reads the last release from .gitmap/release/latest.json, bumps the
+// MINOR segment, and prompts the user. -y skips the prompt.
+const (
+	MsgReleaseAutoBumpHeader  = "\n  Auto-bump: %s → %s (minor)\n"
+	MsgReleaseAutoBumpPrompt  = "  Proceed with this release? [y/N]: "
+	MsgReleaseAutoBumpYes     = "  → -y supplied; proceeding without prompt.\n"
+	MsgReleaseAutoBumpAborted = "  ✗ Auto-bump aborted by user.\n"
+)
+
+// Multi-repo scan-dir release messages (v3.19.0).
+//
+// When `gitmap r` is run from a directory containing many git repos (the
+// cwd itself is NOT a git repo), gitmap walks the tree, keeps only repos
+// that have a prior release manifest, computes a minor bump per repo, and
+// prompts ONCE before releasing them all.
+const (
+	MsgReleaseScanHeader   = "\n  Auto-bump %d repo(s) with prior releases:\n"
+	MsgReleaseScanRow      = "    • %s   %s → %s\n"
+	MsgReleaseScanPrompt   = "\n  Proceed with all releases? [y/N]: "
+	MsgReleaseScanYes      = "\n  → -y supplied; proceeding without prompt.\n"
+	MsgReleaseScanAborted  = "  ✗ Multi-repo release aborted by user.\n"
+	MsgReleaseScanRunning  = "\n  ── Releasing %s → %s ──\n"
+	MsgReleaseScanFail     = "  ✗ Release failed for %s: %v\n"
+	MsgReleaseScanPartial  = "\n  ⚠ %d of %d release(s) failed.\n"
+	MsgReleaseScanDone     = "\n  ✓ All %d release(s) complete.\n"
+)
+
 // Release orphaned metadata messages.
 const (
 	MsgReleaseOrphanedMeta    = "  ⚠ Release metadata exists for %s but no tag or branch was found.\n"
