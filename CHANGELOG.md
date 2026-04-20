@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.13.5 — (2026-04-20) — Stale cleanup-path tests aligned with gitmap-cli subdir
+
+### Fixed
+
+- **`gitmap/cmd/updatecleanup_paths_test.go`** — Tests still asserted the legacy `gitmap` deploy subdir, but production code migrated to `GitMapCliSubdir = "gitmap-cli"` (v3.6.0). Updated three tests:
+  - `TestDeriveDeployAppDir`: PATH binary outside the deploy dir now expects `E:/gitmap-cli`; added a third case covering the legacy `E:/gitmap` short-circuit (still recognized by `deriveDeployAppDir`).
+  - `TestCollectBackupCleanupDirsIncludesPathDerivedDeployAndBuild`: now expects `E:/gitmap-cli` and `E:/bin-run/gitmap-cli`.
+  - `TestCollectTempCleanupDirsIncludesTempAndDerivedTargets`: now expects `E:/gitmap-cli`.
+- **`gitmap/cmd/updatescript_test.go`** — `TestBuildUpdateScriptUsesPathAwareDeployVerification` updated: expected substring is now `gitmap-cli\gitmap.exe` to match `constants.UpdatePSDeployDetect` line 114.
+
+### Why
+
+Production paths in `updatecleanup_paths.go` and `constants_update.go` were updated for the v3.6.0 deploy-subdir rename, but these unit tests were missed and started failing on CI. No production behavior change — pure test alignment.
+
 ## v3.13.4 — (2026-04-20) — gocritic sprintfQuotedString fix
 
 ### Fixed
