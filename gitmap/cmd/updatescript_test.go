@@ -11,7 +11,7 @@ func TestBuildUpdateScriptUsesPathAwareDeployVerification(t *testing.T) {
 	checks := []string{
 		`$configDeployedBinary = $null`,
 		`$activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue`,
-		`$deployedBinary = Join-Path $effectiveDeployTarget "gitmap\gitmap.exe"`,
+		`$deployedBinary = Join-Path $effectiveDeployTarget "gitmap-cli\gitmap.exe"`,
 		`Move-Item -Path $resolvedActive -Destination $backupPath -Force`,
 		`Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue`,
 		`Write-Host "  [OK] Synced after killing stale processes." -ForegroundColor Green`,

@@ -12,8 +12,9 @@ func TestDeriveDeployAppDir(t *testing.T) {
 		selfPath string
 		want     string
 	}{
-		{name: "path binary outside gitmap dir", selfPath: "E:/bin-run/gitmap.exe", want: "E:/gitmap"},
-		{name: "path binary already in gitmap dir", selfPath: "E:/gitmap/gitmap.exe", want: "E:/gitmap"},
+		{name: "path binary outside gitmap-cli dir", selfPath: "E:/bin-run/gitmap.exe", want: "E:/gitmap-cli"},
+		{name: "path binary already in gitmap-cli dir", selfPath: "E:/gitmap-cli/gitmap.exe", want: "E:/gitmap-cli"},
+		{name: "path binary already in legacy gitmap dir", selfPath: "E:/gitmap/gitmap.exe", want: "E:/gitmap"},
 		{name: "empty path", selfPath: "", want: ""},
 	}
 
@@ -50,8 +51,8 @@ func TestCollectBackupCleanupDirsIncludesPathDerivedDeployAndBuild(t *testing.T)
 
 	dirs := collectBackupCleanupDirs("E:/bin-run/gitmap.exe", "/repo", config)
 	assertHasCleanupDir(t, dirs, "E:/bin-run")
-	assertHasCleanupDir(t, dirs, "E:/gitmap")
-	assertHasCleanupDir(t, dirs, "E:/bin-run/gitmap")
+	assertHasCleanupDir(t, dirs, "E:/gitmap-cli")
+	assertHasCleanupDir(t, dirs, "E:/bin-run/gitmap-cli")
 	assertHasCleanupDir(t, dirs, "/repo/bin")
 }
 
@@ -63,7 +64,7 @@ func TestCollectTempCleanupDirsIncludesTempAndDerivedTargets(t *testing.T) {
 
 	dirs := collectTempCleanupDirs("E:/bin-run/gitmap.exe", "/repo", config)
 	assertHasCleanupDir(t, dirs, os.TempDir())
-	assertHasCleanupDir(t, dirs, "E:/gitmap")
+	assertHasCleanupDir(t, dirs, "E:/gitmap-cli")
 	assertHasCleanupDir(t, dirs, "/repo/bin")
 }
 
