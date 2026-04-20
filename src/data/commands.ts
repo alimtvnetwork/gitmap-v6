@@ -93,6 +93,31 @@ export const commands: CommandDef[] = [
   },
   {
     category: "scanning",
+    name: "scan all", alias: "scan a", description: "Re-scan every previously-scanned root folder in parallel (planned v3.33.0)",
+    usage: "gitmap scan all [--workers N] [--prune-missing] [--mode ssh|https] [--output csv|json|terminal]",
+    flags: [
+      { flag: "--workers <n>", description: "Parallel workers (1–16, default 4)" },
+      { flag: "--prune-missing", description: "Auto-remove missing roots from DB without prompting" },
+      { flag: "--mode ssh|https", description: "Forwarded to each per-root scan" },
+      { flag: "--output csv|json|terminal", description: "Forwarded to each per-root scan" },
+      { flag: "--github-desktop", description: "Forwarded to each per-root scan" },
+      { flag: "--quiet", description: "Suppress per-root clone help section" },
+    ],
+    examples: [
+      { command: "gitmap scan all", description: "Re-scan every root from the ScanFolder table (4 parallel workers)" },
+      { command: "gitmap scan a", description: "Short alias" },
+      { command: "gitmap scan all --workers 8", description: "Bump parallelism to 8" },
+      { command: "gitmap scan all --prune-missing", description: "Cron-friendly: auto-prune unreachable roots" },
+    ],
+    seeAlso: [
+      { name: "scan", description: "Single-root scan (the source that populates ScanFolder)" },
+      { name: "rescan", description: "Repeat the most recent single-root scan" },
+      { name: "sf list", description: "Inspect the ScanFolder table directly" },
+      { name: "find-next", description: "List repos with new versions available" },
+    ],
+  },
+  {
+    category: "scanning",
     name: "desktop-sync", alias: "ds", description: "Register all tracked repos with GitHub Desktop",
     usage: "gitmap desktop-sync",
     examples: [
