@@ -1,5 +1,54 @@
 # Changelog
 
+## v3.28.0 — (2026-04-20) — Lucrative scan summary: grouped sections + emoji-rich post-scan log
+
+### Improved (UX / Terminal Output)
+
+- **`gitmap scan` post-scan summary is now visually grouped into three labeled sections** instead of a flat wall of "X written to Y" lines. Each section has a header with a thematic emoji and a horizontal rule, and every line item carries a category icon for instant scanning.
+
+The summary now flows as:
+
+```
+📦 Output Artifacts
+────────────────────────────────────────────
+  📊 CSV         D:\...\.gitmap\output\gitmap.csv
+  🧬 JSON        D:\...\.gitmap\output\gitmap.json
+  📝 Text list   D:\...\.gitmap\output\gitmap.txt
+  🌳 Structure   D:\...\.gitmap\output\folder-structure.md
+  🪄 Clone PS1   D:\...\.gitmap\output\clone.ps1
+  ⚡ HTTPS PS1   D:\...\.gitmap\output\direct-clone.ps1
+  🔐 SSH PS1     D:\...\.gitmap\output\direct-clone-ssh.ps1
+  🖥️  Desktop PS1 D:\...\.gitmap\output\register-desktop.ps1
+  💾 Cache       D:\...\.gitmap\output\last-scan.json
+
+🗄️  Database
+────────────────────────────────────────────
+  ✅ 42 repositories upserted into database
+  🏷️  Tagged 42 repo(s) with scan folder #1
+
+🔍 Project Detection
+────────────────────────────────────────────
+  🧭 Detected 54 project(s) across 35 repo(s)
+  📄 react-projects.json    26 record(s)
+  📄 go-projects.json       24 record(s)
+  📄 node-projects.json      4 record(s)
+  ✅ Saved 54 detected project(s) to database
+
+🎉 Scan complete.
+```
+
+### Files changed
+
+- `gitmap/constants/constants_messages.go` — restyled `MsgCSV/JSON/Text/Structure/Clone/Direct/SSH/Desktop/ScanCache/DBUpsertDone` constants, added `MsgSectionArtifacts`, `MsgSectionDatabase`, `MsgSectionProjects`, `MsgSectionDone`, `MsgSectionRule`, `MsgScanFolderTagged`.
+- `gitmap/constants/constants_project.go` — restyled `MsgProjectDetectDone`, `MsgProjectUpsertDone`, `MsgProjectJSONWritten` to align under the new section header with consistent indentation.
+- `gitmap/cmd/scan.go` — `executeScan` now prints section headers between groups; `tagReposWithScanFolder` uses the centralized `MsgScanFolderTagged` constant (no more inline string).
+- `gitmap/constants/constants.go` — version bumped to `3.28.0`.
+
+### Compatibility
+
+Pure terminal-output cosmetics. No flag, file path, JSON schema, or database column changed. CSV/JSON/PS1 artifact formats are byte-identical to v3.27.0.
+
+
 ## v3.27.0 — (2026-04-20) — Fix Go Report Card: rename module path from placeholder to real GitHub path
 
 ### Fixed (Tooling / Distribution)

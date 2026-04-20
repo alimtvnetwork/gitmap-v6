@@ -62,17 +62,21 @@ func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFo
 	}
 	records := mapper.BuildRecords(repos, cfg.DefaultMode, cfg.Notes)
 	outputDir := resolveOutputDir(cfg.OutputDir, absDir)
+	fmt.Print(constants.MsgSectionArtifacts)
 	writeAllOutputs(records, outputDir, outFile, quiet)
 	saveScanCache(outputDir, cache)
+	fmt.Print(constants.MsgSectionDatabase)
 	upsertToDB(records, outputDir)
 	tagReposWithScanFolder(absDir, records, quiet)
 	records = alignRecordsWithDB(records, outputDir)
+	fmt.Print(constants.MsgSectionProjects)
 	detected := detectAllProjects(records)
 	writeProjectJSONFiles(detected, outputDir)
 	upsertProjectsToDB(detected, records, outputDir)
 	importReleases(absDir, outputDir)
 	addToDesktop(records, ghDesktop)
 	openOutputFolder(outputDir, openFolder)
+	fmt.Print(constants.MsgSectionDone)
 
 	// Mark scan task as completed after all steps succeed.
 	completePendingTask(taskDB, taskID)
@@ -109,7 +113,7 @@ func tagReposWithScanFolder(absDir string, records []model.ScanRecord, quiet boo
 	}
 
 	if !quiet {
-		fmt.Printf("✓ Tagged %d repo(s) with scan folder #%d\n", len(paths), folder.ID)
+		fmt.Printf(constants.MsgScanFolderTagged, len(paths), folder.ID)
 	}
 }
 
