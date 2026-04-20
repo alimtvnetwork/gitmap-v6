@@ -1,6 +1,10 @@
 # Changelog
 
-## v3.13.1 — (2026-04-20) — Lint sweep + gitmap-v4→v5 URL fix + read-prompt overwrite
+## v3.13.2 — (2026-04-20) — Pre-commit hook enhanced
+
+### Changed
+
+- **`hooks/pre-commit` enhanced** — Updated comments and output to explicitly document the three key linters: `misspell` (US spelling), `exhaustive` (complete switch coverage), and `errcheck` (unchecked errors). Pinned golangci-lint version to `v1.64.8` in the install hint.
 
 ### Fixed
 
