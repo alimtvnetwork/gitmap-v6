@@ -106,9 +106,9 @@ const (
 
 // Project detection messages.
 const (
-	MsgProjectDetectDone   = "Detected %d projects across %d repos\n"
-	MsgProjectUpsertDone   = "Saved %d detected projects to database\n"
-	MsgProjectJSONWritten  = "Wrote %s (%d records)\n"
+	MsgProjectDetectDone   = "  🧭 Detected %d project(s) across %d repo(s)\n"
+	MsgProjectUpsertDone   = "  ✅ Saved %d detected project(s) to database\n"
+	MsgProjectJSONWritten  = "  📄 %-22s %d record(s)\n"
 	MsgProjectNoDB         = "No database found. Run 'gitmap scan' first.\n"
 	MsgProjectNoneFound    = "No %s projects found.\n"
 	MsgProjectCount        = "%d\n"
