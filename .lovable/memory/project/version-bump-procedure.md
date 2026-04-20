@@ -17,7 +17,8 @@ When the user says "bump the minor", "bump version", "release it", "cut a releas
 ## Rules
 
 - The previous "never edit .gitmap/release/* by hand" rule was OVERRIDDEN by the user — the AI must update these files directly.
-- Use `code--apply_patch` for const + latest.json + CHANGELOG; `code--exec` heredoc (or apply_patch Add File) for the new vX.Y.Z.json.
+- **DO NOT touch ANY file under the `gitmap/` source folder during a bump EXCEPT the single `Version = "X.Y.Z"` line in `gitmap/constants/constants.go`.** No new `.go` files, no edits to other constants, no refactors. If a code change is needed, the user will ask for it separately.
+- Use `code--line_replace` for const + latest.json + CHANGELOG; `code--write` for the new vX.Y.Z.json.
 - `createdAt` = real ISO 8601 UTC timestamp.
 - `changelog` array entries are plain bullet strings (no leading `- ` markers).
 - Bump `constants.SchemaVersionCurrent` ONLY when Migrate() gains a new structural step (new CREATE/ALTER/phase/seed/ID rename). Cosmetic changes do NOT require a schema bump.
