@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.18.0 — (2026-04-20) — uninstall-quick PowerShell HOME fix
+
+### Fixed (uninstall)
+
+- **`uninstall-quick.ps1`** — `Remove-CompletionSourceLines` no longer assigns to `$home`, which collides with PowerShell's built-in read-only `$HOME` variable because variable names are case-insensitive. The script now uses `$userHomeDir`, so profile cleanup completes without the `Cannot overwrite variable HOME because it is read-only or constant.` error.
+
 ## v3.17.0 — (2026-04-20) — Release.RepoId FK + doctor duplicate-binary check + uninstall profile cleanup
 
 ### Doctor

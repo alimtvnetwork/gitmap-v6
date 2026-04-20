@@ -210,12 +210,12 @@ function Remove-DataFolder {
 }
 
 function Remove-CompletionSourceLines {
-    $home = $env:USERPROFILE
+    $userHomeDir = $env:USERPROFILE
     $profiles = @(
-        (Join-Path $home "Documents\PowerShell\profile.ps1"),
-        (Join-Path $home "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"),
-        (Join-Path $home "Documents\WindowsPowerShell\profile.ps1"),
-        (Join-Path $home "Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1")
+        (Join-Path $userHomeDir "Documents\PowerShell\profile.ps1"),
+        (Join-Path $userHomeDir "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"),
+        (Join-Path $userHomeDir "Documents\WindowsPowerShell\profile.ps1"),
+        (Join-Path $userHomeDir "Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1")
     )
 
     foreach ($p in $profiles) {
