@@ -136,7 +136,7 @@ func writeDirectCloneSSHScript(records []model.ScanRecord, outputDir string) {
 
 		return
 	}
-	fmt.Printf(constants.MsgDirectCloneSSH, path)
+	fmt.Printf(constants.MsgDirectCloneSSH, filepath.Base(path))
 }
 
 // writeDesktopScript writes a PowerShell script to register repos with GitHub Desktop.
