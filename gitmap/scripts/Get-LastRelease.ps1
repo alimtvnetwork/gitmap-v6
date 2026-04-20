@@ -31,9 +31,24 @@ function Get-ReleaseFromBinary {
     }
 
     if ($Binary.Length -gt 0 -and (Test-Path $Binary)) {
-        # Strategy A: parse `list-versions` output, take the HIGHEST semver
-        # (the command lists ascending, so --limit 1 gave the oldest — bug
-        # surfaced as "Last release: v2.82.0" while the binary was 2.93.0).
+        # Strategy A (authoritative): ask the deployed binary its own version.
+        # After a successful release/build swap, this is the version the user
+        # can actually execute, so it must win over metadata/history fallbacks.
+        try {
+            $vOut = & $Binary version 2>&1
+            $vText = ($vOut | Out-String).Trim()
+            $Matches = $null
+            if ($vText -and ($vText -match '(\d+\.\d+\.\d+)')) {
+                $captured = $Matches[1]
+                if ($captured -and $captured.Length -gt 0) {
+                    return "v$captured"
+                }
+            }
+        } catch {
+        }
+
+        # Strategy B: parse `list-versions` only as a fallback when the binary
+        # version command is unavailable or returns no semver.
         try {
             $output = & $Binary list-versions 2>&1
             if ($LASTEXITCODE -eq 0 -and $output) {
@@ -50,18 +65,6 @@ function Get-ReleaseFromBinary {
                     } -Descending
                     return $sorted[0]
                 }
-            }
-        } catch {
-        }
-
-        # Strategy B: ask the binary its own version directly
-        try {
-            $vOut = & $Binary version 2>&1
-            $vText = ($vOut | Out-String).Trim()
-            if ($vText -match '(v?\d+\.\d+\.\d+)') {
-                $v = $Matches[1]
-                if (-not $v.StartsWith('v')) { $v = "v$v" }
-                return $v
             }
         } catch {
         }
