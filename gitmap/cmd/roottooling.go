@@ -41,7 +41,7 @@ func dispatchTooling(command string) bool {
 
 		return true
 	}
-	if command == constants.CmdListReleases || command == constants.CmdListReleasesAlias {
+	if command == constants.CmdListReleases || command == constants.CmdListReleasesAlias || command == constants.CmdReleases {
 		runListReleases(os.Args[2:])
 
 		return true
