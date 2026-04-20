@@ -5,7 +5,7 @@ package store
 //   - reposNoRel: count of Repo rows that have zero Release rows
 //
 // Both queries are read-only and safe to run from doctor.
-func (db *DB) ReleaseRepoIntegrity() (orphaned int, reposNoRel int, err error) {
+func (db *DB) ReleaseRepoIntegrity() (orphaned, reposNoRel int, err error) {
 	if !db.tableExists("Release") || !db.tableExists("Repo") {
 		return 0, 0, nil
 	}
