@@ -86,11 +86,11 @@ func performReleaseAlias(target, alias, version string, pull, noStash, dryRun bo
 		}
 	}
 
-	invokeRelease(version, dryRun)
+	invokeAliasRelease(version, dryRun)
 }
 
-// invokeRelease assembles the args expected by runRelease and dispatches.
-func invokeRelease(version string, dryRun bool) {
+// invokeAliasRelease assembles the args expected by runRelease and dispatches.
+func invokeAliasRelease(version string, dryRun bool) {
 	releaseArgs := []string{version}
 	if dryRun {
 		releaseArgs = append(releaseArgs, "--dry-run")
