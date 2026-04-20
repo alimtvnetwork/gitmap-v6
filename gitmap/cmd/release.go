@@ -185,6 +185,8 @@ func resolveTargetSource(flagTargets string, configTargets []model.ReleaseTarget
 }
 
 // persistReleaseToDB saves the release metadata to SQLite if available.
+// v17: requires the current repo to be registered in the Repo table so the
+// new Release.RepoId FK can be satisfied.
 func persistReleaseToDB() {
 	meta := release.LastMeta
 	if meta == nil {
@@ -202,9 +204,30 @@ func persistReleaseToDB() {
 	if err := db.Migrate(); err != nil {
 		fmt.Fprintf(os.Stderr, "  ⚠ Release DB migration failed: %v\n", err)
 	}
-	if err := db.UpsertRelease(releaseMetaToRecord(*meta)); err != nil {
+
+	repoID, err := resolveCurrentRepoID(db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  ⚠ Could not resolve repo for release: %v\n", err)
+
+		return
+	}
+
+	record := releaseMetaToRecord(*meta)
+	record.RepoID = repoID
+	if err := db.UpsertRelease(record); err != nil {
 		fmt.Fprintf(os.Stderr, "  ⚠ Could not cache release metadata: %v\n", err)
 	}
+}
+
+// resolveCurrentRepoID returns the RepoId for the cwd. Caller must handle
+// the "repo not scanned" error path explicitly.
+func resolveCurrentRepoID(db *store.DB) (int64, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return 0, err
+	}
+
+	return db.ResolveCurrentRepoID(cwd)
 }
 
 // releaseMetaToRecord converts a ReleaseMeta to a ReleaseRecord for DB storage.

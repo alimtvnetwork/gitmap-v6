@@ -146,6 +146,7 @@ func tagToRecord(t release.TagEntry) model.ReleaseRecord {
 }
 
 // cacheReleasesToDB upserts all records into the SQLite database.
+// v17: stamps every record with the current repo's RepoId before upsert.
 func cacheReleasesToDB(records []model.ReleaseRecord) {
 	db, err := openDB()
 	if err != nil {
@@ -158,12 +159,20 @@ func cacheReleasesToDB(records []model.ReleaseRecord) {
 	if err := db.Migrate(); err != nil {
 		fmt.Fprintf(os.Stderr, "  ⚠ Release cache DB migration failed: %v\n", err)
 	}
-	upsertRecords(db, records)
+
+	repoID, err := resolveCurrentRepoID(db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "  ⚠ Skipping DB cache: %v\n", err)
+
+		return
+	}
+	upsertRecords(db, records, repoID)
 }
 
-// upsertRecords persists each record to the database.
-func upsertRecords(db *store.DB, records []model.ReleaseRecord) {
+// upsertRecords persists each record to the database, stamping RepoId.
+func upsertRecords(db *store.DB, records []model.ReleaseRecord, repoID int64) {
 	for _, r := range records {
+		r.RepoID = repoID
 		if err := db.UpsertRelease(r); err != nil {
 			fmt.Fprintf(os.Stderr, "  ⚠ Could not cache release %s: %v\n", r.Version, err)
 		}
