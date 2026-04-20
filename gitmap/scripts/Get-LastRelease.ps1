@@ -58,10 +58,14 @@ function Get-ReleaseFromBinary {
         try {
             $vOut = & $Binary version 2>&1
             $vText = ($vOut | Out-String).Trim()
-            if ($vText -match '(v?\d+\.\d+\.\d+)') {
-                $v = $Matches[1]
-                if (-not $v.StartsWith('v')) { $v = "v$v" }
-                return $v
+            # Reset $Matches so a stale capture from Strategy A cannot leak
+            # back as "v" when the regex below fails to match.
+            $Matches = $null
+            if ($vText -and ($vText -match '(\d+\.\d+\.\d+)')) {
+                $captured = $Matches[1]
+                if ($captured -and $captured.Length -gt 0) {
+                    return "v$captured"
+                }
             }
         } catch {
         }
@@ -126,7 +130,10 @@ if (-not $release) {
     $source = "git tag"
 }
 
-if ($release) {
+# Final guard: never print "v" or other non-semver strings as a version.
+# A valid value must look like vX.Y.Z; anything else falls back to "unknown"
+# so the user gets an honest signal instead of a truncated label.
+if ($release -and ($release -match '^v\d+\.\d+\.\d+$')) {
     Write-Host "  ${Label}:    $release ($source)" -ForegroundColor DarkGray
 } else {
     Write-Host "  ${Label}:    unknown" -ForegroundColor DarkGray
