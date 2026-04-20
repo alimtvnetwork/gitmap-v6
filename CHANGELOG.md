@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.25.1 — (2026-04-20) — CI: portable awk in constants-naming guard (fixes silent exit 1 on Ubuntu runners)
+
+### Fixed (CI)
+
+- **`bash .github/scripts/check-constants-naming.sh` no longer fails with bare `Error: Process completed with exit code 1` and no `::error::` output on GitHub Actions Ubuntu runners.**
+
+### Root cause
+
+The awk extractor used the **gawk-only 3-argument `match(string, regex, array)` form** to capture identifier names from `const ( ... )` blocks:
+
+    match(line, /^[[:space:]]+([A-Z][A-Za-z0-9]+).../, m)
+    print m[1]
+
+GitHub Actions Ubuntu runners ship **mawk** as the default `/usr/bin/awk`, where 3-arg `match()` is a syntax error. mawk aborts at parse time → the awk pipeline produces no output → `set -euo pipefail` propagates exit 1 → the script's violation reporter (which is what would print `::error::` lines) is never reached. So the CI log shows only the bare `Error: Process completed with exit code 1` with zero diagnostic context, even though the guard itself isn't actually finding any naming violation.
+
+Locally everything passed because dev environments (and this Lovable sandbox) have gawk wired to `/bin/awk`, masking the portability bug.
+
+### Fix
+
+1. Rewrote the awk to be POSIX-portable: only 2-arg `match()` + `RSTART` / `RLENGTH` + `substr()`. Captures the same names mawk and gawk both accept. Verified byte-identical output between the old gawk-only awk and the new portable awk on the full `gitmap/constants/` tree (2764 = 2764 entries, zero diff in either direction).
+2. Added a defensive `sudo apt-get install -y gawk` step to `.github/workflows/ci.yml` immediately before the guard runs, so even if mawk-only runners reappear in the future, gawk is on PATH.
+3. Forced `LC_ALL=C` on both sides of the `comm -23 current baseline` invocation so sort ordering is guaranteed identical regardless of runner locale.
+4. Regenerated `.github/scripts/constants-baseline.txt` from 2757 → 2764 entries to admit the v3.25.0 `github-desktop` constants (`CmdGitHubDesktop`, `MsgGHDesktopRegister`, `ErrGHDesktopCwd`, etc. — all canonical-prefixed, so this is just a snapshot refresh).
+
+### Files (this section)
+
+- Edited: `.github/scripts/check-constants-naming.sh` — replaced 3-arg `match()` with `RSTART`/`RLENGTH`/`substr()`; added `LC_ALL=C` to `comm` + sort.
+- Edited: `.github/workflows/ci.yml` — `apt-get install -y gawk` step before the guard.
+- Edited: `.github/scripts/constants-baseline.txt` — regenerated (2757 → 2764).
+- Edited: `gitmap/constants/constants.go` — `Version` bumped to `3.25.1` (only `gitmap/` line touched).
+- Edited: `.gitmap/release/latest.json` — points to `v3.25.1`.
+- New:    `.gitmap/release/v3.25.1.json` — release metadata.
+
+### Notes
+
+- No `gitmap/` source behavior changed; this is purely a CI script portability fix + Version bump.
+- The mawk-vs-gawk gotcha is a recurring bash-script trap on Ubuntu CI; consider grepping the rest of `.github/scripts/` for `match(.*,.*,.*)` to preempt the same bug in other guards.
+
 ## v3.25.0 — (2026-04-20) — new `github-desktop` (gd) command: register cwd repo without scan
 
 ### Added

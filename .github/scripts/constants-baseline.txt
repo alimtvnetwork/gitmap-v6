@@ -172,6 +172,8 @@ CmdExport
 CmdExportAlias
 CmdFindNext
 CmdFindNextAlias
+CmdGitHubDesktop
+CmdGitHubDesktopAlias
 CmdGoMod
 CmdGoModAlias
 CmdGoRepos
@@ -641,6 +643,9 @@ ErrExecLoadFailed
 ErrExecUsage
 ErrFindNextQuery
 ErrFindNextScanRow
+ErrGHDesktopCwd
+ErrGHDesktopInvoke
+ErrGHDesktopNotRepo
 ErrGenericFmt
 ErrGoMetadataUpsert
 ErrGoModBranchExists
@@ -1743,6 +1748,8 @@ MsgFlattenLockedHint
 MsgFlattenRemoving
 MsgFlattenVersionDB
 MsgFoundRepos
+MsgGHDesktopDone
+MsgGHDesktopRegister
 MsgGoModBackupBranch
 MsgGoModDryFile
 MsgGoModDryFiles

@@ -1,0 +1,19 @@
+{
+  "version": "3.25.1",
+  "branch": "release/v3.25.1",
+  "sourceBranch": "main",
+  "commit": "",
+  "tag": "v3.25.1",
+  "assets": [],
+  "changelog": [
+    "CI: fix `bash .github/scripts/check-constants-naming.sh` failing with bare `exit 1` and no `::error::` lines on GitHub Actions Ubuntu runners. Root cause: the awk extractor used the gawk-only 3-arg `match(string, regex, array)` form. Ubuntu runners ship mawk as `/usr/bin/awk`, where 3-arg match is a syntax error \u2014 awk crashes silently, `set -euo pipefail` propagates exit 1, and the violation reporter is never reached so no helpful output is produced.",
+    "Rewrote the awk to be POSIX-portable (2-arg match + RSTART/RLENGTH + substr). Verified byte-identical output between old gawk-only awk and new portable awk on the full constants/ tree (2764 = 2764, zero diff).",
+    "Added belt-and-braces `apt-get install -y gawk` step to the workflow before the guard runs.",
+    "Forced `LC_ALL=C` on both sides of `comm -23` to guarantee identical sort order across runners.",
+    "No `gitmap/` source code touched apart from the Version const bump; regenerated `.github/scripts/constants-baseline.txt` (2757 \u2192 2764) to admit the v3.25.0 GitHub-Desktop constants."
+  ],
+  "isDraft": false,
+  "isPreRelease": false,
+  "createdAt": "2026-04-20T20:55:00Z",
+  "isLatest": true
+}
