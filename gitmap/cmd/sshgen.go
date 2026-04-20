@@ -50,6 +50,18 @@ func runSSHGenerate(args []string) {
 	}
 	defer db.Close()
 
+	// Disk check FIRST — covers keys created outside gitmap (e.g. via raw
+	// `ssh-keygen` or another tool). Without this, we'd fall through to
+	// `ssh-keygen -f <existing>` which prompts "Overwrite (y/n)?" on stdin
+	// and exits non-zero when stdin doesn't supply an answer — exactly the
+	// bug reported in v3.30.x: "Overwrite (y/n)? Error: SSH key generation
+	// failed at C:\Users\...\.ssh\id_rsa: exit status 1".
+	if keyExistsOnDisk(keyPath) && !force {
+		printExistingKeyOnDisk(db, name, keyPath, host)
+
+		return
+	}
+
 	if db.SSHKeyExists(name) && !force {
 		if !handleExistingKey(db, name, &keyPath) {
 			return
