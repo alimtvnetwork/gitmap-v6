@@ -14,6 +14,11 @@ func dispatchTooling(command string) bool {
 
 		return true
 	}
+	if command == constants.CmdGitHubDesktop || command == constants.CmdGitHubDesktopAlias {
+		runGitHubDesktop(os.Args[2:])
+
+		return true
+	}
 	if command == constants.CmdRescan || command == constants.CmdRescanAlias {
 		checkHelp("rescan", os.Args[2:])
 		runRescan()

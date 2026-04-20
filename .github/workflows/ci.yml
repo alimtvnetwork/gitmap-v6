@@ -100,6 +100,10 @@ jobs:
       - uses: actions/checkout@v6
         if: needs.sha-check.outputs.already-built != 'true'
 
+      - name: Install gawk (defensive — script is mawk-portable too)
+        if: needs.sha-check.outputs.already-built != 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gawk
+
       - name: Run constants naming guard
         if: needs.sha-check.outputs.already-built != 'true'
         shell: bash

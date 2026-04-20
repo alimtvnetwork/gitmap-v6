@@ -58,6 +58,8 @@ var generatedCommands = []string{
 	"find-next",
 	"fn",
 	"g",
+	"gd",
+	"github-desktop",
 	"gm",
 	"go",
 	"go-repos",

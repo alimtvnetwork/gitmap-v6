@@ -3,8 +3,8 @@
 ## Core
 Strict code style: <200 lines/file, <15 lines/func, positive logic, pascal case constants, 'is/has' boolean prefixes.
 Zero-swallow error policy. Explicitly log errors to os.Stderr using standardized format. Use `errors.Is`.
-Version bump = update FOUR files directly: `gitmap/constants/constants.go` (Version const), `.gitmap/release/latest.json`, new `.gitmap/release/vX.Y.Z.json`, and `CHANGELOG.md` (rename Unreleased heading). Do NOT defer to `gitmap r`. See [Version Bump Procedure](mem://project/version-bump-procedure).
-NEVER touch `.gitmap/release-assets/` manually (release JSON files are now AI-managed; release-assets are not).
+Version bump = update THREE artifact files directly: `.gitmap/release/latest.json`, new `.gitmap/release/vX.Y.Z.json`, and `CHANGELOG.md` (rename Unreleased heading) + the single Go const `Version` in `gitmap/constants/constants.go`. Do NOT modify ANY OTHER file under `gitmap/` source folder during a version bump. Do NOT defer to `gitmap r`. See [Version Bump Procedure](mem://project/version-bump-procedure).
+NEVER touch `.gitmap/release-assets/` manually. NEVER touch the `gitmap/` Go source folder unless the user explicitly asks for a code change — bumps and memory updates must leave `gitmap/` untouched apart from the lone `Version` const line.
 No magic strings. Centralize in constants. All CLI IDs must be exclusively in `constants_cli.go`.
 Windows-first platform development strategy. Scripts must handle Windows encoding (UTF-8 BOM).
 Go v1.24.13. golangci-lint pinned to v1.64.8, govulncheck pinned to v1.1.4.

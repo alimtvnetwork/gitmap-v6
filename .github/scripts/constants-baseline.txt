@@ -172,6 +172,8 @@ CmdExport
 CmdExportAlias
 CmdFindNext
 CmdFindNextAlias
+CmdGitHubDesktop
+CmdGitHubDesktopAlias
 CmdGoMod
 CmdGoModAlias
 CmdGoRepos
@@ -199,6 +201,9 @@ CmdImport
 CmdImportAlias
 CmdInstall
 CmdInstallAlias
+CmdInstallCleanCode
+CmdInstallCleanCodeCC
+CmdInstallCleanCodeGuide
 CmdInstalledDir
 CmdInstalledDirAlias
 CmdInteractive
@@ -354,6 +359,7 @@ DateUTCSuffix
 DefaultBranch
 DefaultBuildOutput
 DefaultCSVFile
+DefaultCleanCodeURL
 DefaultCloneScript
 DefaultConfigPath
 DefaultDashboardRefresh
@@ -558,6 +564,7 @@ ErrChangelogOpen
 ErrChangelogRead
 ErrChangelogVersionNotFound
 ErrChecksumFailed
+ErrCleanCodeFailed
 ErrClearReleaseFailed
 ErrClearReleaseNotFound
 ErrClearReleaseUsage
@@ -636,6 +643,9 @@ ErrExecLoadFailed
 ErrExecUsage
 ErrFindNextQuery
 ErrFindNextScanRow
+ErrGHDesktopCwd
+ErrGHDesktopInvoke
+ErrGHDesktopNotRepo
 ErrGenericFmt
 ErrGoMetadataUpsert
 ErrGoModBranchExists
@@ -1637,6 +1647,10 @@ MsgChangelogGenHeader
 MsgChangelogGenPreview
 MsgChangelogGenWritten
 MsgChecksumGenerated
+MsgCleanCodeDone
+MsgCleanCodeNoPwsh
+MsgCleanCodeNonWin
+MsgCleanCodeRunning
 MsgClearReleaseDone
 MsgClearReleaseDryRun
 MsgCloneComplete
@@ -1734,6 +1748,8 @@ MsgFlattenLockedHint
 MsgFlattenRemoving
 MsgFlattenVersionDB
 MsgFoundRepos
+MsgGHDesktopDone
+MsgGHDesktopRegister
 MsgGoModBackupBranch
 MsgGoModDryFile
 MsgGoModDryFiles
@@ -2022,6 +2038,8 @@ MsgSSHPromptAction
 MsgSSHPubLabel
 MsgSSHRegenerated
 MsgScanCacheSaved
+MsgSchemaVersionAdvanceFmt
+MsgSchemaVersionUpToDateFmt
 MsgScriptsCloning
 MsgScriptsCopied
 MsgScriptsDone
@@ -2389,6 +2407,7 @@ SSHKeyType
 SSHKeygenBin
 SafePullRetryAttempts
 SafePullRetryDelayMS
+SchemaVersionCurrent
 SelfInstallDefaultUnix
 SelfInstallDefaultWindows
 SelfInstallRemoteBash
@@ -2397,6 +2416,7 @@ SelfInstallScriptBash
 SelfInstallScriptPwsh
 SettingActiveGroup
 SettingActiveMultiGroup
+SettingSchemaVersion
 SettingSourceRepoPath
 SetupAppliedFmt
 SetupBannerBottom
@@ -2718,6 +2738,7 @@ WarnPendingTypeLookup
 WarnPullFilterFallback
 WarnRAStashPopFailed
 WarnReleaseImportSkip
+WarnSchemaVersionWriteFmt
 WarnVerboseLogFailed
 WatchBannerBottom
 WatchBannerTitle

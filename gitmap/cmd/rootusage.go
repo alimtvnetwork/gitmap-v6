@@ -61,6 +61,7 @@ func printGroupCloning() {
 	fmt.Println(constants.HelpClone)
 	fmt.Println(constants.HelpCloneNext)
 	fmt.Println(constants.HelpDesktopSync)
+	fmt.Println(constants.HelpGitHubDesktop)
 }
 
 // printGroupGitOps prints the git operations commands.
