@@ -107,7 +107,7 @@ if (Test-Path $configPath) {
     }
 }
 
-$activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue
+$activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($activeCmdForDeploy -and (Test-Path $activeCmdForDeploy.Source)) {
     $resolvedActiveBinary = (Resolve-Path $activeCmdForDeploy.Source).Path
     $resolvedActiveDir = Split-Path $resolvedActiveBinary -Parent
@@ -128,7 +128,7 @@ if ((-not $deployedBinary) -and $configDeployedBinary) {
 	UpdatePSVersionBefore = `
 $activeBinary = $null
 $activeBefore = "unknown"
-$cmdBefore = Get-Command gitmap -ErrorAction SilentlyContinue
+$cmdBefore = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($cmdBefore -and (Test-Path $cmdBefore.Source)) {
     $activeBinary = $cmdBefore.Source
     $activeBefore = & $activeBinary version 2>&1
@@ -218,7 +218,7 @@ if ($activeBinary -and $deployedBinary -and (Test-Path $deployedBinary)) {
 	UpdatePSVersionAfter = `
 $activeAfter = "unknown"
 $deployedAfter = "unknown"
-$cmdAfter = Get-Command gitmap -ErrorAction SilentlyContinue
+$cmdAfter = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($cmdAfter -and (Test-Path $cmdAfter.Source)) {
     $activeBinary = $cmdAfter.Source
     $activeAfter = & $activeBinary version 2>&1
@@ -307,7 +307,7 @@ if (($runExit -ne 0) -and ($runExit -ne $null)) {
 }
 `
 	RevertPSPostActions = `
-$cmdAfter = Get-Command gitmap -ErrorAction SilentlyContinue
+$cmdAfter = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($cmdAfter -and (Test-Path $cmdAfter.Source)) {
     $activeAfter = & $cmdAfter.Source version 2>&1
     Write-Host "  Active version: $activeAfter" -ForegroundColor DarkGray

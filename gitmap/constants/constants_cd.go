@@ -138,11 +138,11 @@ const CDFuncPowerShell = `function gcd {
 }
 
 function Get-GitmapCommand {
-  $cmd = Get-Command gitmap.exe -CommandType Application -ErrorAction SilentlyContinue
+  $cmd = Get-Command gitmap.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($cmd) {
     return $cmd.Source
   }
-  $cmd = Get-Command gitmap -CommandType Application -ErrorAction SilentlyContinue
+  $cmd = Get-Command gitmap -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($cmd) {
     return $cmd.Source
   }

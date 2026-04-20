@@ -10,7 +10,7 @@ func TestBuildUpdateScriptUsesPathAwareDeployVerification(t *testing.T) {
 
 	checks := []string{
 		`$configDeployedBinary = $null`,
-		`$activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue`,
+		`$activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1`,
 		`$deployedBinary = Join-Path $effectiveDeployTarget "gitmap-cli\gitmap.exe"`,
 		`Move-Item -Path $resolvedActive -Destination $backupPath -Force`,
 		`Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue`,
