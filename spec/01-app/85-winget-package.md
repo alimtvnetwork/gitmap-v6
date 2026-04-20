@@ -68,10 +68,10 @@ NestedInstallerFiles:
     PortableCommandAlias: gitmap
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v5.49.1-windows-amd64.zip
+    InstallerUrl: https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v4.49.1-windows-amd64.zip
     InstallerSha256: <SHA256_OF_ZIP>
   - Architecture: arm64
-    InstallerUrl: https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v5.49.1-windows-arm64.zip
+    InstallerUrl: https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v4.49.1-windows-arm64.zip
     InstallerSha256: <SHA256_OF_ZIP>
 ManifestType: installer
 ManifestVersion: 1.6.0
@@ -88,7 +88,7 @@ ManifestVersion: 1.6.0
 
 2. **Generate manifests (interactive):**
    ```powershell
-   wingetcreate new https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v5.49.1-windows-amd64.zip
+   wingetcreate new https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v4.49.1-windows-amd64.zip
    ```
 
 3. **Validate manifests:**
@@ -111,7 +111,7 @@ ManifestVersion: 1.6.0
 
 ```powershell
 wingetcreate update AliMTVNetwork.GitMap --version 2.49.1 \
-  --urls https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v5.49.1-windows-amd64.zip \
+  --urls https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v4.49.1-windows-amd64.zip \
   --submit --token <GITHUB_PAT>
 ```
 

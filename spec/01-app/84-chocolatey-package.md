@@ -54,7 +54,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageArgs = @{
   packageName    = 'gitmap'
-  url64bit       = 'https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v5.49.1-windows-amd64.zip'
+  url64bit       = 'https://github.com/alimtvnetwork/gitmap-v5/releases/download/v2.49.1/gitmap-v4.49.1-windows-amd64.zip'
   checksum64     = '<SHA256_HASH>'
   checksumType64 = 'sha256'
   unzipLocation  = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"

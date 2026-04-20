@@ -304,7 +304,7 @@ function Install-Binary([string]$zipPath, [string]$installDir) {
     New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
     Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
 
-    # Match exact names OR versioned patterns like gitmap-v5.54.6-windows-amd64.exe
+    # Match exact names OR versioned patterns like gitmap-v4.54.6-windows-amd64.exe
     $candidateNames = @(
         $BinaryName,
         [System.IO.Path]::GetFileNameWithoutExtension($BinaryName),

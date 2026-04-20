@@ -890,7 +890,7 @@ const (
 - The `--repo-path` flag is automatically forwarded through the handoff binary to `update-runner`.
 - Resolution priority: `--repo-path` flag → embedded constant → friendly error with recovery options.
 - Improved "repo path not embedded" error with actionable recovery steps (one-liner install, clone & build, manual download, `--repo-path` override).
-- CI release binaries now include version in filenames (e.g., `gitmap-v5.49.1-windows-amd64.zip`).
+- CI release binaries now include version in filenames (e.g., `gitmap-v4.49.1-windows-amd64.zip`).
 - Updated `install.ps1` (standalone and release-embedded) to handle versioned asset filenames.
 - CI release workflow now explicitly marks stable releases as "latest" via `make_latest`.
 - Updated `helptext/update.md` with `--repo-path` flag docs, troubleshooting section, and error recovery examples.

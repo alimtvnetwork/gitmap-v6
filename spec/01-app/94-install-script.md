@@ -116,7 +116,7 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap
 6. If `.tar.gz` not found in checksums, fall back to `.zip` variant.
 7. Extract archive to temp directory; search for binary using 4-priority
    matching: exact name → platform-specific → versioned pattern
-   (e.g., `gitmap-v5.55.0-linux-amd64`) → any executable.
+   (e.g., `gitmap-v4.55.0-linux-amd64`) → any executable.
 8. Rename-first strategy for safe upgrades of running binaries.
 9. Set executable permission (`chmod +x`).
 10. Auto-detect shell (bash/zsh/fish) and append PATH entry to the
