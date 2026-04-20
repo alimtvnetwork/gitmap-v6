@@ -186,8 +186,11 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap
 ### Clone & Setup (Development)
 
 ```bash
-git clone https://github.com/alimtvnetwork/gitmap-v5.git
-cd gitmap-v5
+git clone https://github.com/alimtvnetwork/gitmap-v5.git gitmap
+```
+
+```bash
+cd gitmap
 ./setup.sh
 ```
 
