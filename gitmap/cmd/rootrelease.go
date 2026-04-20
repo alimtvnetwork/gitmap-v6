@@ -8,7 +8,7 @@ import (
 
 // dispatchRelease routes release-related commands.
 func dispatchRelease(command string) bool {
-	if command == constants.CmdRelease || command == constants.CmdReleaseAlias {
+	if command == constants.CmdRelease || command == constants.CmdReleaseShort {
 		runRelease(os.Args[2:])
 
 		return true

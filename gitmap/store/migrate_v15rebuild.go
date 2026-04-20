@@ -38,6 +38,10 @@ func (db *DB) runV15Rebuild(spec v15RebuildSpec) error {
 		return nil // fresh install, nothing to migrate
 	}
 
+	if db.hasCanonicalV15Shape(spec) {
+		return nil
+	}
+
 	if db.tableExists(spec.NewTable) {
 		// Both exist — the new table was created by a prior partial run
 		// (e.g., via the standard CREATE TABLE IF NOT EXISTS pass). Drop
@@ -88,6 +92,23 @@ func (db *DB) runV15Rebuild(spec v15RebuildSpec) error {
 	}
 
 	return nil
+}
+
+// hasCanonicalV15Shape reports whether a same-name rebuild spec can be skipped
+// because the canonical table already exposes the migrated PK shape. This
+// prevents staging-table rebuilds (TaskType -> TaskType_v15 -> TaskType, etc.)
+// from re-running on every openDB() after the first successful migration.
+func (db *DB) hasCanonicalV15Shape(spec v15RebuildSpec) bool {
+	if !strings.Contains(spec.NewTable, "_v15") {
+		return false
+	}
+	if db.columnExists(spec.OldTable, "Id") {
+		return false
+	}
+
+	v15PK := derivePKColumnName(spec)
+
+	return v15PK != "" && db.columnExists(spec.OldTable, v15PK)
 }
 
 // execV15Rebuild performs the table-rebuild dance for one spec.
