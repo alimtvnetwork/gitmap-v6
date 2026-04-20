@@ -8,7 +8,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -88,4 +87,3 @@ func backupKeyForRegenerate(keyPath string) error {
 }
 
 // (backupKeyForRegenerate is consumed by sshgen.go in the --force branch.)
-var _ = exec.Command
