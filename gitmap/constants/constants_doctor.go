@@ -79,15 +79,10 @@ const (
 	JSONKeyBuildOutput   = "buildOutput"
 	JSONKeyBinaryName    = "binaryName"
 	BackupSuffix         = ".old"
-	// GitMapSubdir is the SOURCE-REPO subdirectory name (<RepoRoot>/gitmap/...).
-	// Do NOT use this for deploy paths — use GitMapCliSubdir instead.
-	GitMapSubdir = "gitmap"
-	// GitMapCliSubdir is the DEPLOY-TARGET subdirectory name
-	// (<DeployRoot>/gitmap-cli/gitmap.exe). Renamed from "gitmap" in v3.6.0
-	// to eliminate visual collision with the binary name. run.ps1 migrates
-	// any legacy <DeployRoot>/gitmap/ install on next invocation.
-	GitMapCliSubdir = "gitmap-cli"
 )
+
+// GitMapSubdir and GitMapCliSubdir are now defined in deploy_manifest.go and
+// populated from the embedded deploy-manifest.json (single source of truth).
 
 // Bare-invocation banner suppression (v3.6.0+).
 const (
