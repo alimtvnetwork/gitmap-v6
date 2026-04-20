@@ -269,6 +269,10 @@ if ! try_self_uninstall; then
 fi
 
 printf '\n'
+step "Exhaustive PATH sweep — removing any remaining gitmap binaries"
+remove_stray_binaries
+
+printf '\n'
 step "User data"
 remove_data_folder
 
