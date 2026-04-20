@@ -90,6 +90,42 @@ function Show-Banner {
     Write-Host ""
 }
 
+# -- Load deploy manifest (single source of truth) -------------
+# Mirrors run.sh's load_deploy_manifest. Reads
+# gitmap/constants/deploy-manifest.json so AppSubdir / LegacyAppSubdirs
+# aren't hardcoded across run.ps1, run.sh, install.sh, and Go constants.
+# Renaming the deploy folder ONLY requires editing that JSON file.
+$script:AppSubdir = "gitmap-cli"
+$script:LegacyAppSubdirs = @("gitmap")
+function Get-DeployManifest {
+    $manifestPath = Join-Path $GitMapDir "constants/deploy-manifest.json"
+    if (-not (Test-Path $manifestPath)) {
+        Write-Warn "deploy-manifest.json not found at $manifestPath - using defaults"
+        return
+    }
+    try {
+        $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+        if ($manifest.appSubdir) {
+            $script:AppSubdir = $manifest.appSubdir
+        }
+        if ($manifest.legacyAppSubdirs) {
+            $script:LegacyAppSubdirs = @($manifest.legacyAppSubdirs)
+        }
+    } catch {
+        Write-Warn "Failed to parse deploy-manifest.json: $_"
+    }
+}
+
+# Test-KnownAppSubdir returns $true if $Name matches AppSubdir or any legacy entry.
+function Test-KnownAppSubdir {
+    param([string]$Name)
+    if ($Name -eq $script:AppSubdir) { return $true }
+    foreach ($legacy in $script:LegacyAppSubdirs) {
+        if ($Name -eq $legacy) { return $true }
+    }
+    return $false
+}
+
 # -- Load config -----------------------------------------------
 function Load-Config {
     $configPath = Join-Path $GitMapDir "powershell.json"
