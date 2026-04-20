@@ -1,5 +1,24 @@
 # Changelog
 
+## v3.16.0 — (2026-04-20) — uninstall-quick.ps1 multi-binary fix + repo rename to gitmap-v5
+
+### Fixed
+
+- **`uninstall-quick.ps1`** — `Try-SelfUninstall` and `Resolve-DeployRoot` now pipe `Get-Command gitmap` through `Select-Object -First 1`. When two `gitmap.exe` binaries were on `PATH` (e.g. a stale drive-root shim at `E:\gitmap\gitmap.exe` AND the canonical `E:\bin-run\gitmap-cli\gitmap.exe`), `Get-Command` returned an array. PowerShell's string interpolation joined `.Source` with a space and the resulting `'E:\gitmap\gitmap.exe E:\bin-run\gitmap-cli\gitmap.exe'` was passed to the runtime as a command name, producing:
+  > The term '...path1... ...path2...' is not recognized as a name of a cmdlet, function, script file, or executable program.
+  Self-uninstall now invokes the FIRST resolved binary by **absolute path** (`& $activeBinary self-uninstall -y`) instead of relying on `& gitmap` PATH resolution, so a stale shim cannot hijack the call.
+- **`run.ps1`** — Same defensive fix applied to all three `Get-Command gitmap` callers (deploy-target detection, post-deploy active-vs-deployed sync, changelog binary resolution).
+- **`gitmap/scripts/Get-LastRelease.ps1`** — Same defensive fix in `Get-ReleaseFromBinary`.
+
+### Renamed
+
+- **All `gitmap-v4` references → `gitmap-v5`** across the entire repo (45 files, 567 occurrences). Includes install/uninstall one-liners, Go installer constants, helptext, spec docs, post-mortems, the React landing page, and `.lovable/memory/**`.
+- **Preserved**: release-asset filenames like `gitmap-v4.49.1-windows-amd64.zip` (where `v4.49.1` is the package version, not the repo name) — only the GitHub URL repo segment changed.
+
+### Why
+
+The uninstall failure was reported by a user who had run gitmap since the v2.x drive-root shim era — their stale `E:\gitmap\gitmap.exe` was never removed and the new `gitmap-cli/` install put a second binary on PATH. The `gitmap-v5` repo rename had been pending since the v3.x line started; bundling both keeps the CHANGELOG narrative simple.
+
 ## v3.15.0 — (2026-04-20) — Single-source-of-truth deploy manifest
 
 ### Added
@@ -137,7 +156,7 @@ Production paths in `updatecleanup_paths.go` and `constants_update.go` were upda
   - `wastedassign`: Removed dead `stashLabel` assignment in `cmd/releasealias.go`.
   - `exhaustive`: Added missing switch cases for `PreferPolicy`, `Direction`, and `DiffKind`.
 - **US-English spelling sweep** — Converted UK spellings to US: `behaviour→behavior`, `honours→honors`, `honouring→honoring`, `artefacts→artifacts`, `Centralised→Centralized`, `summarises→summarizes`, `Recognises→Recognizes`.
-- **Remote installer URLs** — Updated `constants_selfinstall.go` `SelfInstallRemotePwsh` and `SelfInstallRemoteBash` from `gitmap-v4` to `gitmap-v5`.
+- **Remote installer URLs** — Updated `constants_selfinstall.go` `SelfInstallRemotePwsh` and `SelfInstallRemoteBash` from `gitmap-v5` to `gitmap-v5`.
 
 ### Changed
 
@@ -160,7 +179,7 @@ Production paths in `updatecleanup_paths.go` and `constants_update.go` were upda
 
 - Full-repo audit for residual legacy-field callers: every `\.(Draft|PreRelease)\b` and `^\s*(Draft|PreRelease)\s*:` match outside of (a) `release.Version.PreRelease` (semver suffix — different struct), (b) `store/migrate_v15phase5.go` (the rename migration itself), (c) `release/metadata.go::ReadReleaseMeta` (the JSON backward-compat overlay), and (d) `--draft` user-facing CLI flag strings was confirmed to be either intentional or already migrated. No further call sites need updating.
 
-## v3.12.0 — (2026-04-20) — Pinned-version release snippet + gitmap-v4 rename
+## v3.12.0 — (2026-04-20) — Pinned-version release snippet + gitmap-v5 rename
 
 ### Added
 
@@ -170,7 +189,7 @@ Production paths in `updatecleanup_paths.go` and `constants_update.go` were upda
 
 ### Changed
 
-- **Repo rename `gitmap-v3` → `gitmap-v4` across the entire codebase** — every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.ps1`, `install-quick.sh`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries were rewritten via `sed -i 's/gitmap-v3/gitmap-v4/g'`. The only remaining `gitmap-v3` references are inside `.gitmap/` artifacts, which are immutable per project policy.
+- **Repo rename `gitmap-v3` → `gitmap-v5` across the entire codebase** — every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.ps1`, `install-quick.sh`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries were rewritten via `sed -i 's/gitmap-v3/gitmap-v5/g'`. The only remaining `gitmap-v3` references are inside `.gitmap/` artifacts, which are immutable per project policy.
 
 ## v3.11.1 — (2026-04-20) — Alias-collision CI guard
 
@@ -666,7 +685,7 @@ const (
 
 ### Release Command
 
-- After a successful release, if the repo's remote origin matches the gitmap source repository prefix (`github.com/alimtvnetwork/gitmap-v4`), the CLI now prints install one-liner commands for both Windows (PowerShell) and Linux/macOS (Bash).
+- After a successful release, if the repo's remote origin matches the gitmap source repository prefix (`github.com/alimtvnetwork/gitmap-v5`), the CLI now prints install one-liner commands for both Windows (PowerShell) and Linux/macOS (Bash).
 - Added `GitmapRepoPrefix` constant for repo detection and `MsgInstallHintHeader`, `MsgInstallHintWindows`, `MsgInstallHintUnix` message constants.
 - Install hints appear after `Release complete` in all release paths: standard, branch-based, and metadata-only.
 - Non-gitmap repos are unaffected — no install hints are printed.
@@ -882,7 +901,7 @@ const (
 - Added Quick Start section with common command examples at the top of help output.
 - Each group header includes a hint to run commands with `--help` or `-h` for detailed usage and examples.
 - Modularized help implementation across `rootusage.go`, `rootusagecompact.go`, `rootusageflags.go`, and `constants_helpgroups.go`.
-- Repository renamed from `git-repo-navigator` to `gitmap-v4`; all URLs, scripts, and references updated.
+- Repository renamed from `git-repo-navigator` to `gitmap-v5`; all URLs, scripts, and references updated.
 
 ## v2.49.1 — Update UX & Versioned Binaries (2026-04-06)
 

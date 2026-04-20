@@ -56,7 +56,7 @@ const (
 
 // Clone-on-missing-path constants.
 const (
-	SourceRepoCloneURL   = "https://github.com/alimtvnetwork/gitmap-v4.git"
+	SourceRepoCloneURL   = "https://github.com/alimtvnetwork/gitmap-v5.git"
 	MsgUpdateCloning     = "\n  ■ Path does not exist. Cloning gitmap source into %s...\n"
 	MsgUpdateCloneOK     = "  ✓ Cloned successfully.\n"
 	ErrUpdateCloneFailed = "  ✗ Clone failed: %v\n"

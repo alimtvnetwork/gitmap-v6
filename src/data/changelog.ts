@@ -12,7 +12,7 @@ export const changelog: ChangelogEntry[] = [
       "Added pinned-version install snippet on the GitHub release page: `gitmap/release/installsnippet.go::AppendPinnedInstallSnippet`, wired into `workflowgithub.go::uploadToGitHub` between `DetectChangelog()` and `CreateGitHubRelease`, auto-appends a markdown block containing PowerShell + bash one-liners that hard-code the just-published tag. Idempotent via a hidden `<!-- gitmap-pinned-install-snippet:<tag> -->` HTML marker. Anyone copying the snippet from `…/releases/tag/v3.12.0` installs exactly v3.12.0 — never `latest`, never a `-v<N+1>` sibling repo. Template lives in `constants_release.go` as `ReleaseSnippetTemplate` / `ReleaseSnippetMarker`.",
       "Added pinned-version short-circuit in `install.ps1` and `install.sh`: when `-Version <tag>` (PowerShell) or `--version <tag>` (bash) is supplied, the installer skips both the `releases/latest` API call **and** the versioned-repo `-v<N>` discovery probe, downloading `…/releases/download/<tag>/…` directly. Closes the gap where a snippet copied from a v3.x release page could silently jump to the v4 repo's latest tag.",
       "Added spec doc `spec/07-generic-release/08-pinned-version-install-snippet.md` — full NEA/AI handoff contract: rendered snippets, installer-side flag matrix, release-cutting checklist, and a CI test contract for future work.",
-      "Renamed `gitmap-v3` → `gitmap-v4` across the entire codebase: every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.*`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries. Only `.gitmap/` artifacts retain v3 references (immutable per project policy).",
+      "Renamed `gitmap-v3` → `gitmap-v5` across the entire codebase: every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.*`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries. Only `.gitmap/` artifacts retain v3 references (immutable per project policy).",
     ],
   },
   {
@@ -356,7 +356,7 @@ export const changelog: ChangelogEntry[] = [
       "Multi-package-manager support: Chocolatey, Winget, Apt, Snap, Brew, Dnf, Pacman.",
       "Version string compiled from parsed major/minor/patch/build parts during save for comparison support.",
       "Reorganized `gitmap help` with `--compact` flag and 17 categorized command groups.",
-      "Repository renamed from `git-repo-navigator` to `gitmap-v4`.",
+      "Repository renamed from `git-repo-navigator` to `gitmap-v5`.",
     ],
   },
   {
@@ -369,7 +369,7 @@ export const changelog: ChangelogEntry[] = [
       "Added Quick Start section with common command examples at the top of help output.",
       "Each group header includes a hint to run commands with `--help` or `-h` for detailed usage.",
       "Modularized help across `rootusage.go`, `rootusagecompact.go`, `rootusageflags.go`, and `constants_helpgroups.go`.",
-      "Repository renamed from `git-repo-navigator` to `gitmap-v4`; all URLs, scripts, and references updated.",
+      "Repository renamed from `git-repo-navigator` to `gitmap-v5`; all URLs, scripts, and references updated.",
     ],
   },
   {

@@ -651,7 +651,7 @@ function Resolve-DeployTarget {
     }
 
     # 2) If gitmap is already on PATH, deploy to its parent directory
-    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue
+    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($activeCmd) {
         $activePath = $activeCmd.Source
         if (Test-Path $activePath) {
@@ -1347,7 +1347,7 @@ if (-not $NoDeploy) {
     # readout below) reflect reality (DFD-9).
     Sync-ConfigDeployPath -EffectiveDeployTarget $effectiveDeployPath
 
-    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue
+    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($activeCmd -and (Test-Path $deployedBinaryPath)) {
         $activeBinaryPath = $activeCmd.Source
         if (Test-Path $activeBinaryPath) {
@@ -1377,7 +1377,7 @@ if (-not $NoDeploy) {
 }
 
 $changelogBinaryPath = $binaryPath
-$activeCmdForChangelog = Get-Command gitmap -ErrorAction SilentlyContinue
+$activeCmdForChangelog = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($activeCmdForChangelog -and (Test-Path $activeCmdForChangelog.Source)) {
     $changelogBinaryPath = $activeCmdForChangelog.Source
 } elseif ($deployedBinaryPath -and (Test-Path $deployedBinaryPath)) {
