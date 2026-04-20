@@ -5,6 +5,12 @@
 > - [22-data-folder-deploy-and-cleanup.md](22-data-folder-deploy-and-cleanup.md) — DB lifecycle
 > - [../07-generic-release/](../07-generic-release/) — release pipeline that produces these rows
 
+## ER Diagram
+
+![Release ↔ Repo ER diagram](images/release-repo-er.png)
+
+> Source: [`images/release-repo-er.mmd`](images/release-repo-er.mmd)
+
 ## Problem
 
 Until v3.16.x the `Release` table was **orphaned** — no foreign key tied a
