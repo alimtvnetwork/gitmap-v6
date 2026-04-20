@@ -1,5 +1,54 @@
 # Changelog
 
+## v3.27.0 — (2026-04-20) — Fix Go Report Card: rename module path from placeholder to real GitHub path
+
+### Fixed (Tooling / Distribution)
+
+- **Go Report Card now resolves the module instead of failing with `could not get latest module version from https://proxy.golang.org/github.com/user/gitmap/@latest`.** The card at https://goreportcard.com/report/github.com/alimtvnetwork/gitmap-v5/gitmap will start scoring the project for the first time after this version is pushed.
+
+### Root cause
+
+`gitmap/go.mod` was declared as `module github.com/user/gitmap` — a leftover placeholder from project bootstrapping. Because Go Report Card runs `go get <module>@latest` against the public Go module proxy (`proxy.golang.org`) before linting, and that path returns 404 (no such GitHub user/repo), the whole report aborted before any of `gofmt`, `go vet`, `gocyclo`, `ineffassign`, `misspell`, `golint` could run.
+
+The same placeholder was also referenced in:
+
+- 391 `.go` files inside `gitmap/` (all `import "github.com/user/gitmap/..."` statements)
+- The companion module `gitmap-updater/go.mod` and its imports
+- `Makefile` and `.github/workflows/ci.yml` ldflags injection: `-X 'github.com/user/gitmap/constants.Version=...'`
+- `run.ps1` and `run.sh` ldflags injection for `RepoPath`
+- Spec docs and changelog history references
+- React-side changelog/getting-started page references
+
+If left unfixed, anyone running `go install github.com/alimtvnetwork/gitmap-v5/gitmap@latest` would get a `module declares its path as: github.com/user/gitmap but was required as ...` error, and the proxy would refuse to serve the module to downstream tooling.
+
+### Fix
+
+Renamed `github.com/user/gitmap` → `github.com/alimtvnetwork/gitmap-v5/gitmap` across **404 files** in a single atomic sed pass. Also implicitly renamed the sister module `github.com/user/gitmap-updater` → `github.com/alimtvnetwork/gitmap-v5/gitmap-updater`, which lives at the same GitHub path.
+
+Verified post-rename:
+- `gitmap/go.mod` now reads `module github.com/alimtvnetwork/gitmap-v5/gitmap`.
+- `gitmap-updater/go.mod` now reads `module github.com/alimtvnetwork/gitmap-v5/gitmap-updater`.
+- `Makefile` ldflags target the new constants package path.
+- `.github/workflows/ci.yml` build step injects `Version` into the new constants package path.
+- `run.ps1` and `run.sh` inject `RepoPath` into the new constants package path.
+- Zero remaining references to the old placeholder string anywhere in the tree.
+
+### What the user needs to do after pulling
+
+1. Pull v3.27.0 and push to `main`.
+2. Once the new tag (`v3.27.0`) is pushed, visit https://goreportcard.com/report/github.com/alimtvnetwork/gitmap-v5/gitmap — first visit will trigger a fresh scan against the new module path.
+3. The CI ldflags injection still works because the constants package path was renamed alongside the workflow string.
+4. Anyone who had previously cloned the repo and run `go build ./...` will need to re-run `go mod tidy` once after pulling, since every import path changed.
+
+### Files (this section)
+
+- Edited: 404 files (391 `.go` files in `gitmap/`, plus `gitmap/go.mod`, `gitmap-updater/go.mod`, `gitmap-updater/main.go`, `Makefile`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `run.ps1`, `run.sh`, multiple `spec/` docs, `CHANGELOG.md` history references, `src/data/changelog.ts`, `src/pages/GettingStarted.tsx`).
+- Edited: `gitmap/constants/constants.go` — bumped Version to 3.27.0.
+- Created: `.gitmap/release/v3.27.0.json` — release metadata.
+- Edited: `.gitmap/release/latest.json` — pointer to v3.27.0.
+
+---
+
 ## v3.26.0 — (2026-04-20) — Audit + new CI guard for constants/ identifier collisions
 
 ### Added (CI)
