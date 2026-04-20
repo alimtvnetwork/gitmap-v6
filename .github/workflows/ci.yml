@@ -136,6 +136,30 @@ jobs:
         shell: bash
         run: python3 .github/scripts/check-constants-collisions.py
 
+  modulepath-guard:
+    # Fails the build if the legacy placeholder Go module path
+    # `github.com/user/gitmap` is reintroduced anywhere in the repo. That
+    # placeholder was a bootstrap leftover that broke `go install`, the Go
+    # module proxy, and Go Report Card — fixed in v3.27.0 by renaming to
+    # `github.com/alimtvnetwork/gitmap-v5/gitmap`. A stale go.mod, vendored
+    # snippet, generated doc, or copy-pasted import block could silently
+    # bring it back; this guard catches that on PR before it ships.
+    name: Module Path Guard
+    runs-on: ubuntu-latest
+    needs: sha-check
+    steps:
+      - name: Already validated
+        if: needs.sha-check.outputs.already-built == 'true'
+        run: echo "SHA ${{ github.sha }} already passed module path guard"
+
+      - uses: actions/checkout@v6
+        if: needs.sha-check.outputs.already-built != 'true'
+
+      - name: Run module path guard
+        if: needs.sha-check.outputs.already-built != 'true'
+        shell: bash
+        run: bash .github/scripts/check-placeholder-modulepath.sh
+
   generate-check:
     # Guarantees that every Cmd* constant added to a scanned constants_*.go
     # is reflected in completion/allcommands_generated.go. If a contributor
@@ -281,7 +305,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [sha-check, lint, vulncheck, generate-check, cmd-naming-check, constants-naming-check, constants-collision-check, test]
+    needs: [sha-check, lint, vulncheck, generate-check, cmd-naming-check, constants-naming-check, constants-collision-check, modulepath-guard, test]
     if: always()
     steps:
       - name: Already validated

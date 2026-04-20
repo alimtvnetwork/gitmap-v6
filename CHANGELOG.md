@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.29.0 — (2026-04-20) — CI guard: prevent reintroduction of placeholder Go module path
+
+### Added (CI / Tooling)
+
+- **New `modulepath-guard` CI job** that fails the build the moment any file in the repo reintroduces the legacy placeholder module path `github.com/user/gitmap`. Closes the gap that allowed v3.27.0's regression to ship in the first place — no stale `go.mod`, vendored snippet, generated doc, or copy-pasted import block can silently bring it back.
+
+### Implementation
+
+- `.github/scripts/check-placeholder-modulepath.sh` (new, executable) — `grep -rnFI` scan that:
+  - excludes `.git/`, `node_modules/`, `.gitmap/` (frozen release notes), `.lovable/` (AI memory), `spec/` (post-mortem docs), and self-references in `CHANGELOG.md`, `ci.yml`, and the script itself
+  - prints offending file:line on failure with a copy-paste `sed` one-liner to fix
+  - emits `::error::` annotations so GitHub UI surfaces them inline on the PR diff
+- `.github/workflows/ci.yml` — added `modulepath-guard` job (mirrors the structure of `cmd-naming-check` / `constants-naming-check`: SHA cache short-circuit, `actions/checkout@v6`, single bash step) and added it to the `test-summary` `needs:` list so it blocks merge.
+
+### Verified
+
+- Positive: script exits 0 on the current tree (zero references outside allowlisted docs).
+- Negative: temporarily added `import "github.com/user/gitmap/foo"` to a fake `.go` file; script exits 1 with the exact offending line, error annotation, and remediation command.
+
+### Compatibility
+
+CI-only addition. No source code, runtime behavior, or artifact format changed.
+
+
 ## v3.28.0 — (2026-04-20) — Lucrative scan summary: grouped sections + emoji-rich post-scan log
 
 ### Improved (UX / Terminal Output)
