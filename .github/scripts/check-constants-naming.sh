@@ -41,13 +41,47 @@ if [ ! -d "$CONST_DIR" ]; then
 fi
 
 # extract_constants prints the unique sorted list of top-level constant names
-# defined in the package. Matches both `Name = value` and `Name Type = value`
-# forms inside `const (...)` blocks (and bare `const Name = ...`).
+# defined in the package. Uses awk to track `const (` block state so it never
+# picks up identifiers from multi-line string literals (SQL keywords like
+# SET/WHERE/AND) or struct-field assignments (ProjectTypeGoID int64 = 1 in a
+# var block, Manifest.AppSubdir = ... in init code).
+#
+# Recognized forms:
+#   const Name = ...                       (single-line)
+#   const Name Type = ...                  (single-line typed)
+#   const ( ... \n  Name = ... \n ... )    (block, untyped or typed)
+#
+# Inside a `const (` block we accept lines whose first non-whitespace token is
+# a PascalCase identifier followed by either `=`, `<type> =`, or just whitespace
+# then end-of-line (iota grouping). Inside multi-line raw strings (delimited
+# by backticks) we skip everything.
 extract_constants() {
-  grep -rhE '^\s*[A-Z][a-zA-Z0-9]+\s*(=|[A-Za-z0-9.]+\s*=)' "$CONST_DIR"/*.go 2>/dev/null \
-    | grep -oE '^[[:space:]]*[A-Z][a-zA-Z0-9]+' \
-    | sed 's/^[[:space:]]*//' \
-    | sort -u
+  awk '
+    BEGIN { in_const = 0; in_rawstr = 0 }
+    {
+      line = $0
+
+      # Toggle raw-string state on every backtick on the line.
+      n = gsub(/`/, "`", line)
+      if (n % 2 == 1) { in_rawstr = 1 - in_rawstr; next }
+      if (in_rawstr) { next }
+
+      # Track const block entry/exit.
+      if (match(line, /^[[:space:]]*const[[:space:]]*\(/)) { in_const = 1; next }
+      if (in_const && match(line, /^[[:space:]]*\)/))      { in_const = 0; next }
+
+      # Single-line const declaration outside a block.
+      if (match(line, /^[[:space:]]*const[[:space:]]+([A-Z][A-Za-z0-9]+)/, m)) {
+        print m[1]; next
+      }
+
+      # Inside a const block: first token must be a PascalCase identifier
+      # followed by `=`, `Type =`, or end-of-line (iota continuation).
+      if (in_const && match(line, /^[[:space:]]+([A-Z][A-Za-z0-9]+)([[:space:]]+[A-Za-z0-9_.]+)?[[:space:]]*(=|$|\/\/)/, m)) {
+        print m[1]
+      }
+    }
+  ' "$CONST_DIR"/*.go | sort -u
 }
 
 # regenerate mode: rewrite the baseline file from current source.
