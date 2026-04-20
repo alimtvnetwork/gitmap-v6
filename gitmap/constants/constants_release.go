@@ -64,7 +64,7 @@ const (
 
 // Install hint constants (printed after release for gitmap repos).
 const (
-	GitmapRepoPrefix     = "github.com/alimtvnetwork/gitmap-v4"
+	GitmapRepoPrefix     = "github.com/alimtvnetwork/gitmap-v5"
 	GitmapRepoOwner      = "github.com/alimtvnetwork/"
 	GitmapRepoNamePrefix = "gitmap-v"
 	MsgInstallHintHeader = `
@@ -72,11 +72,11 @@ const (
   📦 Install gitmap %s
 `
 	MsgInstallHintWindows = `  🪟 Windows (PowerShell)
-     irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1 | iex
+     irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 `
 	MsgInstallHintUnix = `
   🐧 Linux / macOS
-     curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.sh | sh
+     curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 `
 )
 
@@ -96,12 +96,12 @@ const (
 		"**Windows (PowerShell)**\n" +
 		"```powershell\n" +
 		"$ver = '%s'\n" +
-		"$installer = irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1\n" +
+		"$installer = irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1\n" +
 		"& ([scriptblock]::Create($installer)) -Version $ver -NoDiscovery\n" +
 		"```\n\n" +
 		"**Linux / macOS (bash)**\n" +
 		"```bash\n" +
-		"curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.sh \\\n" +
+		"curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh \\\n" +
 		"  | bash -s -- --version %s --no-discovery\n" +
 		"```\n"
 )

@@ -290,33 +290,33 @@ out at whatever branch they currently hold).
 
 ```
 # move local folder into another local folder, deleting source
-gitmap mv ./gitmap-v4 ./gitmap-v4
+gitmap mv ./gitmap-v5 ./gitmap-v5
 
 # move local folder into a remote repo (clone, copy, commit, push)
-gitmap mv ./gitmap-v4 https://github.com/alimtvnetwork/gitmap-v4
+gitmap mv ./gitmap-v5 https://github.com/alimtvnetwork/gitmap-v5
 
 # move a remote repo's contents into a local folder
-gitmap mv https://github.com/alimtvnetwork/gitmap-v4 ./another-folder
+gitmap mv https://github.com/alimtvnetwork/gitmap-v5 ./another-folder
 
 # move between two remote repos (clones both, copies, pushes RIGHT)
-gitmap mv https://github.com/alimtvnetwork/gitmap-v4 \
-         https://github.com/alimtvnetwork/gitmap-v4
+gitmap mv https://github.com/alimtvnetwork/gitmap-v5 \
+         https://github.com/alimtvnetwork/gitmap-v5
 
 # merge missing files only (identical or differing files prompt)
-gitmap merge-both ./gitmap-v4 ./gitmap-v4
+gitmap merge-both ./gitmap-v5 ./gitmap-v5
 
 # merge with auto-accept: each side's source wins
-gitmap merge-right ./gitmap-v4 https://github.com/alimtvnetwork/gitmap-v4 -y
+gitmap merge-right ./gitmap-v5 https://github.com/alimtvnetwork/gitmap-v5 -y
 
 # merge with explicit policy
-gitmap merge-both ./gitmap-v4 https://github.com/alimtvnetwork/gitmap-v4 \
+gitmap merge-both ./gitmap-v5 https://github.com/alimtvnetwork/gitmap-v5 \
          -y --prefer-newer
 
 # pin remote branch
 gitmap merge-right ./local https://github.com/owner/repo:develop
 
 # preview without writing anything
-gitmap mv ./gitmap-v4 ./gitmap-v4 --dry-run
+gitmap mv ./gitmap-v5 ./gitmap-v5 --dry-run
 ```
 
 ---
@@ -327,17 +327,17 @@ Every command emits structured `[mv]` / `[merge-both]` /
 `[merge-left]` / `[merge-right]` prefixed log lines:
 
 ```
-  [mv] resolving LEFT  : ./gitmap-v4 (folder, exists)
-  [mv] resolving RIGHT : https://github.com/alimtvnetwork/gitmap-v4
-  [mv]   -> mapped to working folder: ./gitmap-v4
+  [mv] resolving LEFT  : ./gitmap-v5 (folder, exists)
+  [mv] resolving RIGHT : https://github.com/alimtvnetwork/gitmap-v5
+  [mv]   -> mapped to working folder: ./gitmap-v5
   [mv]   -> folder does not exist; cloning
   [mv]   -> clone OK (47 files, 1.2 MB)
   [mv] copying files LEFT -> RIGHT (excluding .git/) ...
   [mv]   copied 47 files
-  [mv] deleting LEFT (./gitmap-v4) ...
+  [mv] deleting LEFT (./gitmap-v5) ...
   [mv]   deleted
   [mv] committing in RIGHT ...
-  [mv]   commit 9a3c1e2 "gitmap mv from ./gitmap-v4"
+  [mv]   commit 9a3c1e2 "gitmap mv from ./gitmap-v5"
   [mv] pushing RIGHT ...
   [mv]   push OK
   [mv] done

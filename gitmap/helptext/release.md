@@ -175,10 +175,10 @@ Answering `n` (or pressing Enter) aborts the release.
       📦 Install gitmap v2.61.0
 
       🪟 Windows (PowerShell)
-         irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1 | iex
+         irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 
       🐧 Linux / macOS
-         curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.sh | sh
+         curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 
 Install hints only appear when the repo's remote origin matches the
 gitmap source repository. Non-gitmap repos are unaffected.
