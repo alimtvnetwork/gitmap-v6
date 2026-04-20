@@ -10,7 +10,7 @@ import (
 
 // runReleaseAlias implements `gitmap release-alias <alias> <version>`.
 //
-// Behaviour:
+// Behavior:
 //  1. Resolve the alias -> absolute repo path via SQLite.
 //  2. (--pull) `git pull --ff-only` inside that path.
 //  3. Auto-stash dirty changes (unless --no-stash).
@@ -79,9 +79,8 @@ func performReleaseAlias(target, alias, version string, pull, noStash, dryRun bo
 		runReleaseAliasPull(target)
 	}
 
-	stashLabel := ""
 	if !noStash {
-		stashLabel = autoStashIfDirty(target, alias, version)
+		stashLabel := autoStashIfDirty(target, alias, version)
 		if stashLabel != "" {
 			defer popAutoStash(target, stashLabel)
 		}

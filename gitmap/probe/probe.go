@@ -123,9 +123,9 @@ func parseSemverInt(tag string) int64 {
 	}
 
 	var major, minor, patch int64
-	fmt.Sscanf(parts[0], "%d", &major)
+	_, _ = fmt.Sscanf(parts[0], "%d", &major)
 	if len(parts) > 1 {
-		fmt.Sscanf(parts[1], "%d", &minor)
+		_, _ = fmt.Sscanf(parts[1], "%d", &minor)
 	}
 	if len(parts) > 2 {
 		// Trim any pre-release suffix (e.g. "1-rc1").
@@ -136,7 +136,7 @@ func parseSemverInt(tag string) int64 {
 				break
 			}
 		}
-		fmt.Sscanf(head, "%d", &patch)
+		_, _ = fmt.Sscanf(head, "%d", &patch)
 	}
 
 	return major*1_000_000 + minor*1_000 + patch

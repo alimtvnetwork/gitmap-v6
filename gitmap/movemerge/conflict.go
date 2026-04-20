@@ -62,6 +62,8 @@ func (r *Resolver) resolveSticky() (Choice, bool) {
 // resolveByPolicy applies non-interactive --prefer-* policies.
 func (r *Resolver) resolveByPolicy(l, rgt FileMeta) (Choice, bool) {
 	switch r.policy {
+	case PreferNone:
+		return 0, false
 	case PreferLeft:
 		return ChoiceLeft, true
 	case PreferRight:

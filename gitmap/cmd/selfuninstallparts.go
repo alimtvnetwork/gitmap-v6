@@ -37,7 +37,7 @@ func selfDataDir() string {
 }
 
 // removeDeployArtifacts deletes the gitmap binary plus any sibling
-// artefacts (handoff temp copies, .old backups, completion files).
+// artifacts (handoff temp copies, .old backups, completion files).
 func removeDeployArtifacts(dir string) {
 	if len(dir) == 0 {
 		return

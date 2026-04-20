@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-// MigrationReport summarises a single Migrate() run for `gitmap db-migrate`.
+// MigrationReport summarizes a single Migrate() run for `gitmap db-migrate`.
 type MigrationReport struct {
 	TablesEnsured int
 	StepsRun      []string
