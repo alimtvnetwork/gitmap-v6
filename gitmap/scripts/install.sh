@@ -324,24 +324,28 @@ download_asset() {
 
 repair_layout() {
     local target="$1"
-    local app_dir="$target/gitmap-cli"
-    local legacy_app_dir="$target/${BINARY_NAME}"
+    local app_dir="$target/$APP_SUBDIR"
     local legacy_binary="$target/${BINARY_NAME}"
     local wrapped_binary="$app_dir/${BINARY_NAME}"
 
-    # --- Migration 2: legacy gitmap/ folder -> gitmap-cli/ ----
-    # Distinguish folder vs file at $target/gitmap. A directory means the
+    # --- Migration 2: any legacy app folder -> $APP_SUBDIR ----
+    # Distinguish folder vs file at $target/<legacy>. A directory means the
     # old wrapped layout; a file means the very-old unwrapped binary.
-    if [ -d "$legacy_app_dir" ] && [ "$legacy_app_dir" != "$app_dir" ]; then
-        if [ -d "$app_dir" ]; then
-            warn "Layout: both gitmap/ and gitmap-cli/ exist at ${target} — leaving legacy gitmap/ for manual review"
-        else
-            mv "$legacy_app_dir" "$app_dir" 2>/dev/null && \
-                step "Layout: migrated legacy gitmap/ -> gitmap-cli/ at ${target}"
+    local legacy
+    for legacy in "${LEGACY_APP_SUBDIRS[@]}"; do
+        local legacy_app_dir="$target/$legacy"
+        [ "$legacy_app_dir" = "$app_dir" ] && continue
+        if [ -d "$legacy_app_dir" ]; then
+            if [ -d "$app_dir" ]; then
+                warn "Layout: both $legacy/ and ${APP_SUBDIR}/ exist at ${target} — leaving legacy $legacy/ for manual review"
+            else
+                mv "$legacy_app_dir" "$app_dir" 2>/dev/null && \
+                    step "Layout: migrated legacy $legacy/ -> ${APP_SUBDIR}/ at ${target}"
+            fi
         fi
-    fi
+    done
 
-    # --- Migration 1: legacy unwrapped binary -> gitmap-cli/ --
+    # --- Migration 1: legacy unwrapped binary -> $APP_SUBDIR/ --
     if [ -f "$legacy_binary" ] && [ ! -d "$legacy_binary" ]; then
         if [ -f "$wrapped_binary" ]; then
             rm -f "$legacy_binary" 2>/dev/null && \
@@ -356,7 +360,7 @@ repair_layout() {
                 [ ! -e "$src" ] && continue
                 [ -e "$dst" ] && continue
                 mv "$src" "$dst" 2>/dev/null && \
-                    step "  moved $name -> gitmap-cli/$name"
+                    step "  moved $name -> ${APP_SUBDIR}/$name"
             done
         fi
     else
@@ -812,6 +816,7 @@ main() {
     echo ""
 
     parse_args "$@"
+    load_deploy_manifest
 
     # Versioned repo discovery: re-exec from the latest -v<M> sibling repo.
     if [ "${INSTALLER_DELEGATED:-0}" = "1" ]; then
