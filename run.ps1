@@ -651,9 +651,7 @@ function Resolve-DeployTarget {
     }
 
     # 2) If gitmap is already on PATH, deploy to its parent directory
-    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue
-    if ($activeCmd) {
-        $activePath = $activeCmd.Source
+    $activeCmd = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -First 1
         if (Test-Path $activePath) {
             $resolvedActive = (Resolve-Path $activePath).Path
             $activeDir = Split-Path $resolvedActive -Parent
