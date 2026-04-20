@@ -62,12 +62,14 @@
 ### Doctor
 
 - **New check: `checkDuplicateBinaries`** — detects when multiple `gitmap` binaries exist on PATH (e.g. a stale drive-root shim + the canonical `gitmap-cli/` install). Lists each binary as `[active]` or `[stale]` with its version, and prints a one-shot removal command (`Remove-Item` on Windows, `sudo rm` on Unix). This catches the root cause of the `uninstall-quick.ps1` "not recognized as a cmdlet" error before it happens.
+- **New check: `checkReleaseRepoIntegrity`** — joins `Release` with `Repo` via the new FK and reports two diagnostics now that the FK exists:
+  - **Orphaned `Release` rows** (rows whose `RepoId` has no matching `Repo` row). Should always be `0` post-FK; a non-zero count indicates DB drift or a partially-applied migration. The check prints the offending `ReleaseId` + `Tag` values so they can be cleaned up manually.
+  - **Repo rows with zero releases** (registered repos that have never been released). Surfaced as an informational warning, not an error — useful for spotting repos that were scanned but never tagged. Output is suppressed when the count is 0.
+  Backed by `store.ReleaseRepoIntegrity()` which uses `LEFT JOIN` queries that are guarded against pre-v17 schemas (returns `(0, 0, nil)` when `Release.RepoId` doesn't exist yet).
 
 ### Fixed (uninstall)
 
 - **`uninstall-quick.ps1` + `gitmap self-uninstall`** — now strip the `# gitmap shell completion` + `. '…completions.ps1'` dot-source lines from **all four** PowerShell profile files (PowerShell + WindowsPowerShell × profile.ps1 + Microsoft.PowerShell_profile.ps1). Previously only the marker-block was removed from a single profile, leaving stale dot-source lines that errored on every new terminal after uninstall.
-
-### Schema (BREAKING)
 
 ### Schema (BREAKING)
 
