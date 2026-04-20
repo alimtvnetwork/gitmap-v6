@@ -425,7 +425,7 @@ install_binary() {
     # The folder name was renamed from ${BINARY_NAME} ("gitmap") to
     # "gitmap-cli" in v3.13.11 for cross-platform parity with run.ps1.
     repair_layout "${install_dir}"
-    local app_dir="${install_dir}/gitmap-cli"
+    local app_dir="${install_dir}/${APP_SUBDIR}"
     cleanup_prior_artifacts "${install_dir}" "${app_dir}"
 
     step "Installing to ${app_dir}..."
@@ -559,8 +559,8 @@ add_path_to_profile() {
     local snippet_shell="bash"
     [ "${is_fish}" = true ] && snippet_shell="fish"
     local gitmap_bin=""
-    if [ -x "${INSTALL_DIR:-}/gitmap-cli/gitmap" ]; then
-        gitmap_bin="${INSTALL_DIR}/gitmap-cli/gitmap"
+    if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
+        gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
     elif [ -x "${INSTALL_DIR:-}/gitmap" ]; then
         # Pre-v3.13.11 fallback: top-level binary (very old unwrapped install).
         gitmap_bin="${INSTALL_DIR}/gitmap"
