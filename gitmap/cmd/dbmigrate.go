@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/user/gitmap/constants"
-	"github.com/user/gitmap/store"
 )
 
 // runDBMigrate handles the "db-migrate" (alias "dbm") subcommand.
@@ -14,11 +13,9 @@ import (
 // It opens the active-profile database, runs Migrate() (which is idempotent
 // and safe to invoke repeatedly), and prints a single-line summary. The
 // --verbose flag prints every migration step that ran.
-// The --force flag clears the schema_version marker before Migrate() so the
-// full pipeline re-runs even when the fast-path would otherwise skip it.
 func runDBMigrate(args []string) {
 	checkHelp(constants.CmdDBMigrate, args)
-	verbose, force := parseDBMigrateFlags(args)
+	verbose := parseDBMigrateFlags(args)
 
 	fmt.Print(constants.MsgDBMigrateRunning)
 
@@ -29,10 +26,6 @@ func runDBMigrate(args []string) {
 	}
 	defer db.Close()
 
-	if force {
-		clearSchemaVersionMarker(db)
-	}
-
 	if err := db.Migrate(); err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrDBMigrateFailFmt, err)
 		os.Exit(1)
@@ -41,32 +34,16 @@ func runDBMigrate(args []string) {
 	printDBMigrateSummary(verbose)
 }
 
-// parseDBMigrateFlags extracts the --verbose and --force flags.
-func parseDBMigrateFlags(args []string) (bool, bool) {
+// parseDBMigrateFlags extracts the --verbose flag.
+func parseDBMigrateFlags(args []string) bool {
 	fs := flag.NewFlagSet(constants.CmdDBMigrate, flag.ExitOnError)
 	v := fs.Bool(constants.FlagDBMigrateVerbose, false, constants.FlagDescDBMigrateV)
-	f := fs.Bool(constants.FlagDBMigrateForce, false, constants.FlagDescDBMigrateF)
 
 	if err := fs.Parse(reorderFlagsBeforeArgs(args)); err != nil {
 		os.Exit(2)
 	}
 
-	return *v, *f
-}
-
-// clearSchemaVersionMarker deletes the persisted schema_version Setting row
-// so the next Migrate() call cannot take the fast-path. Failures are warned
-// to stderr but never fatal — the worst case is the fast-path still triggers
-// and the user just re-runs without --force, which is the existing behavior.
-func clearSchemaVersionMarker(db *store.DB) {
-	err := db.DeleteSetting(constants.SettingSchemaVersion)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, constants.WarnDBMigrateForceClear, err)
-
-		return
-	}
-
-	fmt.Print(constants.MsgDBMigrateForceClear)
+	return *v
 }
 
 // printDBMigrateSummary writes the post-run summary line.
@@ -86,16 +63,6 @@ func printDBMigrateSummary(verbose bool) {
 // runPostUpdateMigrate is invoked from the update flow after the binary is
 // replaced. It is best-effort: any failure is warned, never fatal, since the
 // user may have an in-flight DB lock or read-only environment.
-//
-// The post-update path always clears the schema_version marker before
-// Migrate() so the freshly-swapped binary re-walks the FULL pipeline once.
-// This eliminates the failure mode where a new binary ships a brand-new
-// migration step but skips it because the on-disk marker — written by the
-// PREVIOUS binary — already equals SchemaVersionCurrent for the OLD binary
-// (e.g. constant un-bumped, or rebased branches with overlapping versions).
-// Cost: one extra full pipeline run, exactly once per update. Migrate()
-// re-stamps the marker on success, so every subsequent command takes the
-// fast-path again.
 func runPostUpdateMigrate() {
 	fmt.Print(constants.MsgDBMigratePostUpdate)
 
@@ -106,8 +73,6 @@ func runPostUpdateMigrate() {
 		return
 	}
 	defer db.Close()
-
-	clearSchemaVersionMarker(db)
 
 	if err := db.Migrate(); err != nil {
 		fmt.Fprintf(os.Stderr, constants.WarnDBMigratePostFail, err)
