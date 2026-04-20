@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.17.0 — (2026-04-20) — Release table now FK-linked to Repo
+
+### Schema (BREAKING)
+
+- **`Release.RepoId INTEGER NOT NULL REFERENCES Repo(RepoId) ON DELETE CASCADE`** — every release row is now anchored to its source repo. The previous global `Tag UNIQUE` constraint is replaced by composite `UNIQUE (RepoId, Tag)`. New index `IdxRelease_RepoId` for per-repo filtering.
+- **Migration `migrateV15Phase6`**: detects `Release` tables missing `RepoId`, drops them, and lets the standard CREATE pass rebuild with the new FK schema. Existing rows are wiped (user-approved policy: re-import from `.gitmap/release/v*.json` on next `gitmap list-releases`). See `spec/04-generic-cli/24-release-repo-relationship.md`.
+
+### Code
+
+- `model.ReleaseRecord` gains `RepoID int64`.
+- `store.UpsertRelease` requires non-zero `RepoID`; returns `ErrReleaseNoRepo` when the repo isn't registered.
+- New `store.ResolveCurrentRepoID(absPath)` helper resolves the FK from `Repo.AbsolutePath`.
+- All three release-persist call sites — `cmd/release.go:persistReleaseToDB`, `cmd/listreleasesload.go:cacheReleasesToDB`, `cmd/scanimport.go:importReleases` — now resolve and stamp `RepoID` before upsert.
+
+### Spec
+
+- New: `spec/04-generic-cli/24-release-repo-relationship.md`
+- New: `spec/04-generic-cli/images/release-repo-er.mmd` (Mermaid ER diagram)
+
+### Recovery
+
+If a user has legacy `Release` rows but no `.gitmap/release/v*.json` files on disk, run `gitmap release-import --from-github` to repopulate from the GitHub Releases API.
+
 ## v3.16.0 — (2026-04-20) — uninstall-quick.ps1 multi-binary fix + repo rename to gitmap-v5
 
 ### Fixed
