@@ -444,32 +444,73 @@ copy_data_folder() {
 # Required for `gitmap help-dashboard` (hd) which resolves docs-site/
 # relative to the binary directory. Without this, `gitmap hd` fails with:
 #   "Docs site directory not found at <deploy>/docs-site"
+# -- Copy docs-site to deploy directory -----------------------
+# Required for `gitmap help-dashboard` (hd) which resolves docs-site/
+# relative to the binary directory. Without this, `gitmap hd` fails with:
+#   "Docs site directory not found at <deploy>/docs-site"
+#
+# Source resolution order (first hit wins):
+#   1. <repo>/docs-site/dist/   — legacy layout with a dedicated subdir
+#   2. <repo>/dist/             — current layout where the repo root IS the
+#                                 Vite docs app (no docs-site/ subdir)
+#   3. Auto-build at repo root  — if package.json has a `build` script and
+#                                 npm is on PATH, run it and use <repo>/dist/.
+#   4. <repo>/docs-site/ source — npm-dev fallback (no prebuilt dist).
+#   5. Warn — `gitmap hd` will fail until docs are built.
 copy_docs_site() {
     local app_dir="$1"
-    local docs_source="$REPO_ROOT/docs-site"
     local docs_dest="$app_dir/docs-site"
+    local legacy_dir="$REPO_ROOT/docs-site"
+    local legacy_dist="$legacy_dir/dist"
+    local root_dist="$REPO_ROOT/dist"
+    local root_pkg="$REPO_ROOT/package.json"
 
-    if [[ ! -d "$docs_source" ]]; then
-        write_warn "docs-site not found at $docs_source - 'gitmap hd' will fail"
-        return
-    fi
-
-    # Prefer copying only dist/ if it exists (smaller, no node_modules).
-    local dist_source="$docs_source/dist"
-    if [[ -d "$dist_source" ]]; then
+    # 1. Legacy <repo>/docs-site/dist/
+    if [[ -d "$legacy_dist" ]]; then
         local dist_dest="$docs_dest/dist"
         rm -rf "$dist_dest"
         mkdir -p "$docs_dest"
-        cp -r "$dist_source" "$dist_dest"
+        cp -r "$legacy_dist" "$dist_dest"
         write_info "Copied docs-site/dist to gitmap app directory"
         return
     fi
 
-    # No prebuilt dist/ — copy source (minus node_modules) for npm-dev fallback.
-    rm -rf "$docs_dest"
-    mkdir -p "$docs_dest"
-    (cd "$docs_source" && find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' -exec cp -r {} "$docs_dest/" \;)
-    write_warn "docs-site/dist not found - copied source only (run 'npm run build' in docs-site/ for static mode)"
+    # 2. Current <repo>/dist/ (root-level Vite app)
+    if [[ -d "$root_dist" ]]; then
+        local dist_dest="$docs_dest/dist"
+        rm -rf "$dist_dest"
+        mkdir -p "$docs_dest"
+        cp -r "$root_dist" "$dist_dest"
+        write_info "Copied root dist/ to gitmap app docs-site/dist"
+        return
+    fi
+
+    # 3. Auto-build the root Vite app if package.json + npm available
+    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg"; then
+        write_info "Auto-building docs (npm run build) at repo root..."
+        if (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) && [[ -d "$root_dist" ]]; then
+            local dist_dest="$docs_dest/dist"
+            rm -rf "$dist_dest"
+            mkdir -p "$docs_dest"
+            cp -r "$root_dist" "$dist_dest"
+            write_info "Built and copied docs to gitmap app docs-site/dist"
+            return
+        fi
+        write_warn "Auto-build failed - 'gitmap hd' will fail"
+        return
+    fi
+
+    # 4. Legacy <repo>/docs-site/ source-only — npm-dev fallback
+    if [[ -d "$legacy_dir" ]]; then
+        rm -rf "$docs_dest"
+        mkdir -p "$docs_dest"
+        (cd "$legacy_dir" && find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' -exec cp -r {} "$docs_dest/" \;)
+        write_warn "No prebuilt dist/ found - copied docs-site/ source only (run 'npm run build' for static mode)"
+        return
+    fi
+
+    # 5. Nothing found
+    write_warn "No docs found (checked docs-site/dist, docs-site/, dist/) - 'gitmap hd' will fail"
 }
 
 # -- Resolve deploy target -------------------------------------
