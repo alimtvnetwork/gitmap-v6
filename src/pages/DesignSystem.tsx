@@ -262,7 +262,7 @@ const DesignSystemPage = () => {
                   <li>Anything a designer would call a "label"</li>
                 </ul>
                 <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-                  <span className="text-emerald-400">✓ Do:</span> <code className="docs-inline-code">&lt;span className="font-sans"&gt;scan&lt;/span&gt;</code>
+                  <span className="text-primary">✓ Do:</span> <code className="docs-inline-code">&lt;span className="font-sans"&gt;scan&lt;/span&gt;</code>
                 </div>
               </div>
 
