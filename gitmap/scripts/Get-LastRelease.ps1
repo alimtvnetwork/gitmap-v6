@@ -81,14 +81,22 @@ function Get-ReleaseFromJSON {
         $Root = (Get-Location).Path
     }
 
-    $latestFile = Join-Path (Join-Path $Root ".release") "latest.json"
-    if (Test-Path $latestFile) {
+    $latestCandidates = @(
+        (Join-Path (Join-Path (Join-Path $Root ".gitmap") "release") "latest.json"),
+        (Join-Path (Join-Path $Root ".release") "latest.json")
+    )
+
+    foreach ($latestFile in $latestCandidates) {
+        if (-not (Test-Path $latestFile)) {
+            continue
+        }
+
         try {
             $data = Get-Content $latestFile -Raw | ConvertFrom-Json
-            if ($data.tag) {
+            if ($data.tag -and ($data.tag -match '^v\d+\.\d+\.\d+')) {
                 return $data.tag
             }
-            if ($data.version) {
+            if ($data.version -and ($data.version -match '^\d+\.\d+\.\d+')) {
                 return "v$($data.version)"
             }
         } catch {
