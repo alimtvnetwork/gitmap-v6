@@ -74,6 +74,7 @@ func executeSelfUninstall(opts selfUninstallOpts) {
 	if !opts.KeepSnippet {
 		removeProfileSnippet(defaultProfileForOS())
 	}
+	removeCompletionSourceLines()
 	removeCompletionFiles(selfDeployDir())
 	if !opts.KeepData {
 		removePathBestEffort(selfDataDir())

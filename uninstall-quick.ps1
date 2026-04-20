@@ -237,6 +237,10 @@ if (-not $ok) {
 }
 
 Write-Host ""
+Write-Step "Cleaning PowerShell profile completion lines"
+Remove-CompletionSourceLines
+
+Write-Host ""
 Write-Step "User data"
 Remove-DataFolder
 
