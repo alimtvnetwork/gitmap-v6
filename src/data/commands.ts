@@ -201,6 +201,28 @@ export const commands: CommandDef[] = [
       { name: "group", description: "Manage repo groups for targeted pulls" },
     ],
   },
+  {
+    category: "cloning",
+    name: "pull all", alias: "pull a", description: "Pull every repo under the CWD scan root in parallel; run.ps1/run.sh replaces git pull (planned v3.34.0)",
+    usage: "gitmap pull all [--workers N] [--script-timeout <dur>] [--verbose]",
+    flags: [
+      { flag: "--workers <n>", description: "Parallel workers (1–16, default 4)" },
+      { flag: "--script-timeout <dur>", description: "Per-script timeout (default 10m)" },
+      { flag: "--verbose", description: "Forwarded to each per-repo pull" },
+    ],
+    examples: [
+      { command: "cd D:\\projects && gitmap pull all", description: "Pull every repo registered under D:\\projects" },
+      { command: "gitmap p all", description: "Short form using existing pull alias" },
+      { command: "gitmap pull a --workers 8", description: "Bump parallelism" },
+      { command: "gitmap pull all --script-timeout 30m", description: "Allow longer-running run.ps1/run.sh builds" },
+    ],
+    seeAlso: [
+      { name: "pull", description: "Pull a single repo / group / global --all" },
+      { name: "scan all", description: "Bulk-rescan all known roots first" },
+      { name: "scan", description: "Register the current dir as a scan root" },
+      { name: "sf list", description: "Inspect ScanFolder table" },
+    ],
+  },
 
   // ═══════════════════════════════════════════
   // Monitoring & Status
