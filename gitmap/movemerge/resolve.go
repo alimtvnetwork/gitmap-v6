@@ -38,8 +38,8 @@ func resolveFolderEndpoint(ep Endpoint, isLeft bool, opts Options) (Endpoint, er
 		return ep, fmt.Errorf(constants.ErrMMSrcMissingFmt, ep.DisplayName)
 	}
 	if exists && opts.PullFolder && IsGitRepo(abs) {
-		if err = PullFFOnly(abs); err != nil {
-			return ep, err
+		if pullErr := PullFFOnly(abs); pullErr != nil {
+			return ep, pullErr
 		}
 	}
 	ep.IsGitRepo = IsGitRepo(abs)

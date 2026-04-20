@@ -138,8 +138,10 @@ func pickInstallScriptURL() string {
 }
 
 // downloadInstallScript fetches an installer over HTTPS.
+// URL is sourced from compile-time constants (SelfInstallRemotePwsh /
+// SelfInstallRemoteBash); not user-controlled.
 func downloadInstallScript(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) //nolint:gosec // G107: URL is a compile-time constant.
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +169,10 @@ func writeInstallScriptTemp(name string, body []byte) string {
 	}
 	defer f.Close()
 	if strings.HasSuffix(name, ".ps1") {
-		f.Write([]byte{0xEF, 0xBB, 0xBF})
+		if _, err := f.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+			fmt.Fprintf(os.Stderr, constants.ErrSelfInstallScriptWrite, err)
+			os.Exit(1)
+		}
 	}
 	if _, err := f.Write(body); err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrSelfInstallScriptWrite, err)

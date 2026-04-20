@@ -4,7 +4,7 @@ package constants
 //
 // Each command parses its own `flag.NewFlagSet`, so these strings are
 // reused safely (e.g. --json appears for `list-versions`, `list-releases`,
-// `amend-list`, etc.). Centralised here so renames stay consistent.
+// `amend-list`, etc.). Centralized here so renames stay consistent.
 const (
 	FlagOpenValue = "--open"
 	FlagJSON      = "--json"

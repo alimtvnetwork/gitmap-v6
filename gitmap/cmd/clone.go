@@ -88,7 +88,7 @@ func repoNameFromURL(url string) string {
 // (e.g., wp-onboarding-v13 clones into wp-onboarding/).
 // By default, an existing target folder is replaced via the two-strategy
 // flow in spec/01-app/96-clone-replace-existing-folder.md. Pass noReplace=true
-// to restore the strict abort-on-exists behaviour.
+// to restore the strict abort-on-exists behavior.
 func executeDirectClone(url, folderName string, ghDesktopFlag, noReplace bool) {
 	repoName := repoNameFromURL(url)
 	if len(folderName) == 0 {
@@ -106,7 +106,7 @@ func executeDirectClone(url, folderName string, ghDesktopFlag, noReplace bool) {
 		absPath = folderName
 	}
 
-	// Strict mode: keep the original abort-on-exists behaviour.
+	// Strict mode: keep the original abort-on-exists behavior.
 	if noReplace {
 		if _, statErr := os.Stat(absPath); statErr == nil {
 			fmt.Fprintf(os.Stderr, constants.ErrCloneURLExists, absPath)

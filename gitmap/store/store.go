@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/user/gitmap/constants"
 
@@ -176,11 +175,6 @@ func (db *DB) addColumnIfNotExists(stmt string) {
 	}
 
 	fmt.Fprintf(os.Stderr, "  ⚠ Migration failed: %v (statement: %s)\n", err, stmt)
-}
-
-// isDuplicateColumnError checks if an error is a "duplicate column" error.
-func isDuplicateColumnError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "duplicate column")
 }
 
 // migrateSourceColumn adds the Source column to existing Releases tables.

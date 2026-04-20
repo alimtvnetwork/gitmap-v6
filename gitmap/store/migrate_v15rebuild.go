@@ -104,7 +104,7 @@ func (db *DB) execV15Rebuild(spec v15RebuildSpec) error {
 		return fmt.Errorf("create %s: %w", spec.NewTable, err)
 	}
 
-	copySQL := fmt.Sprintf(
+	copySQL := fmt.Sprintf( //nolint:gosec // G201: identifiers come from internal RebuildSpec, not user input.
 		`INSERT INTO "%s" (%s) SELECT %s FROM "%s"`,
 		spec.NewTable, spec.NewColumnList, spec.OldColumnList, spec.OldTable,
 	)

@@ -106,7 +106,7 @@ func resolveCleanupDir(filePath string) string {
 }
 
 // deriveDeployAppDir mirrors run.ps1 PATH-derived deploy target resolution.
-// Recognises both the new "gitmap-cli" subdir and the legacy "gitmap" subdir
+// Recognizes both the new "gitmap-cli" subdir and the legacy "gitmap" subdir
 // so cleanup keeps working during the v3.6.0 migration window.
 func deriveDeployAppDir(selfPath string) string {
 	selfDir := resolveCleanupDir(selfPath)

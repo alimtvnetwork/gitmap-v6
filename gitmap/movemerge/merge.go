@@ -42,6 +42,8 @@ func effectivePolicy(dir Direction, opts Options) PreferPolicy {
 		return opts.Prefer
 	}
 	switch dir {
+	case DirBoth:
+		return PreferNewer
 	case DirRightOnly:
 		return PreferLeft
 	case DirLeftOnly:
@@ -60,6 +62,8 @@ func applyEntry(e DiffEntry, l, r Endpoint, dir Direction, res *Resolver, opts O
 		return applyMissing(e, l, r, dir, opts, false)
 	case DiffMissingRight:
 		return applyMissing(e, l, r, dir, opts, true)
+	case DiffConflict:
+		return applyConflict(e, l, r, dir, res, opts)
 	}
 
 	return applyConflict(e, l, r, dir, res, opts)

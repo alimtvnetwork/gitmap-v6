@@ -23,15 +23,15 @@ func RunMove(left, right Endpoint, opts Options) error {
 		return err
 	}
 	logIndent(opts.LogPrefix, "copied %d files", count)
-	if err = deleteLeftFolder(left, opts); err != nil {
-		return err
+	if delErr := deleteLeftFolder(left, opts); delErr != nil {
+		return delErr
 	}
 
 	return finalizeURLSides(left, right, DirRightOnly, opts)
 }
 
 // ensureRightExists creates RIGHT when it's a folder endpoint that
-// didn't exist; honours --init.
+// didn't exist; honors --init.
 func ensureRightExists(right Endpoint, opts Options) error {
 	if right.Existed || right.Kind == EndpointURL {
 		return nil
@@ -53,7 +53,7 @@ func ensureRightExists(right Endpoint, opts Options) error {
 	return nil
 }
 
-// copyOrDryRun honours --dry-run while still indexing the source.
+// copyOrDryRun honors --dry-run while still indexing the source.
 func copyOrDryRun(src, dst string, opts Options) (int, error) {
 	if !opts.DryRun {
 		return CopyTree(src, dst, opts)
