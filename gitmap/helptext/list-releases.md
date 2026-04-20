@@ -8,11 +8,12 @@ discovered releases are cached to the DB on every invocation.
 
 ## Alias
 
-lr
+lr, releases
 
 ## Usage
 
     gitmap list-releases [--json] [--limit N] [--source repo|release|import|tag]
+    gitmap releases --all-repos [--json] [--limit N]
 
 ## Flags
 
@@ -21,6 +22,7 @@ lr
 | --json | false | Output as structured JSON |
 | --limit \<N\> | 0 | Show only the top N releases (0 = all) |
 | --source \<type\> | — | Filter by release source (repo, release, import, or tag) |
+| --all-repos | false | (v3.20.0) Multi-repo batch view: every Release row in the DB joined with its Repo, ordered by CreatedAt. Bypasses the cwd-bound repo/tag scan. |
 
 ## Prerequisites
 

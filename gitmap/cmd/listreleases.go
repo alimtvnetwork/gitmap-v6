@@ -15,6 +15,14 @@ func runListReleases(args []string) {
 	checkHelp("list-releases", args)
 	asJSON := hasListReleasesJSONFlag(args)
 	limit := parseListReleasesLimit(args)
+
+	// New in v3.20.0: --all-repos pivots to the multi-repo joined view.
+	if hasAllReposFlag(args) {
+		runListReleasesAllRepos(asJSON, limit)
+
+		return
+	}
+
 	source := parseListReleasesSource(args)
 	releases := loadReleases()
 	releases = filterBySource(releases, source)

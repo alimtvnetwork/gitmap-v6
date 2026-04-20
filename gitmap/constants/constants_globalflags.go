@@ -10,6 +10,7 @@ const (
 	FlagJSON      = "--json"
 	FlagLimit     = "--limit"
 	FlagSource    = "--source"
+	FlagAllRepos  = "--all-repos" // v3.20.0: list-releases multi-repo batch view
 	FlagCompact   = "--compact"
 	FlagGroups    = "--groups"
 )

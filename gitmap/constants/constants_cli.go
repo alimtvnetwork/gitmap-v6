@@ -56,6 +56,7 @@ const (
 	CmdRevertRunner          = "revert-runner" // gitmap:cmd skip
 	CmdListReleases          = "list-releases"
 	CmdListReleasesAlias     = "lr"
+	CmdReleases              = "releases" // v3.20.0: alias of list-releases, intended for --all-repos batch view
 	CmdCompletion            = "completion"
 	CmdCompletionAlias       = "cmp"
 	CmdClearReleaseJSON      = "clear-release-json"

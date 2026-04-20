@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.20.0 — (2026-04-20) — `gitmap releases --all-repos` multi-repo batch view
+
+### Added (releases)
+
+- **New top-level `gitmap releases` command** as an alias of `list-releases` (`lr`), exposing the new multi-repo batch view via `--all-repos`.
+- **`--all-repos` flag** on `list-releases` / `lr` / `releases` runs a SQL JOIN of every `Release` row with its owning `Repo` row, ordered by `CreatedAt DESC, Slug ASC`. This is the first command that explicitly exercises the `IdxRelease_RepoId` secondary index added in v17, demonstrating the multi-repo schema readiness pre-paid by that index. Output adds a `REPO` column (slug) to the table; `--json` emits the joined records as `[]store.ReleaseAcrossRepos`. `--limit N` works the same as the single-repo view. The query bypasses the cwd-bound `loadReleases` scan, so it works from anywhere — even outside any git repo — as long as the gitmap DB is reachable.
+
+### Files
+
+- New: `gitmap/store/releaseacrossrepos.go` — `ReleaseAcrossRepos` struct + `ListReleasesAcrossRepos` query method (table/column-existence guarded for pre-v17 DBs).
+- New: `gitmap/cmd/listreleasesallrepos.go` — `runListReleasesAllRepos`, table/JSON renderers, `hasAllReposFlag`.
+- Edited: `gitmap/cmd/listreleases.go` — `runListReleases` now pivots to the all-repos branch when `--all-repos` is present.
+- Edited: `gitmap/cmd/roottooling.go` — dispatches the new `releases` command name.
+- Edited: `gitmap/constants/constants_cli.go` — adds `CmdReleases = "releases"`.
+- Edited: `gitmap/constants/constants_globalflags.go` — adds `FlagAllRepos = "--all-repos"`.
+- Edited: `gitmap/constants/constants_store.go` — adds `SQLSelectAllReleasesAcrossRepos` (Release JOIN Repo).
+- Edited: `gitmap/constants/constants_messages.go` — adds 5 `MsgListReleasesAllRepos*` strings for the wider table.
+- Edited: `gitmap/constants/cmd_constants_test.go` — registers `CmdReleases` in the round-trip table.
+- Edited: `gitmap/helptext/list-releases.md` — documents the new alias and flag.
+
+### Notes
+
+- The store method is defensive: if the DB pre-dates v17 (no `Release.RepoId` column or no `Repo` table), it returns an empty slice rather than erroring, so the command degrades gracefully on legacy databases.
+
 ## v3.19.1 — (2026-04-20) — Exhaustive PATH sweep in uninstall-quick scripts
 
 ### Fixed (uninstall)

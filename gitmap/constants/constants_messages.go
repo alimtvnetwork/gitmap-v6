@@ -231,6 +231,15 @@ const (
 	MsgNo                    = "no"
 )
 
+// List-releases --all-repos messages (v3.20.0). Wider table — adds REPO column.
+const (
+	MsgListReleasesAllReposEmpty     = "No releases recorded across any repo. Run `gitmap release` in any repo first."
+	MsgListReleasesAllReposHeader    = "Releases across all repos (%d found)\n"
+	MsgListReleasesAllReposSeparator = "────────────────────────────────────────────────────────────────────────────────────"
+	MsgListReleasesAllReposColumns   = "  REPO                 VERSION    TAG          BRANCH              LATEST  SOURCE   DATE"
+	MsgListReleasesAllReposRowFmt    = "  %-20s %-10s %-12s %-19s %-7s %-8s %s\n"
+)
+
 // Release import messages.
 const (
 	MsgReleasesImported   = "Releases imported: %d from .gitmap/release/\n"

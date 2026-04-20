@@ -158,6 +158,16 @@ const (
 	SQLSelectAllReleases = `SELECT ReleaseId, RepoId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
 		FROM Release ORDER BY CreatedAt DESC`
 
+	// SQLSelectAllReleasesAcrossRepos powers `gitmap releases --all-repos`.
+	// The JOIN on Repo.RepoId = Release.RepoId is what exercises (and
+	// pre-pays) the IdxRelease_RepoId secondary index added in v17.
+	SQLSelectAllReleasesAcrossRepos = `SELECT R.ReleaseId, R.RepoId, P.Slug, P.AbsolutePath,
+			R.Version, R.Tag, R.Branch, R.CommitSha, R.Source,
+			R.IsDraft, R.IsLatest, R.IsPreRelease, R.CreatedAt
+		FROM Release R
+		JOIN Repo P ON P.RepoId = R.RepoId
+		ORDER BY R.CreatedAt DESC, P.Slug ASC`
+
 	SQLSelectReleaseByTag = `SELECT ReleaseId, RepoId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
 		FROM Release WHERE Tag = ?`
 
