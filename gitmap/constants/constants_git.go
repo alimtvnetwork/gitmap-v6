@@ -64,3 +64,11 @@ const (
 	HTTPSFromSSHFmt     = "https://%s/%s"
 	SSHFromHTTPSFmt     = "git@%s:%s"
 )
+
+// GitStderrNoisePatterns lists substrings whose presence in a git stderr
+// line marks the line as harmless cosmetic chatter that the release
+// pipeline should suppress. Add ONLY substrings that are guaranteed to
+// not appear in a real error — these lines are silently dropped.
+var GitStderrNoisePatterns = []string{
+	"LF will be replaced by CRLF the next time Git touches it",
+}

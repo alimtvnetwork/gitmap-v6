@@ -122,11 +122,19 @@ func resolveFromHead() (string, string, error) {
 	return constants.GitHEAD, branchName, nil
 }
 
-// runGitCmd executes a git command and prints stderr on failure.
+// runGitCmd executes a git command, forwards stdout, and pipes stderr
+// through filteredStderrWriter so cosmetic git warnings (see
+// constants.GitStderrNoisePatterns) never reach the user's terminal.
 func runGitCmd(args ...string) error {
 	cmd := exec.Command(constants.GitBin, args...)
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stderr := newFilteredStderr(os.Stderr)
+	cmd.Stderr = stderr
 
-	return cmd.Run()
+	runErr := cmd.Run()
+	if flushErr := stderr.Flush(); flushErr != nil && runErr == nil {
+		return flushErr
+	}
+
+	return runErr
 }
