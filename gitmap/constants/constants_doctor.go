@@ -153,6 +153,12 @@ const (
 	DoctorLegacyDirsOK = "No legacy directories (.release/, gitmap-output/, .deployed/)"
 )
 
+// Doctor duplicate binary messages.
+const (
+	DoctorDupBinOK    = "Single gitmap binary on PATH"
+	DoctorDupBinTitle = "Multiple gitmap binaries on PATH"
+)
+
 // Doctor setup config messages.
 const (
 	DoctorSetupConfigMissing = "git-setup.json not found (setup will fail without --config)"

@@ -30,6 +30,7 @@ func runDoctorChecks() int {
 	issues := 0
 	issues += checkRepoPath()
 	issues += checkActiveBinary()
+	issues += checkDuplicateBinaries()
 	issues += checkDeployedBinary()
 	issues += checkVersionMismatch()
 	issues += checkGit()
