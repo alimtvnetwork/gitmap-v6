@@ -240,3 +240,39 @@ where they don't apply.
 If a future change touches one driver, the other two MUST be updated
 in the same commit so the parity table stays accurate.
 
+
+---
+
+## Validation Policy — no `deploy-dfd` CI job (v3.13.9+)
+
+The `deploy-dfd` GitHub Actions job that previously enforced DFD-1..DFD-9
+in CI was **intentionally removed in v3.13.9** and will not be reinstated.
+
+**Why removed:**
+- The job kept regressing on legitimate cross-platform divergences
+  (e.g. `gitmap-cli/` vs legacy `gitmap/`) and produced more red builds
+  than real bugs caught.
+- Sandbox layouts in CI never fully match real user installs, so passing
+  CI did not guarantee a clean end-user experience anyway.
+- The cost of debugging CI sandbox quirks outweighed the regression
+  signal it provided.
+
+**Replacement validation (defense in depth):**
+
+1. **`gitmap doctor`** — every user runs this on first launch and after
+   updates. It checks: PATH binary present, deployed binary present,
+   active vs. deployed version match, app subdir matches the manifest
+   (`gitmap/constants/deploy-manifest.json`), and reports actionable
+   fixes via `gitmap doctor --fix-path`.
+2. **End-user smoke testing** — release notes call out layout changes,
+   and the project author runs `./run.ps1` (Windows) and `./run.sh`
+   (Linux) against a clean sandbox before tagging.
+3. **Manifest as single source of truth** — `gitmap-cli` and any legacy
+   subdir names live in **one JSON file** (v3.15.0+). Renames cannot
+   silently desync run.ps1 / run.sh / install.sh / Go constants.
+4. **Code review** — DFD parity table above MUST be updated in the same
+   commit that touches any of the three driver scripts.
+
+If a layout regression slips past doctor + smoke testing, file an issue
+and add a **targeted** unit test to `gitmap/cmd/*_test.go` for the
+specific failure — do NOT reinstate a broad `deploy-dfd` job.

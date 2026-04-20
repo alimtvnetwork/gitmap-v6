@@ -21,6 +21,18 @@
 
 The previous v3.14.0 release had `gitmap-cli` hardcoded in **6+ places** across PowerShell, Bash, and Go. Any future rename (or addition of a new layout migration target) required hunting every file. The manifest centralizes this so the next rename is a one-line PR plus tests.
 
+### Validation policy — `deploy-dfd` CI stays gone
+
+The `deploy-dfd` GitHub Actions job (removed in v3.13.9) is **intentionally not being reinstated**, even after the manifest refactor would make it easier to write. The decision is now documented in [`spec/04-generic-cli/22-data-folder-deploy-and-cleanup.md`](spec/04-generic-cli/22-data-folder-deploy-and-cleanup.md#validation-policy--no-deploy-dfd-ci-job-v3139). Deploy-layout regressions are now caught by:
+
+1. **`gitmap doctor`** on every user's first launch and after updates (PATH binary, deployed binary, version match, app-subdir vs. manifest).
+2. **Author smoke testing** — `./run.ps1` and `./run.sh` against clean sandboxes before each tag.
+3. **Manifest single-source-of-truth** — `gitmap/constants/deploy-manifest.json` makes silent drift across the four drivers impossible.
+4. **Code review** — DFD parity table in the spec MUST be updated in the same commit as any driver change.
+
+Targeted unit tests are preferred over broad CI sandbox-layout assertions when a specific regression is found.
+
+
 ## v3.14.0 — (2026-04-20) — Unix deploy migrated to gitmap-cli/ for cross-platform parity
 
 ### Changed
