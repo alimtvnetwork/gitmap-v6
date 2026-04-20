@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.13.9 — (2026-04-20) — deploy-DFD CI job removed
+
+### Removed
+
+- **`.github/workflows/ci.yml`** — Deleted the entire `deploy-dfd` job (Ubuntu + Windows matrix, ~135 lines, formerly lines 400–533) per user request. The job ran `run.sh` / `run.ps1` into a sandboxed HOME and asserted DFD-1/4/6/7 layout invariants from `spec/04-generic-cli/22-data-folder-deploy-and-cleanup.md`. It had become a recurring source of CI breakage every time the deploy layout evolved (most recently the Windows `gitmap` → `gitmap-cli` rename in v3.6.0, patched in v3.13.8). The DFD spec remains authoritative; layout regressions will now surface through the manual-install path or via `gitmap self-install` end-user testing rather than a synthetic sandbox harness.
+
+
 ## v3.13.8 — (2026-04-20) — CI deploy-DFD Windows assertion aligned with gitmap-cli subdir
 
 ### Fixed
