@@ -235,6 +235,64 @@ const DesignSystemPage = () => {
               <p className="text-foreground">Use <code className="docs-inline-code">gitmap scan</code> to discover repositories.</p>
             </div>
           </div>
+
+          {/* Font Usage Guidelines — when to reach for Poppins vs Ubuntu Mono */}
+          <div className="border border-border rounded-lg p-5 space-y-4 bg-card/30">
+            <div>
+              <h3 className="docs-h3 !mt-0">Font Usage Guidelines</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                One rule: <span className="text-foreground font-medium">Poppins for humans, Ubuntu Mono for machines.</span>
+                Mono is reserved for things the user would literally type into a shell or copy into a config — never for decorative chrome.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Poppins column */}
+              <div className="border border-border rounded-md p-4 space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-foreground font-medium">Poppins (font-sans)</span>
+                  <span className="text-xs text-muted-foreground">Default — no class needed</span>
+                </div>
+                <ul className="text-sm text-foreground space-y-1.5 list-disc pl-5">
+                  <li>Headings, body copy, paragraphs</li>
+                  <li>Button labels &amp; nav items</li>
+                  <li>Command names &amp; aliases (<code className="docs-inline-code">scan</code>, <code className="docs-inline-code">s</code>) on the docs page</li>
+                  <li>Category titles (e.g. "Scanning &amp; Discovery")</li>
+                  <li>Flag descriptions, table headers, tooltips</li>
+                  <li>Anything a designer would call a "label"</li>
+                </ul>
+                <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+                  <span className="text-emerald-400">✓ Do:</span> <code className="docs-inline-code">&lt;span className="font-sans"&gt;scan&lt;/span&gt;</code>
+                </div>
+              </div>
+
+              {/* Ubuntu Mono column */}
+              <div className="border border-border rounded-md p-4 space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-foreground font-medium font-mono">Ubuntu Mono (font-mono)</span>
+                  <span className="text-xs text-muted-foreground">Opt-in only</span>
+                </div>
+                <ul className="text-sm text-foreground space-y-1.5 list-disc pl-5">
+                  <li>Shell commands inside <code className="docs-inline-code">CodeBlock</code> / <code className="docs-inline-code">TerminalDemo</code></li>
+                  <li>Inline code (<code className="docs-inline-code">.docs-inline-code</code>)</li>
+                  <li>Literal CLI output, JSON, YAML, file paths</li>
+                  <li>Diff hunks, error messages copied from a terminal</li>
+                  <li>Keyboard shortcuts inside <code className="docs-inline-code">&lt;kbd&gt;</code></li>
+                </ul>
+                <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+                  <span className="text-rose-400">✗ Don't:</span> use <code className="docs-inline-code">font-mono</code> for prose, badges, chips, or section titles for "techy vibes".
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-md p-4 bg-background/40 space-y-2">
+              <p className="text-sm text-foreground font-medium">Quick decision test</p>
+              <p className="text-sm text-muted-foreground">
+                Ask: <span className="text-foreground italic">"Would the user type this into a terminal exactly as shown?"</span>
+                If yes → <code className="docs-inline-code">font-mono</code>. If no → leave it as default Poppins.
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* Code Blocks */}
