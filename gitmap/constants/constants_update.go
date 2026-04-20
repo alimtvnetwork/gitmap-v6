@@ -90,14 +90,20 @@ try {
     Write-Host "  [WARN] Could not refresh run.ps1: $_" -ForegroundColor Yellow
 }
 `
+	// UpdatePSDeployDetect format args (in order):
+	//   %[1]s — repo path           (e.g. C:\dev\gitmap-v5)
+	//   %[2]s — gitmap subdir       (sourceRepoSubdir from manifest)
+	//   %[3]s — app subdir          (appSubdir from manifest, e.g. gitmap-cli)
+	//   %[4]s — binary name         (gitmap.exe)
+	//   %[5]s — known-subdir array  (PowerShell @("a","b") literal of app + legacy)
 	UpdatePSDeployDetect = `
-$configPath = Join-Path "%s" "gitmap\powershell.json"
+$configPath = Join-Path "%[1]s" "%[2]s\powershell.json"
 $deployedBinary = $null
 $configDeployedBinary = $null
 if (Test-Path $configPath) {
     $cfg = Get-Content $configPath | ConvertFrom-Json
     if ($cfg.deployPath) {
-	    $configDeployedBinary = Join-Path $cfg.deployPath "gitmap-cli\gitmap.exe"
+	    $configDeployedBinary = Join-Path $cfg.deployPath "%[3]s\%[4]s"
     }
 }
 
@@ -105,13 +111,13 @@ $activeCmdForDeploy = Get-Command gitmap -ErrorAction SilentlyContinue
 if ($activeCmdForDeploy -and (Test-Path $activeCmdForDeploy.Source)) {
     $resolvedActiveBinary = (Resolve-Path $activeCmdForDeploy.Source).Path
     $resolvedActiveDir = Split-Path $resolvedActiveBinary -Parent
-    if ((Split-Path $resolvedActiveDir -Leaf) -in @("gitmap-cli","gitmap")) {
+    if ((Split-Path $resolvedActiveDir -Leaf) -in %[5]s) {
         $effectiveDeployTarget = Split-Path $resolvedActiveDir -Parent
     } else {
         $effectiveDeployTarget = Split-Path $resolvedActiveDir -Parent
     }
     if ($effectiveDeployTarget) {
-        $deployedBinary = Join-Path $effectiveDeployTarget "gitmap-cli\gitmap.exe"
+        $deployedBinary = Join-Path $effectiveDeployTarget "%[3]s\%[4]s"
     }
 }
 

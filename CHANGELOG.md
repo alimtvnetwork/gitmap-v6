@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.15.0 — (2026-04-20) — Single-source-of-truth deploy manifest
+
+### Added
+
+- **`gitmap/constants/deploy-manifest.json`** — Single source of truth for deploy-target folder names (`appSubdir`, `legacyAppSubdirs`, `binaryName`, `sourceRepoSubdir`). Renaming the deploy folder in any future version now requires editing **only this one file** — no more drift across `run.ps1`, `run.sh`, `install.sh`, and Go constants.
+- **`gitmap/constants/deploy_manifest.go`** — Embeds the manifest via `go:embed` and populates `constants.GitMapSubdir`, `constants.GitMapCliSubdir`, `constants.LegacyAppSubdirs`, and `constants.Manifest` at package init. Falls back to v3.13.x defaults if the JSON is unparseable so the binary stays usable.
+- **`Get-DeployManifest`** (run.ps1) and **`load_deploy_manifest`** (run.sh, install.sh) — Each script now parses the manifest from disk (run.ps1, run.sh) or from the install repo via curl (install.sh) and exports `$AppSubdir` / `$LegacyAppSubdirs` (or `APP_SUBDIR` / `LEGACY_APP_SUBDIRS`) for use by all downstream layout, deploy, and cleanup logic.
+- **`Test-KnownAppSubdir`** (run.ps1) and **`is_known_app_subdir`** (run.sh) — Reusable predicates that check whether a folder name matches the current or any legacy app subdir, replacing the literal `gitmap-cli`/`gitmap` `or` chains.
+
+### Changed
+
+- **`gitmap/constants/constants_doctor.go`** — `GitMapSubdir` and `GitMapCliSubdir` are no longer `const` literals; they are now `var` populated from the embedded manifest at init time.
+- **`gitmap/constants/constants_update.go`** — `UpdatePSDeployDetect` is now a 5-arg format template (was hardcoded `gitmap`/`gitmap-cli`/`gitmap.exe`). The Windows update script generator (`gitmap/cmd/updatescript.go`) injects the manifest-sourced values plus a PowerShell `@(...)` literal of all known subdirs.
+- **`run.ps1`** — Deploy target detection, `Repair-DeployLayout`, drive-root shim safety guard, and post-deploy app-dir resolution all now read from `$script:AppSubdir` / `$script:LegacyAppSubdirs` instead of literal strings.
+- **`run.sh`** — Same migration: `resolve_deploy_target`, `repair_deploy_layout`, and `Deploy-Binary` use `$APP_SUBDIR` / `is_known_app_subdir`. Legacy migration loop iterates `LEGACY_APP_SUBDIRS` so adding a new legacy name is a one-JSON-line change.
+- **`gitmap/scripts/install.sh`** — `repair_layout` and `install_binary` use `$APP_SUBDIR`. The `add_path_to_profile` snippet probe (`${INSTALL_DIR}/gitmap-cli/gitmap`) is now `${INSTALL_DIR}/${APP_SUBDIR}/gitmap`. Manifest is fetched via curl from the install REPO at startup.
+
+### Why
+
+The previous v3.14.0 release had `gitmap-cli` hardcoded in **6+ places** across PowerShell, Bash, and Go. Any future rename (or addition of a new layout migration target) required hunting every file. The manifest centralizes this so the next rename is a one-line PR plus tests.
+
 ## v3.14.0 — (2026-04-20) — Unix deploy migrated to gitmap-cli/ for cross-platform parity
 
 ### Changed

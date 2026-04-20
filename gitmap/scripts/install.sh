@@ -56,6 +56,40 @@ trap cleanup EXIT
 step()  { printf '  \033[36m%s\033[0m\n' "$*" >&2; }
 ok()    { printf '  \033[32m%s\033[0m\n' "$*" >&2; }
 err()   { printf '  \033[31m%s\033[0m\n' "$*" >&2; }
+warn()  { printf '  \033[33m%s\033[0m\n' "$*" >&2; }
+
+# ── Deploy manifest (single source of truth) ───────────────────────
+# Mirrors run.sh's load_deploy_manifest and run.ps1's Get-DeployManifest.
+# Fetches gitmap/constants/deploy-manifest.json from the install repo so
+# APP_SUBDIR / LEGACY_APP_SUBDIRS aren't hardcoded across scripts and Go.
+# Renaming the deploy folder ONLY requires editing that JSON file.
+APP_SUBDIR="gitmap-cli"
+LEGACY_APP_SUBDIRS=("gitmap")
+load_deploy_manifest() {
+    local manifest_url="https://raw.githubusercontent.com/${REPO}/main/gitmap/constants/deploy-manifest.json"
+    local manifest
+    manifest=$(curl -fsSL --max-time 5 "$manifest_url" 2>/dev/null || true)
+    if [ -z "$manifest" ]; then
+        warn "deploy-manifest.json not reachable - using defaults ($APP_SUBDIR)"
+        return
+    fi
+    local app
+    app=$(printf '%s' "$manifest" | grep -E '"appSubdir"' | head -n1 | sed -E 's/.*"appSubdir"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+    if [ -n "$app" ]; then
+        APP_SUBDIR="$app"
+    fi
+    local legacy_block legacy_csv
+    legacy_block=$(printf '%s' "$manifest" | awk '/"legacyAppSubdirs"/,/]/')
+    if [ -n "$legacy_block" ]; then
+        legacy_csv=$(printf '%s' "$legacy_block" | grep -oE '"[^"]+"' | sed -E 's/^"(.*)"$/\1/' | grep -v '^legacyAppSubdirs$' || true)
+        if [ -n "$legacy_csv" ]; then
+            LEGACY_APP_SUBDIRS=()
+            while IFS= read -r line; do
+                [ -n "$line" ] && LEGACY_APP_SUBDIRS+=("$line")
+            done <<< "$legacy_csv"
+        fi
+    fi
+}
 
 # ── Versioned repo discovery ────────────────────────────────────────
 # spec/01-app/95-installer-script-find-latest-repo.md
@@ -290,24 +324,28 @@ download_asset() {
 
 repair_layout() {
     local target="$1"
-    local app_dir="$target/gitmap-cli"
-    local legacy_app_dir="$target/${BINARY_NAME}"
+    local app_dir="$target/$APP_SUBDIR"
     local legacy_binary="$target/${BINARY_NAME}"
     local wrapped_binary="$app_dir/${BINARY_NAME}"
 
-    # --- Migration 2: legacy gitmap/ folder -> gitmap-cli/ ----
-    # Distinguish folder vs file at $target/gitmap. A directory means the
+    # --- Migration 2: any legacy app folder -> $APP_SUBDIR ----
+    # Distinguish folder vs file at $target/<legacy>. A directory means the
     # old wrapped layout; a file means the very-old unwrapped binary.
-    if [ -d "$legacy_app_dir" ] && [ "$legacy_app_dir" != "$app_dir" ]; then
-        if [ -d "$app_dir" ]; then
-            warn "Layout: both gitmap/ and gitmap-cli/ exist at ${target} — leaving legacy gitmap/ for manual review"
-        else
-            mv "$legacy_app_dir" "$app_dir" 2>/dev/null && \
-                step "Layout: migrated legacy gitmap/ -> gitmap-cli/ at ${target}"
+    local legacy
+    for legacy in "${LEGACY_APP_SUBDIRS[@]}"; do
+        local legacy_app_dir="$target/$legacy"
+        [ "$legacy_app_dir" = "$app_dir" ] && continue
+        if [ -d "$legacy_app_dir" ]; then
+            if [ -d "$app_dir" ]; then
+                warn "Layout: both $legacy/ and ${APP_SUBDIR}/ exist at ${target} — leaving legacy $legacy/ for manual review"
+            else
+                mv "$legacy_app_dir" "$app_dir" 2>/dev/null && \
+                    step "Layout: migrated legacy $legacy/ -> ${APP_SUBDIR}/ at ${target}"
+            fi
         fi
-    fi
+    done
 
-    # --- Migration 1: legacy unwrapped binary -> gitmap-cli/ --
+    # --- Migration 1: legacy unwrapped binary -> $APP_SUBDIR/ --
     if [ -f "$legacy_binary" ] && [ ! -d "$legacy_binary" ]; then
         if [ -f "$wrapped_binary" ]; then
             rm -f "$legacy_binary" 2>/dev/null && \
@@ -322,7 +360,7 @@ repair_layout() {
                 [ ! -e "$src" ] && continue
                 [ -e "$dst" ] && continue
                 mv "$src" "$dst" 2>/dev/null && \
-                    step "  moved $name -> gitmap-cli/$name"
+                    step "  moved $name -> ${APP_SUBDIR}/$name"
             done
         fi
     else
@@ -387,7 +425,7 @@ install_binary() {
     # The folder name was renamed from ${BINARY_NAME} ("gitmap") to
     # "gitmap-cli" in v3.13.11 for cross-platform parity with run.ps1.
     repair_layout "${install_dir}"
-    local app_dir="${install_dir}/gitmap-cli"
+    local app_dir="${install_dir}/${APP_SUBDIR}"
     cleanup_prior_artifacts "${install_dir}" "${app_dir}"
 
     step "Installing to ${app_dir}..."
@@ -521,8 +559,8 @@ add_path_to_profile() {
     local snippet_shell="bash"
     [ "${is_fish}" = true ] && snippet_shell="fish"
     local gitmap_bin=""
-    if [ -x "${INSTALL_DIR:-}/gitmap-cli/gitmap" ]; then
-        gitmap_bin="${INSTALL_DIR}/gitmap-cli/gitmap"
+    if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
+        gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
     elif [ -x "${INSTALL_DIR:-}/gitmap" ]; then
         # Pre-v3.13.11 fallback: top-level binary (very old unwrapped install).
         gitmap_bin="${INSTALL_DIR}/gitmap"
@@ -778,6 +816,7 @@ main() {
     echo ""
 
     parse_args "$@"
+    load_deploy_manifest
 
     # Versioned repo discovery: re-exec from the latest -v<M> sibling repo.
     if [ "${INSTALLER_DELEGATED:-0}" = "1" ]; then

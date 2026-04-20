@@ -139,14 +139,55 @@ func writeScriptToTemp(script string) (string, error) {
 
 // buildUpdateScript generates the PowerShell script content.
 func buildUpdateScript(repoPath, runPS1 string) string {
+	// Build the PowerShell @("a","b") literal of all known app subdirs
+	// (current + legacy) from the embedded deploy manifest.
+	knownSubdirs := buildPSSubdirArray()
+
 	return fmt.Sprintf(constants.UpdatePSHeader, repoPath) +
-		fmt.Sprintf(constants.UpdatePSDeployDetect, repoPath) +
+		fmt.Sprintf(constants.UpdatePSDeployDetect,
+			repoPath,
+			constants.GitMapSubdir,
+			constants.GitMapCliSubdir,
+			constants.Manifest.BinaryName.Windows,
+			knownSubdirs,
+		) +
 		constants.UpdatePSVersionBefore +
 		fmt.Sprintf(constants.UpdatePSRunUpdate, runPS1) +
 		constants.UpdatePSSync +
 		constants.UpdatePSVersionAfter +
 		fmt.Sprintf(constants.UpdatePSVerify, repoPath, repoPath) +
 		constants.UpdatePSPostActions
+}
+
+// buildPSSubdirArray returns a PowerShell array literal — e.g. @("gitmap-cli","gitmap")
+// — containing the current AppSubdir plus every LegacyAppSubdirs entry
+// from gitmap/constants/deploy-manifest.json.
+func buildPSSubdirArray() string {
+	all := append([]string{constants.GitMapCliSubdir}, constants.LegacyAppSubdirs...)
+	quoted := make([]string, 0, len(all))
+	seen := map[string]bool{}
+	for _, name := range all {
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		quoted = append(quoted, fmt.Sprintf("%q", name))
+	}
+
+	return "@(" + joinComma(quoted) + ")"
+}
+
+// joinComma joins strings with a comma — small helper to avoid pulling strings.Join.
+func joinComma(parts []string) string {
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += ","
+		}
+		out += p
+	}
+
+	return out
 }
 
 // runUpdateScript executes the PowerShell script with output piped to terminal.

@@ -82,8 +82,52 @@ show_banner() {
     echo ""
 }
 
+# -- Load deploy manifest (single source of truth) -------------
+# Mirrors run.ps1's Get-DeployManifest. Reads gitmap/constants/deploy-manifest.json
+# so APP_SUBDIR / LEGACY_APP_SUBDIRS aren't hardcoded. Renaming the deploy
+# folder ONLY requires editing that JSON file.
+APP_SUBDIR="gitmap-cli"
+LEGACY_APP_SUBDIRS=("gitmap")
+load_deploy_manifest() {
+    local manifest="$GITMAP_DIR/constants/deploy-manifest.json"
+    if [[ ! -f "$manifest" ]]; then
+        write_warn "deploy-manifest.json not found at $manifest — using defaults"
+        return
+    fi
+    local app
+    app=$(grep -E '"appSubdir"' "$manifest" | head -n1 | sed -E 's/.*"appSubdir"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+    if [[ -n "$app" ]]; then
+        APP_SUBDIR="$app"
+    fi
+    # legacyAppSubdirs is a JSON array — extract values between [ ... ].
+    local legacy_block
+    legacy_block=$(awk '/"legacyAppSubdirs"/,/]/' "$manifest")
+    if [[ -n "$legacy_block" ]]; then
+        local legacy_csv
+        legacy_csv=$(echo "$legacy_block" | grep -oE '"[^"]+"' | sed -E 's/^"(.*)"$/\1/' | grep -v '^legacyAppSubdirs$' || true)
+        if [[ -n "$legacy_csv" ]]; then
+            LEGACY_APP_SUBDIRS=()
+            while IFS= read -r line; do
+                [[ -n "$line" ]] && LEGACY_APP_SUBDIRS+=("$line")
+            done <<< "$legacy_csv"
+        fi
+    fi
+}
+
+# is_known_app_subdir returns 0 if $1 matches APP_SUBDIR or any legacy entry.
+is_known_app_subdir() {
+    local name="$1"
+    [[ "$name" == "$APP_SUBDIR" ]] && return 0
+    local legacy
+    for legacy in "${LEGACY_APP_SUBDIRS[@]}"; do
+        [[ "$name" == "$legacy" ]] && return 0
+    done
+    return 1
+}
+
 # -- Load config -----------------------------------------------
 load_config() {
+    load_deploy_manifest
     local config_path="$GITMAP_DIR/powershell.json"
     if [[ -f "$config_path" ]]; then
         write_info "Config loaded from powershell.json"
@@ -450,10 +494,11 @@ resolve_deploy_target() {
         local active_dir_name
         active_dir_name=$(basename "$active_dir")
 
-        # The binary lives in <deploy-target>/gitmap-cli/gitmap (or the legacy
-        # <deploy-target>/gitmap/gitmap layout from pre-v3.13.11). Either way
-        # the deploy target is the parent of that wrapped folder.
-        if [[ "$active_dir_name" == "gitmap-cli" ]] || [[ "$active_dir_name" == "gitmap" ]]; then
+        # The binary lives in <deploy-target>/$APP_SUBDIR/gitmap (or any
+        # legacy folder name from LEGACY_APP_SUBDIRS). Either way the deploy
+        # target is the parent of that wrapped folder. Folder names are
+        # sourced from gitmap/constants/deploy-manifest.json.
+        if is_known_app_subdir "$active_dir_name"; then
             local deploy_target
             deploy_target=$(dirname "$active_dir")
             write_info "Deploy target: detected from PATH -> $deploy_target"
@@ -485,27 +530,30 @@ resolve_deploy_target() {
 # Idempotent — re-running on a correct gitmap-cli/ layout is a no-op.
 repair_deploy_layout() {
     local target="$1"
-    local app_dir="$target/gitmap-cli"
-    local legacy_app_dir="$target/gitmap"
+    local app_dir="$target/$APP_SUBDIR"
     local legacy_binary="$target/$BINARY_NAME"
     local wrapped_binary="$app_dir/$BINARY_NAME"
 
-    # --- Migration 2: legacy gitmap/ folder -> gitmap-cli/ ----
+    # --- Migration 2: any legacy app folder -> $APP_SUBDIR ----
     # Run BEFORE the unwrapped check so a stray top-level binary inside
     # an otherwise-correct legacy install gets folded in correctly.
-    if [[ -d "$legacy_app_dir" ]] && [[ "$legacy_app_dir" != "$app_dir" ]]; then
+    local legacy
+    for legacy in "${LEGACY_APP_SUBDIRS[@]}"; do
+        local legacy_app_dir="$target/$legacy"
+        [[ "$legacy_app_dir" == "$app_dir" ]] && continue
+        [[ ! -d "$legacy_app_dir" ]] && continue
         if [[ -d "$app_dir" ]]; then
-            write_warn "Layout: both gitmap/ and gitmap-cli/ exist at $target — leaving legacy gitmap/ for manual review"
+            write_warn "Layout: both $legacy/ and $APP_SUBDIR/ exist at $target — leaving legacy $legacy/ for manual review"
         else
             if mv "$legacy_app_dir" "$app_dir" 2>/dev/null; then
-                write_info "Layout: migrated legacy gitmap/ -> gitmap-cli/ at $target"
+                write_info "Layout: migrated legacy $legacy/ -> $APP_SUBDIR/ at $target"
             else
                 write_warn "Layout: could not rename $legacy_app_dir -> $app_dir"
             fi
         fi
-    fi
+    done
 
-    # --- Migration 1: legacy unwrapped binary -> gitmap-cli/ --
+    # --- Migration 1: legacy unwrapped binary -> $APP_SUBDIR/ --
     if [[ ! -f "$legacy_binary" ]]; then
         write_info "Layout: OK (no legacy binary at $target)"
         return
@@ -529,11 +577,11 @@ repair_deploy_layout() {
         dst="$app_dir/$name"
         [[ ! -e "$src" ]] && continue
         if [[ -e "$dst" ]]; then
-            write_info "Layout: $name already inside gitmap-cli/, skipping move"
+            write_info "Layout: $name already inside $APP_SUBDIR/, skipping move"
             continue
         fi
         if mv "$src" "$dst" 2>/dev/null; then
-            write_info "Layout: moved $name -> gitmap-cli/$name"
+            write_info "Layout: moved $name -> $APP_SUBDIR/$name"
         else
             write_warn "Layout: could not move $name"
         fi
@@ -703,11 +751,12 @@ deploy_binary() {
     write_info "Target: $target"
     mkdir -p "$target"
 
-    # Migrate legacy unwrapped or v3.13.10-and-older gitmap/ layout
-    # into the canonical gitmap-cli/ (DFD-3) BEFORE we resolve $app_dir.
+    # Migrate legacy unwrapped or older wrapped layouts into the canonical
+    # $APP_SUBDIR/ (DFD-3) BEFORE we resolve $app_dir. Folder names come
+    # from gitmap/constants/deploy-manifest.json (single source of truth).
     repair_deploy_layout "$target"
 
-    local app_dir="$target/gitmap-cli"
+    local app_dir="$target/$APP_SUBDIR"
     mkdir -p "$app_dir"
 
     # Pre-deploy cleanup (DFD-6) — runs BEFORE the new binary is copied.
