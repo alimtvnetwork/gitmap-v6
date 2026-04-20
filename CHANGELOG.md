@@ -1,5 +1,24 @@
 # Changelog
 
+## v3.16.0 — (2026-04-20) — uninstall-quick.ps1 multi-binary fix + repo rename to gitmap-v5
+
+### Fixed
+
+- **`uninstall-quick.ps1`** — `Try-SelfUninstall` and `Resolve-DeployRoot` now pipe `Get-Command gitmap` through `Select-Object -First 1`. When two `gitmap.exe` binaries were on `PATH` (e.g. a stale drive-root shim at `E:\gitmap\gitmap.exe` AND the canonical `E:\bin-run\gitmap-cli\gitmap.exe`), `Get-Command` returned an array. PowerShell's string interpolation joined `.Source` with a space and the resulting `'E:\gitmap\gitmap.exe E:\bin-run\gitmap-cli\gitmap.exe'` was passed to the runtime as a command name, producing:
+  > The term '...path1... ...path2...' is not recognized as a name of a cmdlet, function, script file, or executable program.
+  Self-uninstall now invokes the FIRST resolved binary by **absolute path** (`& $activeBinary self-uninstall -y`) instead of relying on `& gitmap` PATH resolution, so a stale shim cannot hijack the call.
+- **`run.ps1`** — Same defensive fix applied to all three `Get-Command gitmap` callers (deploy-target detection, post-deploy active-vs-deployed sync, changelog binary resolution).
+- **`gitmap/scripts/Get-LastRelease.ps1`** — Same defensive fix in `Get-ReleaseFromBinary`.
+
+### Renamed
+
+- **All `gitmap-v4` references → `gitmap-v5`** across the entire repo (45 files, 567 occurrences). Includes install/uninstall one-liners, Go installer constants, helptext, spec docs, post-mortems, the React landing page, and `.lovable/memory/**`.
+- **Preserved**: release-asset filenames like `gitmap-v4.49.1-windows-amd64.zip` (where `v4.49.1` is the package version, not the repo name) — only the GitHub URL repo segment changed.
+
+### Why
+
+The uninstall failure was reported by a user who had run gitmap since the v2.x drive-root shim era — their stale `E:\gitmap\gitmap.exe` was never removed and the new `gitmap-cli/` install put a second binary on PATH. The `gitmap-v5` repo rename had been pending since the v3.x line started; bundling both keeps the CHANGELOG narrative simple.
+
 ## v3.15.0 — (2026-04-20) — Single-source-of-truth deploy manifest
 
 ### Added
