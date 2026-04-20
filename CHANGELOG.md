@@ -1,5 +1,42 @@
 # Changelog
 
+## v3.25.0 — (2026-04-20) — new `github-desktop` (gd) command: register cwd repo without scan
+
+### Added
+
+- **`gitmap github-desktop` (alias `gd`)** — registers the current working-directory git repo with GitHub Desktop in one call. Previously the only path was `gitmap desktop-sync` (`ds`), which walks the last-scan output JSON and fails with `no output dir` if you haven't run `gitmap scan` first. Running `gd` from a freshly cloned repo now Just Works:
+
+      cd D:\wp-work\riseup-asia\my-api
+      gitmap gd
+      # → Registering with GitHub Desktop: D:\wp-work\riseup-asia\my-api
+      # → ✓ Registered with GitHub Desktop: D:\wp-work\riseup-asia\my-api
+
+  Optional path argument also supported: `gitmap gd D:\path\to\other\repo`.
+
+### Why this exists
+
+User reported `gitmap github-desktop` printing `Unknown command`. Root cause: the string `github-desktop` only ever existed as a `--github-desktop` *flag* on `scan`/`clone`, never as a command. `desktop-sync` (`ds`) was the closest thing but required prior `gitmap scan`. This commit closes that gap.
+
+### Files (this section)
+
+- New: `gitmap/cmd/githubdesktop.go` — `runGitHubDesktop` (cwd or arg path → `.git` check → GitHub Desktop CLI invoke).
+- New: `gitmap/helptext/github-desktop.md` — full help page with comparison table vs `desktop-sync`.
+- Edited: `gitmap/constants/constants_cli.go` — adds `CmdGitHubDesktop` / `CmdGitHubDesktopAlias` / `HelpGitHubDesktop`.
+- Edited: `gitmap/constants/constants_messages.go` — adds `MsgGHDesktopRegister`, `MsgGHDesktopDone`, `ErrGHDesktopCwd`, `ErrGHDesktopNotRepo`, `ErrGHDesktopInvoke` (all canonical Cmd/Msg/Err prefixes — passes `check-constants-naming.sh` without baseline regen).
+- Edited: `gitmap/constants/constants_helpgroups.go` — `CompactCloning` line includes `github-desktop (gd)`.
+- Edited: `gitmap/cmd/roottooling.go` — dispatcher routes `github-desktop` / `gd` to `runGitHubDesktop`.
+- Edited: `gitmap/cmd/rootusage.go` — Cloning help group prints `HelpGitHubDesktop` after `HelpDesktopSync`.
+- Edited: `gitmap/completion/allcommands_generated.go` — adds `gd` and `github-desktop` to the sorted completion list.
+- Edited: `gitmap/constants/cmd_constants_test.go` — adds the two new constants to the parity map.
+- Edited: `gitmap/completion/completion_test.go` — adds the two new strings to the expected completion list.
+- Edited: `gitmap/constants/constants.go` — `Version` bumped to `3.25.0`.
+- Edited: `.gitmap/release/latest.json` + new `.gitmap/release/v3.25.0.json`.
+
+### Notes
+
+- All new constants use the canonical `Cmd*` / `Help*` / `Msg*` / `Err*` prefixes; `bash .github/scripts/check-constants-naming.sh` and `check-cmd-naming.sh` both pass without regenerating any baseline.
+- `desktop-sync` is unchanged and remains the bulk-sync command for whole scan trees.
+
 ## v3.24.1 — (2026-04-20) — CI: regenerate constants baseline to admit v3.24.0 additions
 
 ### Fixed (CI)

@@ -23,6 +23,8 @@ func topLevelCmds() map[string]string {
 		"CmdHelp":                  CmdHelp,
 		"CmdDesktopSync":           CmdDesktopSync,
 		"CmdDesktopSyncAlias":      CmdDesktopSyncAlias,
+		"CmdGitHubDesktop":         CmdGitHubDesktop,
+		"CmdGitHubDesktopAlias":    CmdGitHubDesktopAlias,
 		"CmdPull":                  CmdPull,
 		"CmdPullAlias":             CmdPullAlias,
 		"CmdRescan":                CmdRescan,

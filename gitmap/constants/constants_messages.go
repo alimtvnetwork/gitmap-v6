@@ -8,12 +8,17 @@ const (
 
 // GitHub Desktop.
 const (
-	GitHubDesktopBin   = "github"
-	OSWindows          = "windows"
-	MsgDesktopNotFound = "GitHub Desktop CLI not found — skipping."
-	MsgDesktopAdded    = "  ✓ Added to GitHub Desktop: %s\n"
-	MsgDesktopFailed   = "  ✗ Failed to add %s: %v\n"
-	MsgDesktopSummary  = "GitHub Desktop: %d added, %d failed\n"
+	GitHubDesktopBin     = "github"
+	OSWindows            = "windows"
+	MsgDesktopNotFound   = "GitHub Desktop CLI not found — skipping."
+	MsgDesktopAdded      = "  ✓ Added to GitHub Desktop: %s\n"
+	MsgDesktopFailed     = "  ✗ Failed to add %s: %v\n"
+	MsgDesktopSummary    = "GitHub Desktop: %d added, %d failed\n"
+	MsgGHDesktopRegister = "  Registering with GitHub Desktop: %s\n"
+	MsgGHDesktopDone     = "  ✓ Registered with GitHub Desktop: %s\n"
+	ErrGHDesktopCwd      = "  ✗ Could not determine current directory: %v\n"
+	ErrGHDesktopNotRepo  = "  ✗ Not a git repository: %s\n     (run `gitmap gd <path>` to register a different folder)\n"
+	ErrGHDesktopInvoke   = "  ✗ GitHub Desktop CLI failed: %v\n%s\n"
 )
 
 // Latest-branch display messages.
