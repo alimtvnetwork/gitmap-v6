@@ -65,7 +65,7 @@ func printUsageScanFlags() {
 	fmt.Println(constants.HelpOutput)
 	fmt.Println(constants.HelpOutputPath)
 	fmt.Println(constants.HelpOutFile)
-	fmt.Println(constants.HelpGitHubDesktop)
+	fmt.Println(constants.HelpScanFlagGitHubDesktop)
 	fmt.Println(constants.HelpOpen)
 	fmt.Println(constants.HelpQuiet)
 }
