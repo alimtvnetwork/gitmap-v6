@@ -209,6 +209,33 @@ function Remove-DataFolder {
     }
 }
 
+function Remove-CompletionSourceLines {
+    $home = $env:USERPROFILE
+    $profiles = @(
+        (Join-Path $home "Documents\PowerShell\profile.ps1"),
+        (Join-Path $home "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"),
+        (Join-Path $home "Documents\WindowsPowerShell\profile.ps1"),
+        (Join-Path $home "Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1")
+    )
+
+    foreach ($p in $profiles) {
+        if (-not (Test-Path $p)) { continue }
+        $lines = Get-Content $p -Raw
+        if (-not $lines) { continue }
+
+        $cleaned = ($lines -split "`n" | Where-Object {
+            $trimmed = $_.Trim()
+            -not ($trimmed -eq '# gitmap shell completion') -and
+            -not ($trimmed -match "^\.\s+'.*completions\.ps1'")
+        }) -join "`n"
+
+        if ($cleaned -ne $lines) {
+            Set-Content -Path $p -Value $cleaned -NoNewline -Encoding UTF8
+            Write-Ok "Removed completion source line from $p"
+        }
+    }
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -235,6 +262,10 @@ if (-not $ok) {
     Write-Step "[4/4] Cleaning User PATH"
     Remove-FromUserPath $root
 }
+
+Write-Host ""
+Write-Step "Cleaning PowerShell profile completion lines"
+Remove-CompletionSourceLines
 
 Write-Host ""
 Write-Step "User data"

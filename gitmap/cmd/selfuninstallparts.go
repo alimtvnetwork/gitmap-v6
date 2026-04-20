@@ -150,6 +150,103 @@ func removeProfileSnippet(profile string) {
 	fmt.Printf(constants.MsgSelfUninstallSnippetGone, profile)
 }
 
+// removeCompletionSourceLines strips the `# gitmap shell completion` comment
+// and the `. '...completions.ps1'` / `source '...'` dot-source line from
+// EVERY resolved profile. Without this the profile errors on the first prompt
+// after uninstall because the script file is gone.
+func removeCompletionSourceLines() {
+	for _, p := range allProfilePaths() {
+		removeCompletionFromProfile(p)
+	}
+}
+
+// removeCompletionFromProfile strips gitmap completion lines from one profile.
+func removeCompletionFromProfile(profile string) {
+	data, err := os.ReadFile(profile)
+	if err != nil {
+		return
+	}
+	cleaned, changed := stripCompletionLines(string(data))
+	if !changed {
+		return
+	}
+	if err := os.WriteFile(profile, []byte(cleaned), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "  ⚠ Could not clean completion line from %s: %v\n", profile, err)
+
+		return
+	}
+	fmt.Printf("  ✓ Removed completion source line from %s\n", profile)
+}
+
+// stripCompletionLines removes any line containing a gitmap completion
+// source command and the preceding comment header.
+func stripCompletionLines(content string) (string, bool) {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var out strings.Builder
+	removed := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if isCompletionLine(line) {
+			removed = true
+
+			continue
+		}
+		out.WriteString(line)
+		out.WriteString("\n")
+	}
+	result := out.String()
+	if !strings.HasSuffix(content, "\n") {
+		result = strings.TrimRight(result, "\n")
+	}
+
+	return result, removed
+}
+
+// isCompletionLine reports whether the line is a gitmap completion source
+// command or the associated comment header.
+func isCompletionLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "# gitmap shell completion" {
+		return true
+	}
+	if strings.Contains(trimmed, "completions.ps1") && strings.HasPrefix(trimmed, ".") {
+		return true
+	}
+	if strings.Contains(trimmed, "gitmap-completion") && strings.HasPrefix(trimmed, "source") {
+		return true
+	}
+
+	return false
+}
+
+// allProfilePaths returns every profile file the completion installer may
+// have written to. Covers PowerShell (Core + Legacy) on Windows and
+// bash/zsh on Unix.
+func allProfilePaths() []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	if isWindows() {
+		docs := filepath.Join(home, "Documents")
+
+		return []string{
+			filepath.Join(docs, "PowerShell", "profile.ps1"),
+			filepath.Join(docs, "PowerShell", "Microsoft.PowerShell_profile.ps1"),
+			filepath.Join(docs, "WindowsPowerShell", "profile.ps1"),
+			filepath.Join(docs, "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1"),
+		}
+	}
+
+	return []string{
+		filepath.Join(home, ".bashrc"),
+		filepath.Join(home, ".zshrc"),
+		filepath.Join(home, ".config", "powershell", "profile.ps1"),
+		filepath.Join(home, ".config", "powershell", "Microsoft.PowerShell_profile.ps1"),
+	}
+}
+
 // stripMarkerBlock removes any line range delimited by the gitmap
 // shell-wrapper marker open/close lines, regardless of manager string.
 func stripMarkerBlock(content string) (string, bool) {
