@@ -34,6 +34,7 @@ var legacyAllCommands = []string{
 	"update",
 	"version", "v",
 	"desktop-sync", "ds",
+	"github-desktop", "gd",
 	"rescan", "rs",
 	"setup",
 	"doctor",
