@@ -209,6 +209,94 @@ function Remove-DataFolder {
     }
 }
 
+# ---------------------------------------------------------------------------
+# Exhaustive PATH sweep — find EVERY gitmap.exe still reachable and nuke it.
+# This is the safety net that catches stale binaries the canonical
+# self-uninstall and deploy-folder sweep can miss (drive-root copies,
+# manually-placed shims, old installs in unusual paths, etc.).
+# ---------------------------------------------------------------------------
+
+function Get-AllGitmapOnPath {
+    # Get-Command -All returns every match across PATH, not just the first.
+    $found = @()
+    try {
+        $cmds = Get-Command gitmap -All -ErrorAction SilentlyContinue
+        foreach ($c in $cmds) {
+            if ($c.Source -and (Test-Path $c.Source)) {
+                $found += (Resolve-Path $c.Source).Path
+            }
+        }
+    } catch {}
+
+    # Belt-and-suspenders: also scan every PATH entry directly for a
+    # gitmap.exe / gitmap file in case Get-Command missed something.
+    $pathDirs = @()
+    foreach ($scope in @("Machine", "User")) {
+        $p = [Environment]::GetEnvironmentVariable("Path", $scope)
+        if ($p) { $pathDirs += ($p -split ';') }
+    }
+    $pathDirs += ($env:PATH -split ';')
+
+    foreach ($d in $pathDirs) {
+        if (-not $d) { continue }
+        $d = $d.TrimEnd('\')
+        foreach ($name in @("gitmap.exe", "gitmap")) {
+            $candidate = Join-Path $d $name
+            if (Test-Path $candidate) {
+                $resolved = (Resolve-Path $candidate).Path
+                if ($found -notcontains $resolved) { $found += $resolved }
+            }
+        }
+    }
+
+    return $found | Select-Object -Unique
+}
+
+function Remove-StrayBinaries {
+    $all = Get-AllGitmapOnPath
+    if (-not $all -or $all.Count -eq 0) {
+        Write-Info "no stray gitmap binaries found on PATH"
+        return @()
+    }
+
+    Write-Info "found $($all.Count) gitmap binary location(s):"
+    foreach ($b in $all) { Write-Info "  - $b" }
+
+    $cleanedDirs = @()
+    foreach ($bin in $all) {
+        try {
+            Remove-Item $bin -Force -ErrorAction Stop
+            Write-Ok "removed $bin"
+            $cleanedDirs += (Split-Path $bin -Parent)
+        } catch {
+            Write-Err "could not remove $bin : $_"
+            Write-Warn "close any terminal/process using gitmap.exe and retry"
+        }
+    }
+    return $cleanedDirs | Select-Object -Unique
+}
+
+function Remove-DirsFromUserPath([string[]]$dirs) {
+    if (-not $dirs -or $dirs.Count -eq 0) { return }
+
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not $userPath) { return }
+
+    $entries = $userPath -split ';' | Where-Object { $_ -ne "" }
+    $normTargets = $dirs | ForEach-Object { $_.TrimEnd('\').ToLower() }
+
+    $kept = $entries | Where-Object {
+        $entry = $_.TrimEnd('\').ToLower()
+        -not ($normTargets -contains $entry)
+    }
+
+    $newPath = ($kept -join ';')
+    if ($newPath -ne $userPath) {
+        [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+        Write-Ok "stripped stray gitmap dirs from User PATH"
+    }
+}
+
 function Remove-CompletionSourceLines {
     $userHomeDir = $env:USERPROFILE
     $profiles = @(
