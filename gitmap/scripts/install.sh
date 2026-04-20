@@ -281,32 +281,50 @@ download_asset() {
 }
 
 # ── Layout repair + pre-deploy cleanup (DFD-3, DFD-6) ──────────────
-# Migrates legacy unwrapped install (<dir>/gitmap) into nested
-# <dir>/gitmap/gitmap layout and removes prior-deploy artifacts.
+# Migrates two legacy layouts into the canonical <dir>/gitmap-cli/:
+#   1) Unwrapped (pre-DFD): <dir>/gitmap binary at the top level.
+#   2) v3.6.0..v3.13.10 wrapped: <dir>/gitmap/ folder (renamed to
+#      gitmap-cli on Unix in v3.13.11 to match the Windows installer
+#      which did the same rename in v3.6.0).
+# Idempotent — re-running on a correct gitmap-cli/ layout is a no-op.
 
 repair_layout() {
     local target="$1"
-    local app_dir="$target/${BINARY_NAME}"
+    local app_dir="$target/gitmap-cli"
+    local legacy_app_dir="$target/${BINARY_NAME}"
     local legacy_binary="$target/${BINARY_NAME}"
     local wrapped_binary="$app_dir/${BINARY_NAME}"
 
-    # Special case: when target ends with /<binary> the legacy and wrapped
-    # paths collide. Skip — caller resolved into a parent dir.
-    if [ -f "$legacy_binary" ] && [ ! -d "$app_dir" ]; then
-        step "Layout: migrating legacy unwrapped install -> ${app_dir}"
-        mkdir -p "$app_dir"
-        local name src dst
-        for name in "${BINARY_NAME}" data CHANGELOG.md docs docs-site; do
-            src="$target/$name"
-            dst="$app_dir/$name"
-            [ ! -e "$src" ] && continue
-            [ -e "$dst" ] && continue
-            mv "$src" "$dst" 2>/dev/null && \
-                step "  moved $name -> ${BINARY_NAME}/$name"
-        done
-    elif [ -f "$legacy_binary" ] && [ -f "$wrapped_binary" ]; then
-        rm -f "$legacy_binary" 2>/dev/null && \
-            step "Layout: removed leftover legacy binary $legacy_binary"
+    # --- Migration 2: legacy gitmap/ folder -> gitmap-cli/ ----
+    # Distinguish folder vs file at $target/gitmap. A directory means the
+    # old wrapped layout; a file means the very-old unwrapped binary.
+    if [ -d "$legacy_app_dir" ] && [ "$legacy_app_dir" != "$app_dir" ]; then
+        if [ -d "$app_dir" ]; then
+            warn "Layout: both gitmap/ and gitmap-cli/ exist at ${target} — leaving legacy gitmap/ for manual review"
+        else
+            mv "$legacy_app_dir" "$app_dir" 2>/dev/null && \
+                step "Layout: migrated legacy gitmap/ -> gitmap-cli/ at ${target}"
+        fi
+    fi
+
+    # --- Migration 1: legacy unwrapped binary -> gitmap-cli/ --
+    if [ -f "$legacy_binary" ] && [ ! -d "$legacy_binary" ]; then
+        if [ -f "$wrapped_binary" ]; then
+            rm -f "$legacy_binary" 2>/dev/null && \
+                step "Layout: removed leftover legacy binary $legacy_binary"
+        else
+            step "Layout: migrating legacy unwrapped install -> ${app_dir}"
+            mkdir -p "$app_dir"
+            local name src dst
+            for name in "${BINARY_NAME}" data CHANGELOG.md docs docs-site; do
+                src="$target/$name"
+                dst="$app_dir/$name"
+                [ ! -e "$src" ] && continue
+                [ -e "$dst" ] && continue
+                mv "$src" "$dst" 2>/dev/null && \
+                    step "  moved $name -> gitmap-cli/$name"
+            done
+        fi
     else
         step "Layout: OK"
     fi
