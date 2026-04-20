@@ -751,11 +751,12 @@ deploy_binary() {
     write_info "Target: $target"
     mkdir -p "$target"
 
-    # Migrate legacy unwrapped or v3.13.10-and-older gitmap/ layout
-    # into the canonical gitmap-cli/ (DFD-3) BEFORE we resolve $app_dir.
+    # Migrate legacy unwrapped or older wrapped layouts into the canonical
+    # $APP_SUBDIR/ (DFD-3) BEFORE we resolve $app_dir. Folder names come
+    # from gitmap/constants/deploy-manifest.json (single source of truth).
     repair_deploy_layout "$target"
 
-    local app_dir="$target/gitmap-cli"
+    local app_dir="$target/$APP_SUBDIR"
     mkdir -p "$app_dir"
 
     # Pre-deploy cleanup (DFD-6) — runs BEFORE the new binary is copied.
