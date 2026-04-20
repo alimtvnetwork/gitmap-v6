@@ -1,6 +1,10 @@
 # Changelog
 
-## v3.13.3 — (2026-04-20) — Codebase-wide UK→US spelling sweep
+## v3.13.4 — (2026-04-20) — gocritic sprintfQuotedString fix
+
+### Fixed
+
+- **gocritic `sprintfQuotedString`** in `gitmap/store/migrate_v15rebuild.go:107` — Replaced `"%s"` with `%q` for the SQLite identifier quoting in the `INSERT INTO ... SELECT FROM` rebuild template. Behaviorally identical (both produce `"TableName"`) but satisfies the linter and is more idiomatic.
 
 ### Fixed
 
