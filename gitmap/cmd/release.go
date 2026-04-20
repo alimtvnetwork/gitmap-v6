@@ -144,23 +144,16 @@ func parseReleaseFlags(args []string) (version, assets, commit, branch, bump, no
 	noCommitFlag := fs.Bool("no-commit", false, constants.FlagDescNoCommit)
 	yesFlag := fs.Bool("yes", false, constants.FlagDescYes)
 
-	// Register -b as shorthand for --bin, -y as shorthand for --yes.
 	fs.BoolVar(binFlag, "b", false, constants.FlagDescBin)
 	fs.BoolVar(yesFlag, "y", false, constants.FlagDescYes)
 
 	var zgGroups zipGroupFlag
 	var zgItems zipItemFlag
-
 	fs.Var(&zgGroups, "zip-group", constants.FlagDescZGZipGroup)
 	fs.Var(&zgItems, "Z", constants.FlagDescZGZipItem)
-
-	// Register -N as shorthand for --notes.
 	fs.StringVar(notesFlag, "N", "", constants.FlagDescNotes)
 
-	// Reorder args so flags come before positional args.
-	// Go's flag package stops parsing at the first non-flag argument.
-	reordered := reorderFlagsBeforeArgs(args)
-	fs.Parse(reordered)
+	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	version = ""
 	if fs.NArg() > 0 {
