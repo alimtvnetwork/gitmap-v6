@@ -1,0 +1,7 @@
+{
+  "version": "3.30.0",
+  "tag": "v3.30.0",
+  "branch": "release/v3.30.0",
+  "title": "Fix Go Report Card badge URL to point at the actual module path",
+  "type": "minor"
+}

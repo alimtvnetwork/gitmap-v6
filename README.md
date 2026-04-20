@@ -13,7 +13,7 @@
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)](https://github.com/alimtvnetwork/gitmap-v5)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](./LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alimtvnetwork/gitmap-v5?style=flat-square)](https://goreportcard.com/report/github.com/alimtvnetwork/gitmap-v5)
+[![Go Report Card](https://goreportcard.com/badge/github.com/alimtvnetwork/gitmap-v5/gitmap?style=flat-square)](https://goreportcard.com/report/github.com/alimtvnetwork/gitmap-v5/gitmap)
 
 _Scan, catalog, clone, and manage all your Git repositories from a single CLI._
 

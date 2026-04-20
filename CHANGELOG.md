@@ -1,27 +1,18 @@
 # Changelog
 
-## v3.29.0 — (2026-04-20) — CI guard: prevent reintroduction of placeholder Go module path
+## v3.30.0 — (2026-04-20) — Fix Go Report Card badge URL to point at the actual module path
 
-### Added (CI / Tooling)
+### Fixed (Docs)
 
-- **New `modulepath-guard` CI job** that fails the build the moment any file in the repo reintroduces the legacy placeholder module path `github.com/user/gitmap`. Closes the gap that allowed v3.27.0's regression to ship in the first place — no stale `go.mod`, vendored snippet, generated doc, or copy-pasted import block can silently bring it back.
+- **README.md Go Report Card badge** now points at `github.com/alimtvnetwork/gitmap-v5/gitmap` (the real Go module path set in v3.27.0) instead of the repo root `github.com/alimtvnetwork/gitmap-v5`. The previous URL returned a 404 from the Go module proxy because there is no `go.mod` at the repo root — the module lives one directory down in `gitmap/`. Both the badge image and the click-through report link were updated.
 
-### Implementation
+### Files changed
 
-- `.github/scripts/check-placeholder-modulepath.sh` (new, executable) — `grep -rnFI` scan that:
-  - excludes `.git/`, `node_modules/`, `.gitmap/` (frozen release notes), `.lovable/` (AI memory), `spec/` (post-mortem docs), and self-references in `CHANGELOG.md`, `ci.yml`, and the script itself
-  - prints offending file:line on failure with a copy-paste `sed` one-liner to fix
-  - emits `::error::` annotations so GitHub UI surfaces them inline on the PR diff
-- `.github/workflows/ci.yml` — added `modulepath-guard` job (mirrors the structure of `cmd-naming-check` / `constants-naming-check`: SHA cache short-circuit, `actions/checkout@v6`, single bash step) and added it to the `test-summary` `needs:` list so it blocks merge.
-
-### Verified
-
-- Positive: script exits 0 on the current tree (zero references outside allowlisted docs).
-- Negative: temporarily added `import "github.com/user/gitmap/foo"` to a fake `.go` file; script exits 1 with the exact offending line, error annotation, and remediation command.
+- `README.md` — single line, both the `goreportcard.com/badge/...` image URL and the `goreportcard.com/report/...` link target now include the `/gitmap` subpath suffix.
 
 ### Compatibility
 
-CI-only addition. No source code, runtime behavior, or artifact format changed.
+Pure documentation fix. No source, CI, or runtime change.
 
 
 ## v3.28.0 — (2026-04-20) — Lucrative scan summary: grouped sections + emoji-rich post-scan log
