@@ -168,12 +168,12 @@ func runOneScanRelease(t scanReleaseTarget) bool {
 	}
 	defer os.Chdir(origDir)
 
-	return invokeRelease(t)
+	return invokeScanRelease(t)
 }
 
-// invokeRelease wraps release.Execute + DB persistence with consistent
+// invokeScanRelease wraps release.Execute + DB persistence with consistent
 // error handling so the caller stays under the func length limit.
-func invokeRelease(t scanReleaseTarget) bool {
+func invokeScanRelease(t scanReleaseTarget) bool {
 	opts := release.Options{Bump: constants.BumpMinor, Yes: true}
 	if err := release.Execute(opts); err != nil {
 		fmt.Fprintf(os.Stderr, constants.MsgReleaseScanFail, t.RelativePath, err)
