@@ -521,7 +521,10 @@ add_path_to_profile() {
     local snippet_shell="bash"
     [ "${is_fish}" = true ] && snippet_shell="fish"
     local gitmap_bin=""
-    if [ -x "${INSTALL_DIR:-}/gitmap" ]; then
+    if [ -x "${INSTALL_DIR:-}/gitmap-cli/gitmap" ]; then
+        gitmap_bin="${INSTALL_DIR}/gitmap-cli/gitmap"
+    elif [ -x "${INSTALL_DIR:-}/gitmap" ]; then
+        # Pre-v3.13.11 fallback: top-level binary (very old unwrapped install).
         gitmap_bin="${INSTALL_DIR}/gitmap"
     elif command -v gitmap >/dev/null 2>&1; then
         gitmap_bin="$(command -v gitmap)"
