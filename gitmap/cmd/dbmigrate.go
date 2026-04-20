@@ -86,6 +86,16 @@ func printDBMigrateSummary(verbose bool) {
 // runPostUpdateMigrate is invoked from the update flow after the binary is
 // replaced. It is best-effort: any failure is warned, never fatal, since the
 // user may have an in-flight DB lock or read-only environment.
+//
+// The post-update path always clears the schema_version marker before
+// Migrate() so the freshly-swapped binary re-walks the FULL pipeline once.
+// This eliminates the failure mode where a new binary ships a brand-new
+// migration step but skips it because the on-disk marker — written by the
+// PREVIOUS binary — already equals SchemaVersionCurrent for the OLD binary
+// (e.g. constant un-bumped, or rebased branches with overlapping versions).
+// Cost: one extra full pipeline run, exactly once per update. Migrate()
+// re-stamps the marker on success, so every subsequent command takes the
+// fast-path again.
 func runPostUpdateMigrate() {
 	fmt.Print(constants.MsgDBMigratePostUpdate)
 
@@ -96,6 +106,8 @@ func runPostUpdateMigrate() {
 		return
 	}
 	defer db.Close()
+
+	clearSchemaVersionMarker(db)
 
 	if err := db.Migrate(); err != nil {
 		fmt.Fprintf(os.Stderr, constants.WarnDBMigratePostFail, err)
