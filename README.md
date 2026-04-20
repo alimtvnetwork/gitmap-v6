@@ -27,40 +27,46 @@ _Scan, catalog, clone, and manage all your Git repositories from a single CLI._
 
 Prompts for the install drive/folder (press Enter for the default), then runs the full installer.
 
+#### Windows (PowerShell)
+
 ```powershell
-# Windows (PowerShell) — interactive, choose drive/folder
-irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/install-quick.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.ps1 | iex
 ```
 
+#### Linux / macOS
+
 ```bash
-# Linux / macOS — interactive, choose folder
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/install-quick.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.sh | bash
 ```
 
 ### Install — Full (defaults, no prompt)
 
+#### Windows (PowerShell)
+
 ```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 ```
 
+#### Linux / macOS
+
 ```bash
-# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 ```
 
 ### Uninstall — Quick (one-liner)
 
 Removes the gitmap binary, deploy folder, PATH entries, and (optionally) the user data folder. First tries the canonical `gitmap self-uninstall`; falls back to a manual sweep if gitmap is no longer on PATH.
 
+#### Windows (PowerShell)
+
 ```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/uninstall-quick.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/uninstall-quick.ps1 | iex
 ```
 
+#### Linux / macOS
+
 ```bash
-# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/uninstall-quick.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/uninstall-quick.sh | bash
 ```
 
 Useful flags (both scripts):
@@ -93,34 +99,36 @@ Every command supports `--help` or `-h` for detailed usage with examples.
 
 ### One-Liner Install (recommended)
 
-**Quick installers — prompt for an install folder, then delegate to the full installer:**
+Quick installers prompt for an install folder, then delegate to the full installer.
+
+#### Windows (PowerShell) — Quick
 
 ```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/install-quick.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.ps1 | iex
 ```
+
+#### Linux / macOS — Quick
 
 ```bash
-# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/install-quick.sh | bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.sh | bash
 ```
 
-**Windows (PowerShell — full bootstrap, works on any machine):**
+#### Windows (PowerShell) — Full bootstrap (works on any machine)
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1'))
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1'))
 ```
 
-**Windows (short form, PowerShell 5+):**
+#### Windows (PowerShell 5+) — Short form
 
 ```powershell
-irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 ```
 
-**Linux / macOS (Bash):**
+#### Linux / macOS (Bash)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v4/main/gitmap/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 ```
 
 ### Installer Options
