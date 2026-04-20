@@ -62,11 +62,13 @@ const SQLCreateGroupRepo = `CREATE TABLE IF NOT EXISTS GroupRepo (
 	PRIMARY KEY (GroupId, RepoId)
 )`
 
-// SQL: create Release table (v15: singular + ReleaseId PK + IsX boolean prefix).
+// SQL: create Release table (v17: + RepoId FK to Repo, composite UNIQUE(RepoId, Tag)).
+// See spec/04-generic-cli/24-release-repo-relationship.md for the rationale.
 const SQLCreateRelease = `CREATE TABLE IF NOT EXISTS Release (
 	ReleaseId    INTEGER PRIMARY KEY AUTOINCREMENT,
+	RepoId       INTEGER NOT NULL REFERENCES Repo(RepoId) ON DELETE CASCADE,
 	Version      TEXT NOT NULL,
-	Tag          TEXT NOT NULL UNIQUE,
+	Tag          TEXT NOT NULL,
 	Branch       TEXT NOT NULL,
 	SourceBranch TEXT NOT NULL,
 	CommitSha    TEXT NOT NULL,
@@ -76,8 +78,12 @@ const SQLCreateRelease = `CREATE TABLE IF NOT EXISTS Release (
 	IsPreRelease INTEGER DEFAULT 0,
 	IsLatest     INTEGER DEFAULT 0,
 	Source       TEXT DEFAULT 'release',
-	CreatedAt    TEXT DEFAULT CURRENT_TIMESTAMP
+	CreatedAt    TEXT DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (RepoId, Tag)
 )`
+
+// SQL: index on Release.RepoId for fast per-repo filtering (future multi-repo mode).
+const SQLCreateReleaseRepoIdIndex = "CREATE INDEX IF NOT EXISTS IdxRelease_RepoId ON Release(RepoId)"
 
 // SQL: add Source column — v15: now targets singular Release table.
 const SQLAddSourceColumn = "ALTER TABLE Release ADD COLUMN Source TEXT DEFAULT 'release'"
@@ -139,22 +145,23 @@ const (
 // SQL: import-side group insert (used by store/import.go to insert without conflict).
 const SQLImportInsertGroup = `INSERT OR IGNORE INTO "Group" (Name, Description, Color) VALUES (?, ?, ?)`
 
-// SQL: release operations (v15: Release singular, ReleaseId PK, IsDraft/IsPreRelease).
+// SQL: release operations (v17: composite UNIQUE(RepoId, Tag), RepoId FK).
 const (
-	SQLUpsertRelease = `INSERT INTO Release (Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(Tag) DO UPDATE SET
+	SQLUpsertRelease = `INSERT INTO Release (RepoId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(RepoId, Tag) DO UPDATE SET
 			Version=excluded.Version, Branch=excluded.Branch, SourceBranch=excluded.SourceBranch,
-			CommitSha=excluded.CommitSha, Changelog=excluded.Changelog, Notes=excluded.Notes, IsDraft=excluded.IsDraft,
-			IsPreRelease=excluded.IsPreRelease, IsLatest=excluded.IsLatest, Source=excluded.Source`
+			CommitSha=excluded.CommitSha, Changelog=excluded.Changelog, Notes=excluded.Notes,
+			IsDraft=excluded.IsDraft, IsPreRelease=excluded.IsPreRelease,
+			IsLatest=excluded.IsLatest, Source=excluded.Source`
 
-	SQLSelectAllReleases = `SELECT ReleaseId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
+	SQLSelectAllReleases = `SELECT ReleaseId, RepoId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
 		FROM Release ORDER BY CreatedAt DESC`
 
-	SQLSelectReleaseByTag = `SELECT ReleaseId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
+	SQLSelectReleaseByTag = `SELECT ReleaseId, RepoId, Version, Tag, Branch, SourceBranch, CommitSha, Changelog, Notes, IsDraft, IsPreRelease, IsLatest, Source, CreatedAt
 		FROM Release WHERE Tag = ?`
 
-	SQLClearLatestRelease = "UPDATE Release SET IsLatest = 0 WHERE IsLatest = 1"
+	SQLClearLatestRelease = "UPDATE Release SET IsLatest = 0 WHERE IsLatest = 1 AND RepoId = ?"
 
 	SQLAddNotesColumn = "ALTER TABLE Release ADD COLUMN Notes TEXT DEFAULT ''"
 )
