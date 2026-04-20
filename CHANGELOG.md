@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.13.6 — (2026-04-20) — Completion generator drift resynced
+
+### Fixed
+
+- **`gitmap/completion/allcommands_generated.go`** — CI `generate-check` flagged 5 missing commands. Added in alphabetical order: `probe`, `reset`, `self-install`, `self-uninstall`, `sf`. These were registered with `// gitmap:cmd top-level` markers in their respective spec const blocks but the generated file had not been re-run. Equivalent to `cd gitmap && go generate ./...`.
+
 ## v3.13.5 — (2026-04-20) — Stale cleanup-path tests aligned with gitmap-cli subdir
 
 ### Fixed
