@@ -13,7 +13,7 @@
 
 - Re-ran the audit grep across the same file set; zero remaining matches for the UK pattern set under audit.
 
-
+## v3.13.2 — (2026-04-20) — Pre-commit hook enhanced
 
 ### Changed
 
