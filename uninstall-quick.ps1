@@ -356,6 +356,11 @@ Write-Step "Cleaning PowerShell profile completion lines"
 Remove-CompletionSourceLines
 
 Write-Host ""
+Write-Step "Exhaustive PATH sweep — removing any remaining gitmap binaries"
+$strayDirs = Remove-StrayBinaries
+Remove-DirsFromUserPath $strayDirs
+
+Write-Host ""
 Write-Step "User data"
 Remove-DataFolder
 
