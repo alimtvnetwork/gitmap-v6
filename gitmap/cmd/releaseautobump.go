@@ -13,7 +13,7 @@ import (
 // peekNextMinorVersion reads .gitmap/release/latest.json (falling back to
 // the highest local git tag) and returns the auto-incremented MINOR version.
 // Returns ok=false when no prior release exists in either source.
-func peekNextMinorVersion() (current release.Version, next release.Version, ok bool) {
+func peekNextMinorVersion() (current, next release.Version, ok bool) {
 	cur, err := readCurrentReleaseVersion()
 	if err != nil {
 		return release.Version{}, release.Version{}, false

@@ -93,7 +93,11 @@ func readRepoNextMinor(repoDir string) (release.Version, release.Version, bool) 
 	if err := os.Chdir(repoDir); err != nil {
 		return release.Version{}, release.Version{}, false
 	}
-	defer os.Chdir(origDir)
+	defer func() {
+		if err := os.Chdir(origDir); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to restore original directory: %v\n", err)
+		}
+	}()
 
 	return peekNextMinorVersion()
 }
@@ -166,7 +170,11 @@ func runOneScanRelease(t scanReleaseTarget) bool {
 
 		return false
 	}
-	defer os.Chdir(origDir)
+	defer func() {
+		if err := os.Chdir(origDir); err != nil {
+			fmt.Fprintf(os.Stderr, constants.MsgReleaseScanFail, t.RelativePath, err)
+		}
+	}()
 
 	return invokeScanRelease(t)
 }
