@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.13.7 — (2026-04-20) — find-next const block tagged for completion generator
+
+### Fixed
+
+- **`gitmap/constants/constants_find_next.go`** — Audit of all `constants_*.go` files (Python AST scan over const blocks containing `Cmd[A-Z]\w* = "..."` declarations not marked `// gitmap:cmd skip`) found exactly one drift: the `find-next CLI tokens` block declared `CmdFindNext` and `CmdFindNextAlias` alongside flag tokens but was missing the `// gitmap:cmd top-level` marker. Split the block into two: one for flag tokens (untagged) and one for the command names (tagged with the marker). Without this fix, future renames of `find-next` would not surface in `allcommands_generated.go` and the CI `generate-check` would not catch it.
+
+### Why
+
+Marker comments are the source of truth for the completion generator. A const block containing top-level commands but lacking the marker is silent drift waiting to happen — the audit closes that gap across all 35 `constants_*.go` files. All other const blocks declaring `Cmd*` strings were verified to either (a) carry the `// gitmap:cmd top-level` marker, or (b) tag every line with `// gitmap:cmd skip`.
+
 ## v3.13.6 — (2026-04-20) — Completion generator drift resynced
 
 ### Fixed

@@ -47,10 +47,15 @@ const (
 	MsgFindNextUsageHeader = "Usage: gitmap find-next [--scan-folder <id>] [--json]"
 )
 
-// find-next CLI tokens.
+// find-next CLI flag tokens.
 const (
 	FindNextFlagScanFolder = "--scan-folder"
 	FindNextFlagJSON       = "--json"
-	CmdFindNext            = "find-next"
-	CmdFindNextAlias       = "fn"
+)
+
+// gitmap:cmd top-level
+// find-next CLI commands.
+const (
+	CmdFindNext      = "find-next"
+	CmdFindNextAlias = "fn"
 )
