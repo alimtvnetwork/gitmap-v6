@@ -672,29 +672,16 @@ function Copy-DocsSite {
         return
     }
 
-    # Prefer copying only dist/ if it exists (smaller, no node_modules).
-    $distSource = Join-Path $docsSource "dist"
-    if (Test-Path $distSource) {
-        $distDest = Join-Path $docsDest "dist"
-        if (Test-Path $distDest) {
-            Remove-Item $distDest -Recurse -Force
-        }
-        New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
-        Copy-Item $distSource $distDest -Recurse
-        Write-Info "Copied docs-site/dist to gitmap app directory"
-        return
-    }
-
-    # No prebuilt dist/ — copy the whole docs-site/ for npm-dev fallback,
-    # excluding node_modules to keep the deploy lean.
+    # 2. Legacy <repo>/docs-site/ source-only — npm-dev fallback (no prebuilt dist).
+    # Copy everything except node_modules to keep the deploy lean.
     if (Test-Path $docsDest) {
         Remove-Item $docsDest -Recurse -Force
     }
     New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
-    Get-ChildItem -Path $docsSource -Force | Where-Object { $_.Name -ne "node_modules" } | ForEach-Object {
+    Get-ChildItem -Path $legacyDir -Force | Where-Object { $_.Name -ne "node_modules" } | ForEach-Object {
         Copy-Item $_.FullName -Destination $docsDest -Recurse -Force
     }
-    Write-Warn "docs-site/dist not found - copied source only (run 'npm run build' in docs-site/ for static mode)"
+    Write-Warn "No prebuilt dist/ found - copied docs-site/ source only (run 'npm run build' for static mode)"
 }
 
 # -- Resolve deploy target -------------------------------------
