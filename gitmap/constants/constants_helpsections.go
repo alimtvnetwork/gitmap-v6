@@ -10,7 +10,7 @@ const (
 	HelpOutput        = "  --output csv|json|terminal  Output format (default: terminal)"
 	HelpOutputPath    = "  --output-path <dir> Output directory (default: .gitmap/output)"
 	HelpOutFile       = "  --out-file <path>   Exact output file path"
-	HelpGitHubDesktop = "  --github-desktop    Add repos to GitHub Desktop"
+	HelpScanFlagGitHubDesktop = "  --github-desktop    Add repos to GitHub Desktop"
 	HelpOpen          = "  --open              Open output folder after scan"
 	HelpQuiet         = "  --quiet             Suppress clone help section (for CI/scripted use)"
 
