@@ -6,7 +6,7 @@ Install (or re-install) the gitmap binary on this machine.
 
 ```
 gitmap self-install [--dir <path>] [--yes] [--version <tag>]
-                    [--profile auto|both|zsh|bash|pwsh|fish]
+                    [--shell-mode <mode>]
                     [--show-path] [--force-lock]
 ```
 
@@ -26,10 +26,12 @@ gitmap self-install [--dir <path>] [--yes] [--version <tag>]
 3. Writes the script to a temp file (UTF-8 BOM on PowerShell), runs it
    with `-InstallDir` / `--dir`, and forwards `--version` if pinned.
 
-## --profile <mode>
+## --shell-mode <mode>
 
 Controls which shell profile files receive the PATH snippet on Unix.
 Defaults to `auto`.
+
+### Singleton modes
 
 | Mode   | Writes PATH to                                             |
 |--------|------------------------------------------------------------|
@@ -40,12 +42,29 @@ Defaults to `auto`.
 | `pwsh` | `~/.config/powershell/Microsoft.PowerShell_profile.ps1`    |
 | `fish` | `~/.config/fish/config.fish`                               |
 
-`--profile both` is the recommended mode when running from pwsh on
-macOS — it guarantees both the zsh login profile (used by
-Terminal.app / iTerm) and the pwsh profile receive the PATH update so
-gitmap works immediately whichever shell you open.
+### Combo modes (v3.48.0+)
 
-`--dual-shell` is kept as a hidden alias for `--profile both`.
+Any `+`-joined combination of the concrete shell families
+(`zsh`, `bash`, `pwsh`, `fish`) writes PATH to **only** those families.
+Combos are **strict** — `~/.profile` and any unlisted family are skipped.
+
+| Combo            | Writes PATH to                                                    |
+|------------------|-------------------------------------------------------------------|
+| `zsh+pwsh`       | zsh profiles + pwsh profile only (recommended for macOS pwsh users) |
+| `bash+fish`      | bash profiles + fish config only                                  |
+| `zsh+bash+pwsh`  | zsh + bash + pwsh, skip fish and `~/.profile`                     |
+
+`auto` and `both` cannot appear inside a combo (they're meta values, not
+shell families).
+
+`--profile <mode>` is kept as a hidden alias for `--shell-mode <mode>`.
+`--dual-shell` is kept as a hidden alias for `--shell-mode both`.
+
+When the resolved mode includes `pwsh` (`both`, `pwsh` singleton, or any
+combo containing `pwsh`), the installer also exports `GITMAP_DUAL_SHELL=1`
+into `install.sh`'s environment so `detect_active_pwsh` fires regardless
+of the parent shell — guaranteeing the pwsh profile is written even when
+the installer is launched from zsh.
 
 ## Examples
 
@@ -54,9 +73,12 @@ gitmap self-install
 gitmap self-install --yes
 gitmap self-install --dir D:\dev\gitmap
 gitmap self-install --version v3.0.0
-gitmap self-install --profile both        # macOS / pwsh user
-gitmap self-install --profile pwsh        # only touch the pwsh profile
-gitmap self-install --show-path           # audit which profiles got written
+gitmap self-install --shell-mode both              # write every detected profile
+gitmap self-install --shell-mode zsh+pwsh          # macOS pwsh user, deterministic
+gitmap self-install --shell-mode bash+fish         # Linux user with two shells
+gitmap self-install --shell-mode zsh+bash+pwsh     # cross-shell dev workstation
+gitmap self-install --shell-mode pwsh              # only touch the pwsh profile
+gitmap self-install --show-path                    # audit which profiles got written
 ```
 
 ## See also
