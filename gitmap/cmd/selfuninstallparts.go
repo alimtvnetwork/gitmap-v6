@@ -286,22 +286,6 @@ func isMarkerOpen(line string) bool {
 		strings.Contains(line, " - managed by ")
 }
 
-// defaultProfileForOS picks the conventional rc file for the current OS.
-// Kept for back-compat with older callers; new code should prefer
-// resolveProfilesForShellMode which returns the full deterministic list
-// for a --shell-mode value.
-func defaultProfileForOS() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	if isWindows() {
-		return filepath.Join(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
-	}
-
-	return filepath.Join(home, ".bashrc")
-}
-
 // resolveProfilesForShellMode returns the deterministic list of profile
 // files self-uninstall should strip the PATH snippet from for the given
 // --shell-mode value. Mirrors install.sh's should_write_profile gating
