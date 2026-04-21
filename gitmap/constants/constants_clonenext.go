@@ -11,7 +11,12 @@ const (
 	MsgCloneNextRemoved      = "✓ Removed %s\n"
 	MsgCloneNextMovedTo      = "→ Now in %s\n"
 	MsgFlattenFallback       = "→ Falling back to versioned folder %s (current folder is locked by this shell)\n"
-	MsgFlattenLockedHint     = "  Tip: 'cd ..' out of %s in your shell, then re-run to flatten.\n"
+	MsgFlattenLockedHint     = "  Tip: 'cd ..' out of %s in your shell, then re-run to flatten — or pass -f to force.\n"
+	// MsgForceReleasing is printed by `cn -f` BEFORE the chdir-to-parent
+	// trick that releases the Windows file lock on the cwd. Telling the
+	// user "I'm leaving X" up front keeps the subsequent removal log
+	// from looking like an unrelated jump.
+	MsgForceReleasing = "  → Force-flatten: leaving %s to release lock...\n"
 )
 
 // Clone-next error and warning messages.
@@ -26,6 +31,12 @@ const (
 	ErrCloneNextRepoCheck     = "Error: cannot check target repo: %v\n"
 	ErrCloneNextRepoCreate    = "Error: cannot create GitHub repo %s: %v\n"
 	WarnCloneNextRemoveFailed = "Warning: could not remove %s: %v\n"
+	// ErrCloneNextForceFailed fires when -f / --force was passed but
+	// the existing flattened folder still cannot be removed (e.g. a
+	// non-shell process holds a handle on it). We refuse the silent
+	// versioned-folder fallback here — the user explicitly asked for
+	// a flat layout, so a clear error beats a surprise rename.
+	ErrCloneNextForceFailed = "Error: --force could not remove %s: %v\nClose any process holding files in %s and re-run.\n"
 )
 
 // Clone-next flag descriptions.
@@ -36,6 +47,7 @@ const (
 	FlagDescCloneNextCreateRemote = "Create target GitHub repo if it does not exist (requires GITHUB_TOKEN)"
 	FlagDescCloneNextCSV          = "Read repo paths from CSV file (one path per row, header optional)"
 	FlagDescCloneNextAll          = "Walk current folder and run cn on every git repo found one level deep"
+	FlagDescCloneNextForce        = "Force flatten even when cwd is the target folder (chdir to parent, no versioned fallback)"
 )
 
 // Clone-next help strings for usage output.
@@ -49,6 +61,7 @@ const (
 	HelpCNCreateRemote = "  --create-remote     Create target GitHub repo if missing (needs GITHUB_TOKEN)"
 	HelpCNCSV          = "  --csv <path>        Batch mode: read repo list from CSV (one path per row)"
 	HelpCNAll          = "  --all               Batch mode: cn every git repo one level under cwd"
+	HelpCNForce        = "  --force, -f         Force flatten when cwd IS the target folder (no versioned fallback)"
 )
 
 // Clone-next batch mode messages and statuses (v3.42.0+).

@@ -17,11 +17,12 @@ both the current active version and a full transition history.
 ## Command Syntax
 
 ```
-gitmap cn <version-spec> [--delete] [--keep] [--no-desktop] [--verbose]
+gitmap cn <version-spec> [-f|--force] [--delete] [--keep] [--no-desktop] [--verbose]
 ```
 
 | Flag | Description |
 |------|-------------|
+| `-f`, `--force` | Force flatten even when cwd IS the target folder. chdir to parent and remove cwd before cloning. Refuses the versioned-folder fallback. |
 | `--delete` | Remove the current versioned folder after clone (when different from flattened path) |
 | `--keep` | Keep current folder without prompting |
 | `--no-desktop` | Skip GitHub Desktop registration |
@@ -31,8 +32,29 @@ gitmap cn <version-spec> [--delete] [--keep] [--no-desktop] [--verbose]
 
 | Flags Used | Behavior |
 |------------|----------|
-| (none) | Clone into `macro-ahk/`, replacing it if it exists |
-| `--delete` | Clone into `macro-ahk/`, then delete `macro-ahk-v15/` (if different path) |
+| (none) | Clone into `macro-ahk/`, replacing it if it exists. If cwd IS `macro-ahk/` (already flattened), Windows file lock prevents removal → falls back to `macro-ahk-vN/` with a warning. |
+| `-f` / `--force` | Same as default, but if cwd IS the target folder, gitmap chdirs to parent first, removes the cwd, and clones into the flattened name. **Never falls back to a versioned folder.** Aborts with a clear error if removal still fails. |
+| `--delete` | Clone into `macro-ahk/`, then delete the old versioned folder (if a different path) |
+
+### `-f` Use Case (v3.50.0+)
+
+Working continuously from one flattened folder across version bumps:
+
+```
+PS C:\repos\macro-ahk> gitmap cn v++ -f
+  → Force-flatten: leaving D:\repos\macro-ahk to release lock...
+  Removing existing macro-ahk for fresh clone...
+  Cloning macro-ahk-v22 into macro-ahk (flattened)...
+  ✓ Cloned macro-ahk-v22 into macro-ahk
+  → Now in macro-ahk
+```
+
+Without `-f`, this same flow falls back to `macro-ahk-v22/` because the
+shell holds an open handle on `macro-ahk/`. `-f` is the explicit
+contract that the user accepts losing their cwd in exchange for a
+guaranteed-flat layout.
+
+
 
 ---
 
