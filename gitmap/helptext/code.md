@@ -1,57 +1,62 @@
 # gitmap code
 
 Register a path with the VS Code Project Manager extension and open it in
-VS Code in one step.
-
-## Aliases
-
-None.
+VS Code. Supports a multi-root **`paths`** subcommand (v3.39.0+).
 
 ## Usage
 
-    gitmap code [alias] [path]
+    gitmap code [alias] [path] [extraPath...]
+    gitmap code paths add  <alias> <path>
+    gitmap code paths rm   <alias> <path>
+    gitmap code paths list <alias>
 
-| Form                              | Behavior                                                                   |
-|-----------------------------------|----------------------------------------------------------------------------|
-| `gitmap code`                     | Use the git repo root if inside one, else the current directory. Alias = folder basename. |
-| `gitmap code myalias`             | Same path resolution as above; alias overridden to `myalias`.              |
-| `gitmap code myalias D:\anywhere` | Use any path (no git requirement). Alias = `myalias`.                       |
+| Form                                              | Behavior                                                                          |
+|---------------------------------------------------|-----------------------------------------------------------------------------------|
+| `gitmap code`                                     | Use git repo root (or CWD). Alias = folder basename.                              |
+| `gitmap code myalias`                             | Same path resolution; alias overridden to `myalias`.                              |
+| `gitmap code myalias D:\anywhere`                 | Use any path. Alias = `myalias`.                                                  |
+| `gitmap code myalias D:\root D:\extra1 D:\extra2` | Register root + variadic extras (additive — never clobbers user-added paths).     |
+| `gitmap code paths add webapp D:\frontend`        | Attach an extra folder to the existing `webapp` entry.                            |
+| `gitmap code paths rm  webapp D:\frontend`        | Detach an extra folder. Forces a clean overwrite (does NOT re-union it back in).  |
+| `gitmap code paths list webapp`                   | Print rootPath + every attached extra path for the alias.                         |
 
 ## What it does
 
 1. Resolves the absolute `rootPath`.
-2. Upserts a row in the gitmap `VSCodeProject` table keyed by `rootPath`.
-3. Atomically syncs the entry into the alefragnani.project-manager
-   `projects.json` file (preserving foreign entries and any user-set
-   `tags` / `paths` / `enabled` / `profile` fields).
-4. Launches VS Code on the resolved path via the `code` CLI.
+2. Upserts the `VSCodeProject` row keyed by `rootPath` (case-insensitive).
+3. UNIONs any `extraPath...` into the DB-side `Paths` column (JSON-encoded).
+4. Atomically syncs the entry into the alefragnani.project-manager
+   `projects.json` file. Foreign entries plus user-edited `tags` /
+   `enabled` / `profile` are preserved verbatim. Paths added in the VS
+   Code UI are also preserved — gitmap only ever adds (or, via
+   `paths rm`, explicitly removes a single entry).
+5. Launches VS Code on the resolved root path. The `paths` subcommand
+   skips this step.
 
-`projects.json` location is derived per OS by first discovering the VS Code
-**user-data root** (`%APPDATA%\Code` / `~/Library/Application Support/Code` /
-`$XDG_CONFIG_HOME/Code`), then appending
-`User/globalStorage/alefragnani.project-manager/projects.json`. The full path
-is never hardcoded.
+## Multi-root semantics
+
+- Adding via `paths add` or variadic `gitmap code <alias> <root> <extra...>`
+  is **additive**: existing extras (DB-managed or UI-added) are kept.
+- `paths rm` is the only way to drop a path — it overwrites `paths` so
+  the deletion sticks across re-syncs.
+- `gitmap as <newalias>` only renames `name`. Extras and other user
+  fields are left exactly as set.
 
 ## Examples
 
-    cd ~/code/my-app
-    gitmap code                # rootPath = repo root, name = "my-app"
+    gitmap code                                  # rootPath = repo root
+    gitmap code backend                          # alias overridden
+    gitmap code docs ~/Documents/spec            # any path
+    gitmap code mono ~/work/main \
+                     ~/work/main/frontend \
+                     ~/work/main/backend         # root + extras
 
-    gitmap code backend        # name overridden to "backend"
-
-    gitmap code docs ~/Documents/spec   # any path, name = "docs"
-
-## Errors
-
-| Condition                                  | Exit | Action                                                  |
-|--------------------------------------------|------|---------------------------------------------------------|
-| Provided path does not exist               | 1    | Error printed; nothing written.                         |
-| VS Code user-data dir missing              | 1    | Suggests installing VS Code.                            |
-| project-manager extension dir missing      | 1    | Suggests installing the extension first.                |
-| `code` CLI not on PATH                     | 0    | DB and `projects.json` still updated; install hint.     |
+    gitmap code paths add  mono ~/work/main/scripts
+    gitmap code paths list mono
+    gitmap code paths rm   mono ~/work/main/scripts
 
 ## See also
 
-- `gitmap as` — register a short alias for a repo.
-- `gitmap scan` — bulk-syncs every discovered repo into `projects.json`.
+- `gitmap as` — register a short alias (mirrors to projects.json).
+- `gitmap scan` — bulk-syncs every discovered repo into projects.json.
 - Spec: `spec/01-vscode-project-manager-sync/README.md`

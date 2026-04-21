@@ -13,19 +13,24 @@ import (
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
 )
 
-// Pair is one (rootPath, name) tuple to upsert into projects.json.
+// Pair is one (rootPath, name, paths) tuple to upsert into projects.json.
+// Paths is the gitmap-managed multi-root list; the Sync function UNIONs it
+// with whatever the user already added in the VS Code UI — gitmap never
+// silently removes a user-added path.
 type Pair struct {
 	RootPath string
 	Name     string
+	Paths    []string
 }
 
 // Sync reconciles projects.json with the supplied DB-side pairs.
 //
 // Behavior:
-//   - New rootPath -> append a default Entry.
-//   - Existing rootPath -> update only Name. Preserve Paths, Tags,
-//     Enabled, and Profile (so user edits in the VS Code UI survive).
-//   - Foreign entries (rootPath not in pairs) -> preserved.
+//   - New rootPath -> append a default Entry with Paths = pair.Paths.
+//   - Existing rootPath -> update Name. Paths becomes UNION(existing, pair.Paths).
+//     Tags / Enabled / Profile are preserved (so user edits in the VS Code UI
+//     survive untouched).
+//   - Foreign entries (rootPath not in pairs) -> preserved verbatim.
 //
 // Writes are atomic: temp file in the same directory then os.Rename.
 // Returns ErrUserDataMissing / ErrExtensionMissing when the path
@@ -53,6 +58,7 @@ func Sync(pairs []Pair) (SyncSummary, error) {
 }
 
 // RenameByPath updates the Name field of the entry whose rootPath matches.
+// Paths / Tags / Enabled / Profile are intentionally left alone.
 // Returns true when an entry was actually renamed (false = no-op).
 func RenameByPath(rootPath, newName string) (bool, error) {
 	path, err := ProjectsJSONPath()
@@ -110,6 +116,9 @@ func readEntries(path string) ([]Entry, error) {
 
 // mergePairs upserts pairs into existing by rootPath. Returns the new
 // slice plus an Added/Updated/Unchanged summary (Total set by caller).
+//
+// "Updated" counts when EITHER Name OR the union'd Paths set actually
+// changes vs. what's currently on disk. Pure no-ops increment Unchanged.
 func mergePairs(existing []Entry, pairs []Pair) ([]Entry, SyncSummary) {
 	indexByPath := make(map[string]int, len(existing))
 	for i, e := range existing {
@@ -123,20 +132,25 @@ func mergePairs(existing []Entry, pairs []Pair) ([]Entry, SyncSummary) {
 
 		idx, found := indexByPath[key]
 		if !found {
-			existing = append(existing, newEntry(p.RootPath, p.Name))
+			existing = append(existing, newEntry(p.RootPath, p.Name, p.Paths))
 			indexByPath[key] = len(existing) - 1
 			summary.Added++
 
 			continue
 		}
 
-		if existing[idx].Name == p.Name {
+		merged := unionPaths(existing[idx].Paths, p.Paths)
+		nameChanged := existing[idx].Name != p.Name
+		pathsChanged := len(merged) != len(existing[idx].Paths)
+
+		if !nameChanged && !pathsChanged {
 			summary.Unchanged++
 
 			continue
 		}
 
 		existing[idx].Name = p.Name
+		existing[idx].Paths = merged
 		summary.Updated++
 	}
 

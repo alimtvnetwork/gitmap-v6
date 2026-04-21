@@ -21,14 +21,18 @@ type SyncSummary struct {
 	Total     int
 }
 
-// newEntry builds a default Entry for a freshly registered (rootPath, name).
+// newEntry builds a default Entry for a freshly registered tuple.
 // Tags and Paths are always emitted as non-nil empty slices so the encoded
 // JSON contains `[]` rather than `null` (matches the sample fixture).
-func newEntry(rootPath, name string) Entry {
+func newEntry(rootPath, name string, paths []string) Entry {
+	if paths == nil {
+		paths = []string{}
+	}
+
 	return Entry{
 		Name:     name,
 		RootPath: rootPath,
-		Paths:    []string{},
+		Paths:    paths,
 		Tags:     []string{},
 		Enabled:  true,
 		Profile:  "",
@@ -47,4 +51,32 @@ func ensureSlices(e Entry) Entry {
 	}
 
 	return e
+}
+
+// unionPaths returns the union of `existing` and `incoming`, preserving
+// the order of `existing` first then appending any new entries from
+// `incoming`. Path comparison is OS-aware (case-insensitive on Windows).
+func unionPaths(existing, incoming []string) []string {
+	seen := make(map[string]struct{}, len(existing)+len(incoming))
+	out := make([]string, 0, len(existing)+len(incoming))
+
+	for _, p := range existing {
+		key := normalizePath(p)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, p)
+	}
+
+	for _, p := range incoming {
+		key := normalizePath(p)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, p)
+	}
+
+	return out
 }

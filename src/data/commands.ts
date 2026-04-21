@@ -805,12 +805,16 @@ export const commands: CommandDef[] = [
   },
   {
     category: "navigation",
-    name: "code", description: "Register the current repo (or any path) with the alefragnani.project-manager VS Code extension and open VS Code on it. Path resolution: explicit arg > git repo root > CWD.",
-    usage: "gitmap code [alias] [path]",
+    name: "code", description: "Register the current repo (or any path) with the alefragnani.project-manager VS Code extension and open VS Code on it. Supports multi-root extras and a `paths` subcommand (v3.39.0+).",
+    usage: "gitmap code [alias] [path] [extraPath...]\ngitmap code paths add|rm|list <alias> [path]",
     examples: [
       { command: "gitmap code", description: "Register the git repo root (or CWD) — alias defaults to folder basename" },
       { command: "gitmap code backend", description: "Override the alias to 'backend' for the resolved path" },
       { command: "gitmap code docs ~/Documents/spec", description: "Register any path (no git requirement) with alias 'docs'" },
+      { command: "gitmap code mono ~/work/main ~/work/main/frontend ~/work/main/backend", description: "Register a multi-root entry: root + variadic extras (additive, never clobbers UI-added paths)" },
+      { command: "gitmap code paths add mono ~/work/main/scripts", description: "Attach an extra folder to an existing entry" },
+      { command: "gitmap code paths list mono", description: "Show rootPath + every attached extra path" },
+      { command: "gitmap code paths rm mono ~/work/main/scripts", description: "Detach an extra folder (overwrites — actually sticks across re-syncs)" },
     ],
     seeAlso: [
       { name: "as", description: "Register an alias for the current repo (mirrors to projects.json too)" },

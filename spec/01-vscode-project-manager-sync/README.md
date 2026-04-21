@@ -38,7 +38,19 @@ Each entry in `projects.json` is an object with exactly these fields:
 | `enabled`  | boolean   | `true` on insert. Preserved on upsert.                           |
 | `profile`  | string    | `""` on insert. Preserved on upsert.                             |
 
-**Multi-root (`paths`) and auto-tags are deferred** to a future revision.
+**Multi-root (`paths`) shipped in v3.39.0** — see "Multi-root paths" below.
+**Auto-tags are still deferred** to a future revision.
+
+### 2.1 Multi-root paths (v3.39.0)
+
+- DB column `VSCodeProject.Paths` (JSON-encoded TEXT, schema v20).
+- API: `gitmap code <alias> <root> [extra...]` (variadic, additive)
+  and `gitmap code paths add|rm|list <alias> [path]` (explicit).
+- `Sync()` UNIONs DB-side paths with on-disk paths — user edits in the
+  VS Code UI are never silently removed. Only `paths rm` (which calls
+  `vscodepm.OverwritePaths`) bypasses union semantics.
+- `gitmap as <newalias>` only rewrites `name`. Multi-root paths, tags,
+  enabled, and profile are preserved on rename.
 
 ## 3. File location — derived from VS Code user-data root
 

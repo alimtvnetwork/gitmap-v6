@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.39.0 — (2026-04-21) — Multi-root `paths` for VS Code Project Manager sync
+
+### Added
+
+- **`gitmap code <alias> <root> [extra...]`** — variadic form attaches
+  extra folders to a Project Manager entry in one call. Additive: never
+  clobbers paths you added in the VS Code UI.
+- **`gitmap code paths add|rm|list <alias> [path]`** — explicit subcommand
+  to manage the `paths` array on an existing entry. `rm` overwrites the
+  entry so the removal actually sticks across re-syncs.
+- New DB column **`VSCodeProject.Paths`** (JSON-encoded TEXT, schema **v20**).
+  Idempotent additive migration — existing v19 databases upgrade silently.
+- New `vscodepm.OverwritePaths(rootPath, name, paths)` helper for the
+  one place we need to bypass union semantics (`paths rm`).
+
+### Changed
+
+- `vscodepm.Pair` now carries `Paths []string`. `Sync()` UNIONs the DB-side
+  list with the on-disk list — gitmap never silently removes a user-added
+  path.
+- `gitmap as <newalias>` continues to only rewrite `name`. Extra paths,
+  tags, enabled, and profile are preserved (per spec).
+
+### Files
+
+- New: `gitmap/vscodepm/overwrite.go`
+- Updated: `gitmap/cmd/code.go`, `gitmap/vscodepm/{sync,entry}.go`,
+  `gitmap/store/vscode_project.go`, `gitmap/model/vscode_project.go`,
+  `gitmap/constants/{constants,constants_settings,constants_vscode_pm_sql}.go`,
+  `gitmap/store/store.go`, `gitmap/helptext/code.md`,
+  `src/data/commands.ts`.
+
+### Compatibility
+
+- Pure additive change. Legacy v19 DBs auto-upgrade on next invocation.
+- `gitmap scan` and the single-arg `gitmap code [alias]` flows are
+  unchanged for users who do not need multi-root.
+
 ## v3.38.0 — (2026-04-21) — VS Code Project Manager sync (`gitmap code` + auto-sync on scan)
 
 ### Added
