@@ -666,11 +666,10 @@ const DiagnosticChecklist = () => {
 const ChecklistCommand = ({ command }: { command: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(command).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+  const handleCopy = useCallback(async () => {
+    await copyToClipboard(command);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [command]);
 
   return (
