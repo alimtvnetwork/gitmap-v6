@@ -167,6 +167,9 @@ func runCloneNext(args []string) {
 		}
 	}
 
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStageClone, targetName)
+	}
 	fmt.Printf(constants.MsgFlattenCloning, targetName, flattenedFolder)
 	cloneResult := runGitClone(targetURL, targetPath)
 	if !cloneResult {
