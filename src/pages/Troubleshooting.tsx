@@ -312,6 +312,30 @@ const Troubleshooting = () => {
     return counts;
   }, []);
 
+  // Deep-link: scroll to ?id=<issue-id> and relax filters that would hide it.
+  const targetId = searchParams.get("id");
+  useEffect(() => {
+    if (!targetId) return;
+    const issue = issues.find((i) => i.id === targetId);
+    if (!issue) return;
+    if (activeCategory !== "all" && activeCategory !== issue.category) {
+      setActiveCategory("all");
+      return;
+    }
+    if (filtered.findIndex((i) => i.id === targetId) === -1) {
+      if (search) setSearch("");
+      return;
+    }
+    if (scrolledIdRef.current === targetId) return;
+    const el = document.getElementById(targetId);
+    if (el) {
+      scrolledIdRef.current = targetId;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2", "ring-primary");
+      window.setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+    }
+  }, [targetId, filtered, activeCategory, search]);
+
   return (
     <DocsLayout>
       <h1 className="text-3xl font-heading font-bold mb-2 docs-h1">Troubleshooting</h1>
