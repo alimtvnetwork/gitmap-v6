@@ -3,7 +3,6 @@
 package release
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
