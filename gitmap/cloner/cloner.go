@@ -172,18 +172,32 @@ func cloneOne(rec model.ScanRecord, targetDir string) model.CloneResult {
 }
 
 // runClone executes the git clone command.
+//
+// The branch-selection strategy is driven by ScanRecord.BranchSource so
+// that records captured in a detached or unknown state never produce
+// "Remote branch not found" errors. When the source is trusted (HEAD,
+// remote-tracking, default) the recorded branch is passed via -b; when it
+// is untrusted (detached, unknown) git clone is invoked without -b and
+// the remote's default HEAD decides the checkout.
 func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	url := pickURL(rec)
-	cmd := exec.Command(constants.GitBin, constants.GitClone,
-		constants.GitBranchFlag, rec.Branch, url, dest)
+	strat := pickCloneStrategy(rec)
+
+	args := []string{constants.GitClone}
+	if strat.useBranch {
+		args = append(args, constants.GitBranchFlag, strat.branch)
+	}
+	args = append(args, url, dest)
+
+	cmd := exec.Command(constants.GitBin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := fmt.Sprintf("%s: %s", err.Error(), string(out))
 
-		return model.CloneResult{Record: rec, Success: false, Error: msg}
+		return model.CloneResult{Record: rec, Success: false, Error: msg, Notes: strat.reason}
 	}
 
-	return model.CloneResult{Record: rec, Success: true}
+	return model.CloneResult{Record: rec, Success: true, Notes: strat.reason}
 }
 
 // pickURL selects the best available URL from a record.

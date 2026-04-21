@@ -61,10 +61,15 @@ func DefaultConfig() Config {
 }
 
 // CloneResult tracks the outcome of a single clone operation.
+//
+// Notes carries non-fatal diagnostics about how the clone was performed —
+// for example, which branch-selection strategy was applied based on the
+// record's BranchSource.
 type CloneResult struct {
 	Record  ScanRecord
 	Success bool
 	Error   string
+	Notes   string
 }
 
 // CloneSummary aggregates results of a batch clone operation.
