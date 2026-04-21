@@ -394,6 +394,7 @@ const Troubleshooting = () => {
                     {categoryMeta[issue.category].label}
                   </p>
                 </div>
+                <CopyLinkButton issueId={issue.id} />
                 {issue.fixCommand && (
                   <CopyFixButton command={issue.fixCommand} altCommand={issue.altCommand} />
                 )}
