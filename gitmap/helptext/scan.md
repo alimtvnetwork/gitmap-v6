@@ -29,6 +29,24 @@ s
 
 - None (this is typically the first command you run)
 
+## Live progress indicator
+
+While the walker runs, gitmap prints a single live status line to stderr
+showing how many directories have been walked and how many Git repos
+have been found so far:
+
+    ⟳ Scanning — 1284 dirs · 37 repos
+
+The line refreshes about ten times a second using a carriage return, so
+it never grows in your scrollback. When the walk finishes, the live line
+is replaced by a one-line summary:
+
+    ✓ Walked 4271 directories · found 58 repositories
+
+The indicator is suppressed automatically when `--quiet` is passed or
+when stderr is not a terminal (CI, redirected output). In those cases
+only the final summary line is emitted.
+
 ## Examples
 
 ### Example 1: Scan a directory
