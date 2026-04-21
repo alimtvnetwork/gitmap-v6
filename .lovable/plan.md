@@ -3,6 +3,21 @@
 
 > Status legend: ✅ Done · 🔄 In Progress · ⏳ Pending · 🚫 Blocked
 
+## v3.39.0 Release-Version Script (spec 105) — 2026-04-21
+- ✅ Authored `spec/01-app/105-release-version-script.md` (full contract: URL flow, generic + snapshot artefacts, flags, exit codes, missing-version interactive flow)
+- ✅ Authored `.lovable/memory/features/release-version-script.md` and indexed
+- ⏳ Implement `gitmap/scripts/release-version.ps1` (generic, parameterized, embedded via `go:embed`)
+- ⏳ Implement `gitmap/scripts/release-version.sh` (bash counterpart, identical contract)
+- ⏳ Add `constants/constants_install.go` entries: `ScriptReleaseVersionPS1`, `ScriptReleaseVersionSh`, snapshot filename format `release-version-vX.Y.Z.{ps1,sh}`
+- ⏳ Wire snapshot generation into `cmd/release.go` release pipeline (copy generic, prepend `$Version = '<tag>'`, upload as release asset alongside binaries + checksums)
+- ⏳ Update `src/pages/Release.tsx` to render TWO install boxes per `/release/:version` page: pinned (snapshot URL) and generic (`-Version` parameter form)
+- ⏳ Confirm front-page `install.ps1` (latest-resolving) is **untouched** — out of scope
+- ⏳ Add Vitest coverage for snapshot generator: input version → script body has `$Version = 'vX.Y.Z'` at line 1
+- ⏳ Add Go test for missing-version interactive flow (mock GitHub API 404 + simulated TTY)
+- ⏳ Add CHANGELOG v3.39.0 entry + bump `Version` constant
+- 🚫 Decision needed before implementation: confirm GitHub release asset upload is automated (release pipeline) or manual (release notes checklist)
+
+
 ## v3.12.1 Session Snapshot (2026-04-20)
 - ✅ Migrated all stale `Draft`/`PreRelease` field references to `IsDraft`/`IsPreRelease` (`release/metadata_test.go`, `tests/release_test/skipmeta_test.go`)
 - ✅ Fixed `cmd/probe.go` `go vet` non-constant format string error
