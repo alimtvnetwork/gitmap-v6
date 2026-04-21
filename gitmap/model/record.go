@@ -68,11 +68,16 @@ type CloneResult struct {
 }
 
 // CloneSummary aggregates results of a batch clone operation.
+//
+// Skipped tracks repos that were already cloned and up to date according to
+// the clone cache; they are also counted in Succeeded since the desired
+// state was achieved without performing a clone or pull.
 type CloneSummary struct {
 	Succeeded int
 	Failed    int
 	Cloned    []CloneResult
 	Errors    []CloneResult
+	Skipped   []CloneResult
 }
 
 // ScanCache stores the flags used for the last scan so rescan can replay them.

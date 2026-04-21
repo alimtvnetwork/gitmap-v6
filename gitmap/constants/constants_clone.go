@@ -4,9 +4,10 @@ package constants
 const (
 	ProgressBeginFmt   = "[%3d/%d]  Cloning %s ..."
 	ProgressDoneFmt    = " done (%s)\n"
+	ProgressSkipFmt    = " skipped (cached)\n"
 	ProgressFailFmt    = " FAILED\n"
 	ProgressSummaryFmt = "\nClone complete: %d/%d repos in %s\n"
-	ProgressDetailFmt  = "  Cloned: %d | Pulled: %d | Failed: %d\n"
+	ProgressDetailFmt  = "  Cloned: %d | Pulled: %d | Skipped: %d | Failed: %d\n"
 )
 
 // Batch progress format strings (generic operations).
