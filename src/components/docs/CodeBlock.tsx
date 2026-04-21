@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { Copy, Check, Download, Maximize2, Minimize2, AArrowUp, AArrowDown } from "lucide-react";
+import { copyToClipboard } from "@/lib/clipboard";
 import hljs from "highlight.js/lib/core";
 import go from "highlight.js/lib/languages/go";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -127,14 +128,14 @@ const CodeBlock = ({ code, language = "bash", title }: CodeBlockProps) => {
     setLastPinned(lineIndex);
   }, [lastPinned]);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     const textToCopy = hasPinned
       ? Array.from(pinnedLines)
           .sort((a, b) => a - b)
           .map((i) => code.split("\n")[i])
           .join("\n")
       : code;
-    navigator.clipboard.writeText(textToCopy);
+    await copyToClipboard(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [code, hasPinned, pinnedLines]);

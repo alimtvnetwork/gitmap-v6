@@ -4,6 +4,7 @@ import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import SearchBar from "@/components/docs/SearchBar";
 import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check, Link2, Stethoscope, Terminal, FileText, ListChecks } from "lucide-react";
+import { copyToClipboard } from "@/lib/clipboard";
 
 type Category = "paths" | "config" | "auth" | "network" | "locks" | "git" | "build";
 
@@ -503,14 +504,13 @@ interface CopyFixButtonProps {
 const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     const payload = altCommand
       ? `${command}\n\n# Alternative\n${altCommand}`
       : command;
-    navigator.clipboard.writeText(payload).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+    await copyToClipboard(payload);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [command, altCommand]);
 
   return (
@@ -545,13 +545,12 @@ const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
 const CopyLinkButton = ({ issueId }: { issueId: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     const url = new URL(window.location.href);
     url.searchParams.set("id", issueId);
-    navigator.clipboard.writeText(url.toString()).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+    await copyToClipboard(url.toString());
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [issueId]);
 
   return (
@@ -667,11 +666,10 @@ const DiagnosticChecklist = () => {
 const ChecklistCommand = ({ command }: { command: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(command).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+  const handleCopy = useCallback(async () => {
+    await copyToClipboard(command);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [command]);
 
   return (

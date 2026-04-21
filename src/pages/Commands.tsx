@@ -5,6 +5,7 @@ import CommandCard from "@/components/docs/CommandCard";
 import CommandCategoryGroup from "@/components/docs/CommandCategoryGroup";
 import SearchBar from "@/components/docs/SearchBar";
 import { commands, Categories } from "@/data/commands";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const CommandsPage = () => {
   const [search, setSearch] = useState("");
@@ -88,8 +89,8 @@ const CommandsPage = () => {
     return md;
   }, []);
 
-  const handleCopyAll = useCallback(() => {
-    navigator.clipboard.writeText(generateMarkdown());
+  const handleCopyAll = useCallback(async () => {
+    await copyToClipboard(generateMarkdown());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [generateMarkdown]);

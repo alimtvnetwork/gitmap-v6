@@ -2,6 +2,7 @@ import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const colorTokens = [
   { token: "--background", light: "220 20% 97%", dark: "220 25% 6%", usage: "Page background" },
@@ -48,8 +49,8 @@ function ColorSwatch({ hsl, label, token }: { hsl: string; label?: string; token
   const [copied, setCopied] = useState(false);
   const cssValue = `hsl(${hsl})`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(token ? `var(${token})` : hsl);
+  const handleCopy = async () => {
+    await copyToClipboard(token ? `var(${token})` : hsl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
