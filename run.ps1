@@ -799,8 +799,7 @@ function Copy-DocsSite {
                 $viteBin = Join-Path $nodeModules ".bin\vite.cmd"
                 if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
                     Write-Info "Installing docs dependencies (npm install) at repo root..."
-                    npm install --no-audit --no-fund --silent 2>&1 | Out-Null
-                    $installExit = $LASTEXITCODE
+                    $installExit = Invoke-NpmQuiet -NpmArgs @('install','--no-audit','--no-fund','--silent')
                     if ($installExit -ne 0) {
                         Write-Warn "npm install failed - skipping docs build"
                         Write-ReportError -Stage "docs-npm-install" `
@@ -813,8 +812,7 @@ function Copy-DocsSite {
                     }
                 }
                 Write-Info "Auto-building docs (npm run build) at repo root..."
-                npm run build 2>&1 | Out-Null
-                $buildExit = $LASTEXITCODE
+                $buildExit = Invoke-NpmQuiet -NpmArgs @('run','build')
                 if ($buildExit -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
                     if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
