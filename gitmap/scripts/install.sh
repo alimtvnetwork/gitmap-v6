@@ -685,7 +685,7 @@ add_to_path() {
     # This ensures gitmap is available regardless of which shell the user opens.
 
     # zsh profiles (both, to cover login + interactive shells)
-    if [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; then
+    if should_write_profile zsh && { [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; }; then
         # .zshrc — interactive shells (most terminal emulators)
         if add_path_to_profile "${dir}" "${HOME}/.zshrc" false; then
             profiles_written="${profiles_written} ~/.zshrc"
@@ -701,7 +701,7 @@ add_to_path() {
     fi
 
     # bash profiles
-    if [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; then
+    if should_write_profile bash && { [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; }; then
         if add_path_to_profile "${dir}" "${HOME}/.bashrc" false; then
             profiles_written="${profiles_written} ~/.bashrc"
         else
@@ -716,15 +716,19 @@ add_to_path() {
         fi
     fi
 
-    # POSIX ~/.profile — catch-all for sh and other POSIX shells
-    if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
-        profiles_written="${profiles_written} ~/.profile"
-    else
-        profiles_skipped="${profiles_skipped} ~/.profile"
+    # POSIX ~/.profile — catch-all for sh and other POSIX shells.
+    # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
+    # the "only this shell family" contract.
+    if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
+        if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
+            profiles_written="${profiles_written} ~/.profile"
+        else
+            profiles_skipped="${profiles_skipped} ~/.profile"
+        fi
     fi
 
     # fish (only if fish is installed or is the default shell)
-    if [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; then
+    if should_write_profile fish && { [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; }; then
         local fish_config="${HOME}/.config/fish/config.fish"
         if add_path_to_profile "${dir}" "${fish_config}" fish; then
             profiles_written="${profiles_written} ~/.config/fish/config.fish"
@@ -735,9 +739,8 @@ add_to_path() {
 
     # PowerShell on Unix — detected when the installer was launched from
     # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
-    # The --dual-shell flag (DUAL_SHELL=true) forces this branch even
-    # when neither detection signal fires, so users who explicitly want
-    # both shells wired up can opt in deterministically.
+    # The --profile both / --dual-shell flag (DUAL_SHELL=true) forces
+    # this branch even when neither detection signal fires.
     # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     local pwsh_active=false
     if detect_active_pwsh; then
@@ -747,9 +750,9 @@ add_to_path() {
     local pwsh_force=false
     if [ "${DUAL_SHELL:-false}" = true ]; then
         pwsh_force=true
-        PATH_PWSH_DETECTED="forced (--dual-shell)"
+        PATH_PWSH_DETECTED="forced (--profile both)"
     fi
-    if [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; then
+    if should_write_profile pwsh && { [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; }; then
         if [ "${pwsh_active}" = false ] && [ "${pwsh_force}" = false ]; then
             PATH_PWSH_DETECTED="yes (pwsh on PATH)"
         fi
