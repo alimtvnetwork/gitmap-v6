@@ -9,7 +9,7 @@ import (
 	"io/fs"
 )
 
-//go:embed install.ps1 install.sh uninstall.ps1
+//go:embed install.ps1 install.sh uninstall.ps1 release-version.ps1 release-version.sh
 var files embed.FS
 
 // FS returns the embedded read-only filesystem rooted at gitmap/scripts/.
