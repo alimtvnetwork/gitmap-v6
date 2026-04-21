@@ -545,13 +545,12 @@ const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
 const CopyLinkButton = ({ issueId }: { issueId: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     const url = new URL(window.location.href);
     url.searchParams.set("id", issueId);
-    navigator.clipboard.writeText(url.toString()).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+    await copyToClipboard(url.toString());
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [issueId]);
 
   return (
