@@ -43,7 +43,9 @@ func autoRegisterCurrentRepo(db *store.DB, cwd string) error {
 		return fmt.Errorf("tag repo failed: %w", err)
 	}
 
-	fmt.Fprintf(os.Stdout, "  ✓ Auto-registered repo %q under scan folder %q (#%d)\n",
+	// Trailing blank line: separates the release summary from the next
+	// shell prompt so the terminal output doesn't visually run into PS1.
+	fmt.Fprintf(os.Stdout, "  ✓ Auto-registered repo %q under scan folder %q (#%d)\n\n",
 		absCwd, parent, folder.ID)
 
 	return nil
