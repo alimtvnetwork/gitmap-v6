@@ -5,6 +5,32 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    # Manual escape hatches for the golangci-lint baseline cache. Use when
+    # the cached baseline appears stale (e.g. linter version bump,
+    # configuration change, or false-positive from a partial earlier run).
+    #
+    #   lint_baseline_cache_version
+    #     Bumps the cache key suffix. Old caches are abandoned; the next
+    #     main-branch run reseeds under the new version. Free-form string
+    #     (e.g. "v2", "2026-04-21"). Default "v1" preserves history.
+    #
+    #   lint_baseline_disable
+    #     When "true", skips both the restore and save steps for this run.
+    #     The diff job enters seeding mode (exits 0, surfaces all current
+    #     findings as warnings) without touching the cache. Use to
+    #     diagnose suspected stale-cache issues without losing history.
+    inputs:
+      lint_baseline_cache_version:
+        description: "Bump to invalidate the golangci-lint baseline cache (e.g. v2)"
+        required: false
+        default: "v1"
+        type: string
+      lint_baseline_disable:
+        description: "Skip restoring/saving the lint baseline cache for this run"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ci-${{ github.ref }}
