@@ -228,8 +228,9 @@ func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 }
 
 // buildSelfInstallBashCmd builds the Unix invocation and propagates
-// --dual-shell both as a CLI flag and as an env var (belt-and-suspenders
-// so detect_active_pwsh can fire from either signal).
+// --dual-shell + --show-path through to install.sh. --dual-shell is
+// also exported as GITMAP_DUAL_SHELL=1 (belt-and-suspenders so
+// detect_active_pwsh fires from either signal).
 func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
 	if len(opts.Version) > 0 {
@@ -237,6 +238,9 @@ func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	}
 	if opts.DualShell {
 		args = append(args, constants.FlagSelfDualShell)
+	}
+	if opts.ShowPath {
+		args = append(args, constants.FlagSelfShowPath)
 	}
 	cmd := exec.Command("bash", args...)
 	if opts.DualShell {
