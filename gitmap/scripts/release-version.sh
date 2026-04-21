@@ -294,12 +294,130 @@ interactive_pick() {
         exit $EXIT_VERSION_MISSING
     fi
 
+# ── Resolve requested version (with optional fallback / prompt) ────
+resolve_requested_version() {
+    validate_version
+    local body
+    body="$(github_api "/releases/tags/$VERSION" || true)"
+    if [ -n "$body" ] && echo "$body" | grep -q '"tag_name"'; then
+        echo "$VERSION"
+        return
+    fi
+
+    if [ "$ALLOW_FALLBACK" -eq 1 ]; then
+        local fb
+        fb="$(resolve_fallback_patch)"
+        if [ -n "$fb" ]; then
+            warn "Requested $VERSION missing; falling back to newest patch in series: $fb"
+            echo "$fb"
+            return
+        fi
+        fatal_error "$ERR_NO_FALLBACK" \
+            "Requested version $VERSION is not published and no same-minor-series patch is available." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"fallbackAttempted\":true}"
+    fi
+
+    if ! is_interactive; then
+        local recent_json
+        recent_json="$(recent_releases_json)"
+        fatal_error "$ERR_NON_INTERACTIVE" \
+            "Requested version $VERSION is not published. Non-interactive session cannot prompt for substitution. Re-run with --allow-fallback to opt into same-minor patch substitution, or pin to one of the recent releases." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"interactive\":false,\"allowFallbackHint\":\"--allow-fallback\",\"recentReleases\":$recent_json}"
+    fi
+
+    interactive_pick
+}
+
+# is_interactive returns 0 only when we can safely prompt for input.
+# We require: not --quiet, not --json-errors, not running under CI, AND a
+# real /dev/tty.
+is_interactive() {
+    [ "$QUIET" -eq 1 ] && return 1
+    [ "$JSON_ERRORS" -eq 1 ] && return 1
+    [ "${CI:-}" = "true" ] || [ "${CI:-}" = "1" ] && return 1
+    [ -r /dev/tty ] || return 1
+    [ -w /dev/tty ] || return 1
+    return 0
+}
+
+resolve_fallback_patch() {
+    if [[ ! "$VERSION" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then return; fi
+    local major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}"
+    github_api "/releases?per_page=100" \
+        | grep -oE '"tag_name":[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+"' \
+        | sed -E 's/.*"(v[0-9.]+)".*/\1/' \
+        | grep -E "^v$major\.$minor\." \
+        | sort -t. -k3 -n -r \
+        | head -n1
+}
+
+# recent_releases_json returns a JSON array of the 5 most recent release tags.
+recent_releases_json() {
+    local tags
+    tags="$(github_api "/releases?per_page=5" 2>/dev/null \
+        | grep -oE '"tag_name":[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+"' \
+        | sed -E 's/.*"(v[0-9.]+)".*/\1/' \
+        | head -n5)"
+    if [ -z "$tags" ]; then printf '[]'; return; fi
+    local first=1 out="["
+    while IFS= read -r tag; do
+        [ -z "$tag" ] && continue
+        if [ $first -eq 1 ]; then first=0; else out="$out,"; fi
+        out="$out\"$tag\""
+    done <<< "$tags"
+    out="$out]"
+    printf '%s' "$out"
+}
+
+interactive_pick() {
+    local recent
+    recent="$(github_api "/releases?per_page=5" \
+        | grep -oE '"tag_name":[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+"' \
+        | sed -E 's/.*"(v[0-9.]+)".*/\1/' \
+        | head -n5)"
+    if [ -z "$recent" ]; then
+        fatal_error "$ERR_RECENT_LIST_FAILED" \
+            "Requested version $VERSION is not published and the recent-releases list could not be fetched." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\"}"
+    fi
+    local i=1
+    local -a choices=()
+    echo "" >&2
+    echo "  Requested: $VERSION (not found)" >&2
+    echo "  Most recent published releases:" >&2
+    while IFS= read -r tag; do
+        choices+=("$tag")
+        printf "    [%d] %s\n" "$i" "$tag" >&2
+        i=$((i+1))
+    done <<< "$recent"
+    echo "    [N] Quit (default)" >&2
+    printf "  Pick a number to install instead, or N to quit: " >&2
+
+    local reply=""
+    if ! read -r reply </dev/tty; then
+        echo "" >&2
+        fatal_error "$ERR_NON_INTERACTIVE" \
+            "Could not read from /dev/tty; aborting." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\"}"
+    fi
+
     if [ -z "$reply" ] || [[ "$reply" =~ ^[Nn] ]]; then
-        exit $EXIT_VERSION_MISSING
+        local recent_json
+        recent_json="$(recent_releases_json)"
+        fatal_error "$ERR_USER_DECLINED" \
+            "User declined to substitute for missing version $VERSION." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"recentReleases\":$recent_json}"
     fi
     if ! [[ "$reply" =~ ^[0-9]+$ ]] || [ "$reply" -lt 1 ] || [ "$reply" -gt "${#choices[@]}" ]; then
-        err "Invalid choice."
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_INVALID_CHOICE" \
+            "Invalid choice '$reply'; expected 1..${#choices[@]} or N." \
+            $EXIT_VERSION_MISSING \
+            "{\"reply\":\"$(json_escape "$reply")\",\"max\":${#choices[@]}}"
     fi
     local chosen="${choices[$((reply-1))]}"
     warn "User selected $chosen as substitute for $VERSION"
