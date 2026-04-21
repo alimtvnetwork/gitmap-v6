@@ -16,6 +16,12 @@
 //   - The first I/O error from any worker wins and is returned; remaining
 //     workers drain and exit. Partial results discovered before the error
 //     are still returned so callers can render what was found.
+//
+// Live progress: callers may pass a Progress callback via ScanOptions to
+// observe directory-walked / repo-found counts in near-real time. The
+// callback is invoked from a single dedicated goroutine on a fixed cadence
+// (see progress.go) so handlers do NOT need to be reentrant or fast — but
+// they MUST not block indefinitely or the closing snapshot will be delayed.
 package scanner
 
 import (
@@ -23,6 +29,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
@@ -43,12 +50,38 @@ type RepoInfo struct {
 	RelativePath string
 }
 
+// ScanProgress is a snapshot of in-flight scan counters delivered to a
+// caller-supplied callback. Snapshots are emitted on a fixed cadence
+// while the walker is running and once more when the walker terminates
+// (Final == true) — even if the totals didn't change since the last
+// emission, so renderers can clear / finalize their line.
+type ScanProgress struct {
+	// DirsWalked is the number of directories fully read by os.ReadDir.
+	DirsWalked int64
+	// ReposFound is the number of Git repositories discovered so far.
+	ReposFound int64
+	// Final marks the terminating snapshot for this scan.
+	Final bool
+}
+
+// ScanOptions bundles optional hooks and tunables for ScanDirWithOptions.
+// Zero-value is valid and equivalent to the legacy ScanDir signature.
+type ScanOptions struct {
+	// ExcludeDirs is the list of directory base names to skip.
+	ExcludeDirs []string
+	// Workers is the worker-pool size; <=0 picks the platform default.
+	Workers int
+	// Progress, when non-nil, is invoked from a single goroutine with
+	// throttled snapshots while the scan runs and once more at the end.
+	Progress func(ScanProgress)
+}
+
 // ScanDir walks root recursively and returns all Git repo paths found.
 // Subtrees are crawled by a bounded worker pool sized via
 // defaultWorkerCount(); result order is not guaranteed (callers that
 // depend on lexical order must sort).
 func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
-	return ScanDirWithWorkers(root, excludeDirs, 0)
+	return ScanDirWithOptions(root, ScanOptions{ExcludeDirs: excludeDirs})
 }
 
 // ScanDirWithWorkers walks root using exactly `workers` goroutines.
@@ -56,12 +89,27 @@ func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
 // from defaultWorkerCount(). Values larger than MaxScanWorkers are
 // clamped down to keep the pool under the per-process fd budget.
 func ScanDirWithWorkers(root string, excludeDirs []string, workers int) ([]RepoInfo, error) {
+	return ScanDirWithOptions(root, ScanOptions{
+		ExcludeDirs: excludeDirs,
+		Workers:     workers,
+	})
+}
+
+// ScanDirWithOptions is the full-fat entry point. Use it when you want to
+// observe scan progress via opts.Progress. The two thin wrappers above
+// exist for backward compatibility with callers that don't care.
+func ScanDirWithOptions(root string, opts ScanOptions) ([]RepoInfo, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return walkParallel(absRoot, buildExcludeSet(excludeDirs), resolveWorkerCount(workers))
+	return walkParallel(
+		absRoot,
+		buildExcludeSet(opts.ExcludeDirs),
+		resolveWorkerCount(opts.Workers),
+		opts.Progress,
+	)
 }
 
 // resolveWorkerCount normalizes a caller-supplied worker count: 0 / <0
@@ -107,19 +155,37 @@ type scanState struct {
 	root    string
 	exclude map[string]bool
 
-	queue chan string  // pending directories to walk
+	queue chan string    // pending directories to walk
 	wg    sync.WaitGroup // tracks outstanding queued items, NOT workers
 
-	mu     sync.Mutex
-	repos  []RepoInfo
+	mu       sync.Mutex
+	repos    []RepoInfo
 	firstErr error
+
+	// Atomic counters fuel the live progress callback. They are
+	// updated on the hot path (one increment per processed dir / one
+	// per recorded repo) and read by the throttled emitter goroutine
+	// — so atomic.LoadInt64 is the only safe access pattern.
+	dirsWalked atomic.Int64
+	reposFound atomic.Int64
+}
+
+// snapshot returns the current counters in a single struct. The two
+// atomic loads are independent — a snapshot is a near-monotonic estimate,
+// not a transactional read — which is fine for human-facing UI updates.
+func (st *scanState) snapshot(final bool) ScanProgress {
+	return ScanProgress{
+		DirsWalked: st.dirsWalked.Load(),
+		ReposFound: st.reposFound.Load(),
+		Final:      final,
+	}
 }
 
 // walkParallel runs a fixed-size worker pool that consumes directories
 // from an unbounded-capacity FIFO and enqueues child directories back.
 // The queue is closed when wg drops to zero — i.e. every dispatched
 // directory has been fully processed and produced no new work.
-func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo, error) {
+func walkParallel(root string, exclude map[string]bool, workers int, progress func(ScanProgress)) ([]RepoInfo, error) {
 	st := &scanState{
 		root:    root,
 		exclude: exclude,
@@ -133,6 +199,8 @@ func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo
 
 	st.wg.Add(1)
 	st.queue <- root
+
+	stopProgress := startProgress(st, progress)
 
 	var workerWG sync.WaitGroup
 	for i := 0; i < workers; i++ {
@@ -155,6 +223,7 @@ func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo
 	}()
 
 	workerWG.Wait()
+	stopProgress() // emits the final snapshot exactly once
 
 	st.mu.Lock()
 	defer st.mu.Unlock()
@@ -168,6 +237,7 @@ func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo
 // returned at the end.
 func (st *scanState) processDir(dir string) {
 	entries, err := os.ReadDir(dir)
+	st.dirsWalked.Add(1)
 	if err != nil {
 		st.recordErr(err)
 
@@ -218,6 +288,7 @@ func (st *scanState) recordRepo(repoPath string) {
 		RelativePath: rel,
 	})
 	st.mu.Unlock()
+	st.reposFound.Add(1)
 }
 
 // recordErr stores the FIRST error to occur. Later errors are dropped to
