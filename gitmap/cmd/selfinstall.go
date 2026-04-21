@@ -19,11 +19,16 @@ import (
 )
 
 // selfInstallOpts holds parsed flags for self-install.
+//
+// ShellMode is the canonical name (v3.48.0+); it carries either a
+// singleton (auto|both|zsh|bash|pwsh|fish) or a `+`-joined combo such
+// as `zsh+pwsh`. The legacy field name `Profile` is preserved as a
+// pointer-style accessor in code paths that haven't been migrated yet.
 type selfInstallOpts struct {
 	Dir       string
 	Yes       bool
 	Version   string
-	Profile   string // --profile: auto|both|zsh|bash|pwsh|fish (default auto)
+	ShellMode string // --shell-mode (canonical) / --profile (alias) / --dual-shell (alias)
 	ShowPath  bool   // --show-path: expand install summary with PATH audit trail
 	ForceLock bool   // --force-lock: bypass the duplicate-install guard
 }
@@ -82,53 +87,125 @@ func acquireSelfInstallLock(opts selfInstallOpts) lockfile.Releaser {
 	return func() {} // unreachable; satisfies the compiler
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version / --profile / --dual-shell / --show-path / --force-lock.
+// parseSelfInstallFlags reads --dir / --yes / --version / --shell-mode
+// (canonical) / --profile (alias) / --dual-shell (alias) / --show-path /
+// --force-lock.
 //
-// --dual-shell is kept as a hidden alias for --profile both: when both
-// flags are passed, --profile wins (explicit beats deprecated). This
-// preserves backward compat for existing scripts/CI without forcing a
-// breaking change.
+// Precedence when multiple shell-mode-style flags are passed:
+//   1. --shell-mode wins (canonical, explicit).
+//   2. --profile wins over --dual-shell (newer alias beats older).
+//   3. --dual-shell upgrades the default `auto` to `both` only if no
+//      higher-precedence flag was set.
+//
+// All three converge onto opts.ShellMode so the rest of the program sees
+// a single resolved value.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
-	var dualShell bool
+	var (
+		shellModeFlag string
+		profileFlag   string
+		dualShell     bool
+	)
 	fs.StringVar(&opts.Dir, "dir", "", constants.FlagDescSelfDir)
 	fs.BoolVar(&opts.Yes, "yes", false, constants.FlagDescSelfYes)
 	fs.BoolVar(&opts.Yes, "y", false, constants.FlagDescSelfYes)
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
-	fs.StringVar(&opts.Profile, "profile", constants.ProfileModeAuto, constants.FlagDescSelfProfile)
+	fs.StringVar(&shellModeFlag, "shell-mode", "", constants.FlagDescSelfShellMode)
+	fs.StringVar(&profileFlag, "profile", "", constants.FlagDescSelfProfile)
 	fs.BoolVar(&dualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
 	fs.BoolVar(&opts.ShowPath, "show-path", false, constants.FlagDescSelfShowPath)
 	fs.BoolVar(&opts.ForceLock, "force-lock", false, constants.FlagDescSelfForceLock)
 	fs.Parse(reorderFlagsBeforeArgs(args))
-	opts.Profile = resolveProfileMode(opts.Profile, dualShell)
-	validateProfileMode(opts.Profile)
+	opts.ShellMode = resolveShellMode(shellModeFlag, profileFlag, dualShell)
+	validateShellMode(opts.ShellMode)
 
 	return opts
 }
 
-// resolveProfileMode reconciles --profile and the deprecated --dual-shell
-// alias. Explicit --profile always wins; --dual-shell only upgrades the
-// default `auto` to `both` so it never silently overrides a user choice.
-func resolveProfileMode(profile string, dualShell bool) string {
-	if dualShell && profile == constants.ProfileModeAuto {
-		return constants.ProfileModeBoth
+// resolveShellMode collapses --shell-mode / --profile / --dual-shell
+// onto a single string. Empty inputs all default to ShellModeAuto so
+// callers never see a zero value.
+func resolveShellMode(shellMode, profile string, dualShell bool) string {
+	if len(shellMode) > 0 {
+		return shellMode
+	}
+	if len(profile) > 0 {
+		return profile
+	}
+	if dualShell {
+		return constants.ShellModeBoth
 	}
 
-	return profile
+	return constants.ShellModeAuto
 }
 
-// validateProfileMode rejects unknown --profile values with a clear list
-// of accepted ones. Exits 1 — bad CLI input is unrecoverable.
-func validateProfileMode(mode string) {
-	for _, valid := range constants.SelfInstallProfileModes {
+// validateShellMode accepts any singleton from SelfInstallShellModes,
+// or any `+`-joined combo whose tokens are all concrete shell families.
+// Exits 1 with a clear error pointing to both singletons and the combo
+// syntax — bad CLI input is unrecoverable.
+func validateShellMode(mode string) {
+	if isValidSingletonShellMode(mode) {
+		return
+	}
+	if isValidComboShellMode(mode) {
+		return
+	}
+	fmt.Fprintf(os.Stderr, constants.ErrSelfInstallShellModeInvalid,
+		mode, strings.Join(constants.SelfInstallShellModes, "|"))
+	os.Exit(1)
+}
+
+// isValidSingletonShellMode reports whether mode is one of the bare
+// singletons (auto|both|zsh|bash|pwsh|fish).
+func isValidSingletonShellMode(mode string) bool {
+	for _, valid := range constants.SelfInstallShellModes {
 		if mode == valid {
-			return
+			return true
 		}
 	}
-	fmt.Fprintf(os.Stderr, constants.ErrSelfInstallProfileInvalid,
-		mode, strings.Join(constants.SelfInstallProfileModes, "|"))
-	os.Exit(1)
+
+	return false
+}
+
+// isValidComboShellMode reports whether mode is a `+`-joined combo of
+// concrete shell singletons (zsh|bash|pwsh|fish). `auto` and `both` are
+// rejected inside combos because they're meta values, not shell families.
+// At least two distinct tokens are required — single-token "combos"
+// should use the bare singleton form, and dupes like "zsh+zsh" are
+// almost certainly a typo.
+func isValidComboShellMode(mode string) bool {
+	if !strings.Contains(mode, constants.ShellModeComboSep) {
+		return false
+	}
+	tokens := strings.Split(mode, constants.ShellModeComboSep)
+	if len(tokens) < 2 {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, tok := range tokens {
+		if !isConcreteShellFamily(tok) {
+			return false
+		}
+		if seen[tok] {
+			return false
+		}
+		seen[tok] = true
+	}
+
+	return true
+}
+
+// isConcreteShellFamily reports whether tok names an actual shell family
+// (not a meta mode). Used by combo validation.
+func isConcreteShellFamily(tok string) bool {
+	switch tok {
+	case constants.ShellModeZsh, constants.ShellModeBash,
+		constants.ShellModePwsh, constants.ShellModeFish:
+		return true
+	}
+
+	return false
 }
 
 // resolveSelfInstallDir returns the install directory, prompting the
@@ -302,23 +379,45 @@ func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 }
 
 // buildSelfInstallBashCmd builds the Unix invocation and propagates
-// --profile + --show-path through to install.sh. When the resolved
-// profile mode is `both`, GITMAP_DUAL_SHELL=1 is also exported as a
-// belt-and-suspenders signal so detect_active_pwsh inside install.sh
-// fires from either the env var OR the explicit flag.
+// --shell-mode + --show-path through to install.sh. When the resolved
+// shell mode requires pwsh (`both` OR any combo containing `pwsh`),
+// GITMAP_DUAL_SHELL=1 is also exported as a belt-and-suspenders signal
+// so detect_active_pwsh inside install.sh fires from either the env
+// var OR the explicit flag.
 func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
 	if len(opts.Version) > 0 {
 		args = append(args, "--version", opts.Version)
 	}
-	args = append(args, constants.FlagSelfProfile, opts.Profile)
+	args = append(args, constants.FlagSelfShellMode, opts.ShellMode)
 	if opts.ShowPath {
 		args = append(args, constants.FlagSelfShowPath)
 	}
 	cmd := exec.Command("bash", args...)
-	if opts.Profile == constants.ProfileModeBoth {
+	if shellModeRequiresPwsh(opts.ShellMode) {
 		cmd.Env = append(os.Environ(), "GITMAP_DUAL_SHELL=1")
 	}
 
 	return cmd
+}
+
+// shellModeRequiresPwsh reports whether the resolved mode forces a pwsh
+// profile write. Covers `both` (writes everything) and any combo whose
+// tokens include `pwsh` (e.g. `zsh+pwsh`, `bash+pwsh`, `zsh+bash+pwsh`).
+// Singletons other than `pwsh` itself return false — the user explicitly
+// asked for a non-pwsh shell.
+func shellModeRequiresPwsh(mode string) bool {
+	if mode == constants.ShellModeBoth || mode == constants.ShellModePwsh {
+		return true
+	}
+	if !strings.Contains(mode, constants.ShellModeComboSep) {
+		return false
+	}
+	for _, tok := range strings.Split(mode, constants.ShellModeComboSep) {
+		if tok == constants.ShellModePwsh {
+			return true
+		}
+	}
+
+	return false
 }

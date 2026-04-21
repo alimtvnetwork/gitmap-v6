@@ -787,8 +787,9 @@ add_to_path() {
     fi
 
     # POSIX ~/.profile — catch-all for sh and other POSIX shells.
-    # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
-    # the "only this shell family" contract.
+    # Skipped under single-shell modes AND combo modes (zsh+pwsh, etc.)
+    # to honour the "only the listed families" strict contract. Only
+    # `auto` (detect everything) and `both` (write everything) include it.
     if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
         add_path_to_profile "${dir}" "${HOME}/.profile" false
         record_profile_outcome $? "~/.profile"
@@ -803,8 +804,8 @@ add_to_path() {
 
     # PowerShell on Unix — detected when the installer was launched from
     # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
-    # The --profile both / --dual-shell flag (DUAL_SHELL=true) forces
-    # this branch even when neither detection signal fires.
+    # The --shell-mode both / pwsh-containing combo (DUAL_SHELL=true)
+    # forces this branch even when neither detection signal fires.
     # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     local pwsh_active=false
     if detect_active_pwsh; then
@@ -814,7 +815,7 @@ add_to_path() {
     local pwsh_force=false
     if [ "${DUAL_SHELL:-false}" = true ]; then
         pwsh_force=true
-        PATH_PWSH_DETECTED="forced (--profile both)"
+        PATH_PWSH_DETECTED="forced (--shell-mode ${PROFILE_MODE})"
     fi
     if should_write_profile pwsh && { [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; }; then
         if [ "${pwsh_active}" = false ] && [ "${pwsh_force}" = false ]; then
@@ -1101,9 +1102,14 @@ parse_args() {
     DUAL_SHELL=false
     SHOW_PATH=false
     # PROFILE_MODE controls which shell profiles get the PATH snippet.
-    # auto = run detection (current behavior, default)
-    # both = write all supported profiles (zsh + bash + .profile + fish + pwsh)
-    # zsh|bash|pwsh|fish = restrict writes to exactly that shell family
+    # Accepted values:
+    #   auto   = run detection (default; current behavior)
+    #   both   = write all supported profiles (zsh + bash + .profile + fish + pwsh)
+    #   zsh|bash|pwsh|fish = restrict writes to exactly that one shell family
+    #   <a>+<b>[+<c>...] = strict combo, only the listed families (e.g. zsh+pwsh)
+    # Combos are STRICT — ~/.profile and undeclared families are skipped.
+    # The Go caller (gitmap self-install --shell-mode <mode>) already
+    # validated this; we re-validate below for direct (curl|bash) users.
     # See spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     # for the original motivating use case (pwsh user on macOS).
     PROFILE_MODE="auto"
@@ -1134,23 +1140,26 @@ parse_args() {
                 PROBE_CEILING="$2"
                 shift 2
                 ;;
-            --profile)
-                # Accepts auto|both|zsh|bash|pwsh|fish. Validation is
-                # primarily done by the Go caller (gitmap self-install),
-                # but we re-validate here for users who invoke install.sh
-                # directly (curl | bash flow).
+            --shell-mode|--profile)
+                # --shell-mode is canonical (v3.48.0+); --profile is the
+                # v3.46.0 alias. Both accept singletons (auto|both|zsh|
+                # bash|pwsh|fish) and `+`-joined combos (e.g. zsh+pwsh).
+                # Validation lives in validate_shell_mode so curl|bash
+                # users get the same error contract as gitmap self-install
+                # users. Combos containing pwsh export GITMAP_DUAL_SHELL=1
+                # so detect_active_pwsh fires regardless of $SHELL.
                 PROFILE_MODE="$2"
-                validate_profile_mode "${PROFILE_MODE}"
-                if [ "${PROFILE_MODE}" = "both" ]; then
+                validate_shell_mode "${PROFILE_MODE}"
+                if shell_mode_includes_pwsh "${PROFILE_MODE}"; then
                     DUAL_SHELL=true
                     export GITMAP_DUAL_SHELL=1
                 fi
                 shift 2
                 ;;
             --dual-shell)
-                # Hidden alias for --profile both. Kept for backward
+                # Hidden alias for --shell-mode both. Kept for backward
                 # compatibility with v3.43–v3.45 callers; new code should
-                # use --profile both.
+                # use --shell-mode both.
                 PROFILE_MODE="both"
                 DUAL_SHELL=true
                 export GITMAP_DUAL_SHELL=1
@@ -1164,7 +1173,7 @@ parse_args() {
                 shift
                 ;;
             --help|-h)
-                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--profile <mode>] [--show-path]"
+                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--shell-mode <mode>] [--show-path]"
                 echo ""
                 echo "Options:"
                 echo "  --version <tag>        Install a specific version (e.g. v2.55.0)"
@@ -1173,7 +1182,10 @@ parse_args() {
                 echo "  --no-path              Skip adding install directory to PATH"
                 echo "  --no-discovery         Skip versioned-repo discovery (install baseline)"
                 echo "  --probe-ceiling <N>    Highest -v<N> to probe (default: 30)"
-                echo "  --profile <mode>       Which shell profile(s) to write: auto|both|zsh|bash|pwsh|fish"
+                echo "  --shell-mode <mode>    Which shell profile(s) to write:"
+                echo "                           auto|both|zsh|bash|pwsh|fish"
+                echo "                           or '+'-joined combo (e.g. zsh+pwsh, bash+fish)"
+                echo "  --profile <mode>       Deprecated alias for --shell-mode"
                 echo "  --show-path            Print detected shell + every profile file written"
                 exit 0
                 ;;
@@ -1186,17 +1198,75 @@ parse_args() {
     done
 }
 
-# validate_profile_mode rejects unknown --profile values. Exits 1 with
-# a clear list so curl | bash users get the same error contract as
-# `gitmap self-install` users.
-validate_profile_mode() {
+# validate_shell_mode rejects unknown --shell-mode / --profile values.
+# Accepts the six singletons (auto|both|zsh|bash|pwsh|fish) and any
+# `+`-joined combo of concrete shell families (zsh, bash, pwsh, fish);
+# meta values `auto` and `both` are not valid inside combos.
+# Exits 1 with a clear list so curl|bash users get the same error
+# contract as `gitmap self-install` users.
+validate_shell_mode() {
     local mode="$1"
     case "${mode}" in
         auto|both|zsh|bash|pwsh|fish) return 0 ;;
-        *)
-            err "--profile '${mode}' is not valid. Accepted: auto|both|zsh|bash|pwsh|fish"
-            exit 1
-            ;;
+    esac
+    if validate_shell_mode_combo "${mode}"; then
+        return 0
+    fi
+    err "--shell-mode '${mode}' is not valid."
+    err "Accepted singletons: auto|both|zsh|bash|pwsh|fish"
+    err "Accepted combos:     '+'-joined concrete shells (e.g. zsh+pwsh, bash+fish, zsh+bash+pwsh)"
+    exit 1
+}
+
+# validate_shell_mode_combo returns 0 iff $1 is a `+`-joined list of two
+# or more distinct concrete shell families. Helper for validate_shell_mode.
+validate_shell_mode_combo() {
+    local mode="$1"
+    case "${mode}" in
+        *+*) ;;
+        *) return 1 ;;
+    esac
+    local oldifs="${IFS}"
+    IFS='+'
+    # shellcheck disable=SC2086
+    set -- ${mode}
+    IFS="${oldifs}"
+    if [ $# -lt 2 ]; then
+        return 1
+    fi
+    local seen=""
+    local tok
+    for tok in "$@"; do
+        case "${tok}" in
+            zsh|bash|pwsh|fish) ;;
+            *) return 1 ;;
+        esac
+        case " ${seen} " in
+            *" ${tok} "*) return 1 ;;
+        esac
+        seen="${seen} ${tok}"
+    done
+
+    return 0
+}
+
+# validate_profile_mode is the legacy entry point kept for any external
+# scripts that source install.sh and call it directly. Delegates to
+# validate_shell_mode.
+validate_profile_mode() {
+    validate_shell_mode "$1"
+}
+
+# shell_mode_includes_pwsh reports whether $1 forces a pwsh profile
+# write. Covers `both`, the bare `pwsh` singleton, and any combo whose
+# `+`-joined tokens include `pwsh`. Used to decide whether to export
+# GITMAP_DUAL_SHELL=1.
+shell_mode_includes_pwsh() {
+    local mode="$1"
+    case "${mode}" in
+        both|pwsh) return 0 ;;
+        *+pwsh|pwsh+*|*+pwsh+*) return 0 ;;
+        *) return 1 ;;
     esac
 }
 
@@ -1205,12 +1275,21 @@ validate_profile_mode() {
 #   auto → caller's existing detection logic decides (return 0 always;
 #          the caller's own `if` already filters).
 #   both → always yes.
-#   <shell> → only if it matches.
+#   <shell> singleton → only if it matches.
+#   <a>+<b>[+<c>...] combo → yes iff family appears as a `+`-token.
+# Combos are strict: anything not listed (including ~/.profile, which
+# the caller checks separately) is excluded.
 should_write_profile() {
     local family="$1"
     case "${PROFILE_MODE}" in
         auto|both) return 0 ;;
         "${family}") return 0 ;;
+        *+*)
+            case "+${PROFILE_MODE}+" in
+                *"+${family}+"*) return 0 ;;
+                *) return 1 ;;
+            esac
+            ;;
         *) return 1 ;;
     esac
 }

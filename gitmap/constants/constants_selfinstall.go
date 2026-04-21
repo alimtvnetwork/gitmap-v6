@@ -81,6 +81,11 @@ const (
 const CmdSelfUninstallRunner = "self-uninstall-runner" // gitmap:cmd skip
 
 // Flag names shared by self-install / self-uninstall.
+//
+// FlagSelfShellMode is the canonical name as of v3.48.0. FlagSelfProfile
+// (introduced in v3.46.0) and FlagSelfDualShell (v3.43.0) are kept as
+// hidden aliases so existing scripts and CI continue to work — the Go
+// parser collapses all three onto opts.ShellMode (formerly opts.Profile).
 const (
 	FlagSelfDir          = "--dir"
 	FlagSelfYes          = "--yes"
@@ -88,38 +93,75 @@ const (
 	FlagSelfKeepData     = "--keep-data"
 	FlagSelfKeepSnippet  = "--keep-snippet"
 	FlagSelfFromVersion  = "--version"
-	FlagSelfProfile      = "--profile"
-	FlagSelfDualShell    = "--dual-shell" // hidden alias for --profile both
+	FlagSelfShellMode    = "--shell-mode" // canonical (v3.48.0+)
+	FlagSelfProfile      = "--profile"    // hidden alias (v3.46.0+)
+	FlagSelfDualShell    = "--dual-shell" // hidden alias (v3.43.0+)
 	FlagSelfShowPath     = "--show-path"
 	FlagSelfForceLock    = "--force-lock"
 )
 
-// SelfInstallProfileMode values accepted by --profile. `auto` is the
-// default (run detect_active_pwsh + $SHELL heuristics). `both` writes
-// PATH to every supported shell's profile file. The single-shell values
-// restrict writes to exactly one profile family (useful for CI / users
-// who manage other shells themselves).
+// ShellMode values accepted by --shell-mode. `auto` is the default
+// (run detect_active_pwsh + $SHELL heuristics). `both` writes PATH to
+// every supported shell's profile file. Singletons restrict writes to
+// exactly one family.
+//
+// Combos: any `+`-joined combination of the singletons (e.g. `zsh+pwsh`,
+// `bash+fish`, `zsh+bash+pwsh`) is also accepted. Combos are STRICT —
+// only the listed families receive the PATH snippet; ~/.profile and any
+// undeclared family are skipped. This is the difference from `both`,
+// which writes everything detected.
+//
+// Aliases retained for back-compat:
+//   ProfileMode* names mirror ShellMode* names — both are still exported
+//   so old code referencing ProfileModeBoth keeps compiling.
 const (
-	ProfileModeAuto = "auto"
-	ProfileModeBoth = "both"
-	ProfileModeZsh  = "zsh"
-	ProfileModeBash = "bash"
-	ProfileModePwsh = "pwsh"
-	ProfileModeFish = "fish"
+	ShellModeAuto = "auto"
+	ShellModeBoth = "both"
+	ShellModeZsh  = "zsh"
+	ShellModeBash = "bash"
+	ShellModePwsh = "pwsh"
+	ShellModeFish = "fish"
+
+	// Back-compat alias names — same values, different identifiers.
+	ProfileModeAuto = ShellModeAuto
+	ProfileModeBoth = ShellModeBoth
+	ProfileModeZsh  = ShellModeZsh
+	ProfileModeBash = ShellModeBash
+	ProfileModePwsh = ShellModePwsh
+	ProfileModeFish = ShellModeFish
+
+	// ShellModeComboSep is the delimiter for combo modes like "zsh+pwsh".
+	ShellModeComboSep = "+"
 )
 
-// SelfInstallProfileModes is the canonical set, used by validation and
-// help text so the list lives in exactly one place.
-var SelfInstallProfileModes = []string{
-	ProfileModeAuto,
-	ProfileModeBoth,
-	ProfileModeZsh,
-	ProfileModeBash,
-	ProfileModePwsh,
-	ProfileModeFish,
-}
+// SelfInstallShellModes lists the singleton (non-combo) values accepted
+// by --shell-mode. Combos are validated by splitting on ShellModeComboSep
+// and checking each token against this list.
+//
+// SelfInstallProfileModes is the back-compat alias kept for existing
+// references in selfinstall.go and tests.
+var (
+	SelfInstallShellModes = []string{
+		ShellModeAuto,
+		ShellModeBoth,
+		ShellModeZsh,
+		ShellModeBash,
+		ShellModePwsh,
+		ShellModeFish,
+	}
+	SelfInstallProfileModes = SelfInstallShellModes
+)
 
-// ErrSelfInstallProfileInvalid fires when --profile gets an unknown value.
+// ErrSelfInstallShellModeInvalid fires when --shell-mode gets an unknown
+// value (singleton or combo token). Format: %q = full bad value, %s =
+// accepted singletons (combos are documented separately in help text to
+// avoid an unbounded "valid values" string).
+const ErrSelfInstallShellModeInvalid = "Error: --shell-mode %q is not valid. " +
+	"Accepted singletons: %s. Combos: any '+'-joined combination of singletons " +
+	"(e.g. zsh+pwsh, bash+fish, zsh+bash+pwsh).\n"
+
+// ErrSelfInstallProfileInvalid is the back-compat error for the legacy
+// --profile flag. Same wording as before to keep CI grep patterns valid.
 const ErrSelfInstallProfileInvalid = "Error: --profile %q is not valid. Accepted: %s\n"
 
 // Flag descriptions.
@@ -130,8 +172,10 @@ const (
 	FlagDescSelfKeepData    = "Preserve the .gitmap data dir during self-uninstall"
 	FlagDescSelfKeepSnippet = "Leave the PATH snippet in shell profile during self-uninstall"
 	FlagDescSelfFromVersion = "Pin a specific gitmap version to install (e.g. v3.0.0)"
-	FlagDescSelfProfile     = "Which shell profile(s) to write PATH into: auto|both|zsh|bash|pwsh|fish (default: auto)"
-	FlagDescSelfDualShell   = "Deprecated alias for --profile both (hidden; still works)"
+	FlagDescSelfShellMode   = "Which shell profile(s) to write PATH into: auto|both|zsh|bash|pwsh|fish " +
+		"or any '+'-joined combo such as zsh+pwsh (default: auto)"
+	FlagDescSelfProfile     = "Deprecated alias for --shell-mode (hidden; still works)"
+	FlagDescSelfDualShell   = "Deprecated alias for --shell-mode both (hidden; still works)"
 	FlagDescSelfShowPath    = "Print detected shell, chosen PATH target, and every profile file written"
 	FlagDescSelfForceLock   = "Bypass the duplicate-install guard (recover from a stale lock left by a crashed installer)"
 )
