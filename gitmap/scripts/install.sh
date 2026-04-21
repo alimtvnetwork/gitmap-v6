@@ -43,6 +43,14 @@ PATH_TARGET=""
 PATH_LINE=""
 PATH_STATUS=""
 PATH_RELOAD=""
+# PATH_RELOAD_ALT holds a secondary reload command for the *other* shell
+# when both a POSIX profile and the pwsh profile were written (typical
+# under --dual-shell or when pwsh is detected alongside zsh/bash). The
+# post-install block renders it as an "or in <shell>:" hint so users in
+# either shell see the syntactically correct reload command — never a
+# `source ~/.zshrc` shown to someone sitting in pwsh, and vice versa.
+PATH_RELOAD_ALT=""
+PATH_RELOAD_ALT_SHELL=""
 # Per-profile audit trail used by --show-path. Populated by add_to_path
 # and consumed by print_install_summary; safe to read even when empty.
 PATH_PROFILES_WRITTEN=""
