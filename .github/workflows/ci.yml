@@ -120,13 +120,24 @@ jobs:
 
       - name: Restore baseline from last successful main run
         id: baseline-cache
-        if: needs.sha-check.outputs.already-built != 'true'
+        # Skip the restore entirely when the operator dispatched the
+        # workflow with lint_baseline_disable=true. Combined with the
+        # matching guard on the save step below, this gives a clean
+        # "ignore the cache for one run" toggle without manual cache
+        # deletion via the GitHub UI.
+        if: |
+          needs.sha-check.outputs.already-built != 'true' &&
+          inputs.lint_baseline_disable != true
         uses: actions/cache/restore@v4
         with:
           path: /tmp/lint-baseline
-          key: golangci-baseline-main-${{ github.sha }}
+          # Cache key includes a version suffix (default "v1") that an
+          # operator can bump via workflow_dispatch to abandon a stale
+          # baseline. The restore-keys fallback also carries the version
+          # so we never accidentally restore a pre-bump baseline.
+          key: golangci-baseline-main-${{ inputs.lint_baseline_cache_version || 'v1' }}-${{ github.sha }}
           restore-keys: |
-            golangci-baseline-main-
+            golangci-baseline-main-${{ inputs.lint_baseline_cache_version || 'v1' }}-
 
       - name: Install golangci-lint v1.64.8
         if: needs.sha-check.outputs.already-built != 'true'
@@ -153,9 +164,16 @@ jobs:
       - name: Diff vs baseline (fail only on NEW findings)
         if: needs.sha-check.outputs.already-built != 'true'
         shell: bash
+        env:
+          BASELINE_DISABLED: ${{ inputs.lint_baseline_disable || 'false' }}
         run: |
           BASELINE=/tmp/lint-baseline/report.json
-          if [ ! -f "$BASELINE" ]; then
+          # When disabled via dispatch, force seeding mode by pointing at
+          # an empty path so lint-diff.py treats it as "no baseline".
+          if [ "$BASELINE_DISABLED" = "true" ]; then
+            echo "::notice::Baseline cache disabled by workflow_dispatch input — seeding mode."
+            BASELINE=""
+          elif [ ! -f "$BASELINE" ]; then
             echo "::notice::No baseline found — this run will seed the cache."
           fi
           python3 .github/scripts/lint-diff.py \
@@ -169,7 +187,8 @@ jobs:
         if: |
           success() &&
           needs.sha-check.outputs.already-built != 'true' &&
-          github.event_name == 'push' &&
+          inputs.lint_baseline_disable != true &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
           github.ref == 'refs/heads/main'
         run: |
           mkdir -p /tmp/lint-baseline
@@ -179,12 +198,13 @@ jobs:
         if: |
           success() &&
           needs.sha-check.outputs.already-built != 'true' &&
-          github.event_name == 'push' &&
+          inputs.lint_baseline_disable != true &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
           github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: /tmp/lint-baseline
-          key: golangci-baseline-main-${{ github.sha }}
+          key: golangci-baseline-main-${{ inputs.lint_baseline_cache_version || 'v1' }}-${{ github.sha }}
 
       - name: Upload current lint report
         if: always() && needs.sha-check.outputs.already-built != 'true'
