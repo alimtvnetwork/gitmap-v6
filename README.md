@@ -627,7 +627,66 @@ gitmap r       [version] [flags]
 
 → Detailed help: [release](gitmap/helptext/release.md) · [release-alias](gitmap/helptext/release-alias.md) · [release-self](gitmap/helptext/release-self.md) · [release-pending](gitmap/helptext/release-pending.md) · [changelog](gitmap/helptext/changelog.md)
 
+### Changelog (recent versions)
+
+Concise, grouped per version. Each entry calls out **💥 Breaking**, **✨ Enhancements**, and **🐛 Fixes**. Versions with nothing in a category omit it. Full history lives in [`CHANGELOG.md`](CHANGELOG.md); query it from the CLI with `gitmap changelog vX.Y.Z` or `gitmap cl --limit 5`.
+
+#### v3.50.0 — 2026-04-21 — Force-flatten for `clone-next`
+
+- 💥 **Breaking:** none. New flag is opt-in and defaults to existing behavior.
+- ✨ **Enhancements:**
+  - `gitmap cn -f` / `--force`: force a flat clone even when cwd IS the target folder. Chdirs to the parent before remove (releases the Windows file lock), then re-clones into `<base>/`.
+  - Refuses the silent versioned-folder fallback under `-f` — you get a flat layout or a clear error, never a surprise rename.
+  - `--force` / `-f` added to zsh + PowerShell completions and to `clone-next` help text.
+- 🐛 **Fixes:** `MsgFlattenLockedHint` now mentions `-f` so users discover the escape hatch on the first lock warning.
+
+#### v3.32.1 — 2026-04-20 — `gitmap status` legacy path fix
+
+- 🐛 **Fixes:** `status` no longer fails with `could not load gitmap.json at output\gitmap.json`. It now reads from the unified `.gitmap/output/` path and transparently falls through to the SQLite database when the JSON file is missing.
+
+#### v3.32.0 — 2026-04-20 — Scan output: hoisted base path
+
+- ✨ **Enhancements:** `gitmap scan` post-scan summary prints `📂 Base: <path>` once and lists each artifact by filename only. All icon/label columns aligned to a 12-char gutter.
+
+#### v3.31.0 — 2026-04-20 — Cross-dir release/clone-next + `has-change`
+
+- ✨ **Enhancements:**
+  - `gitmap r <repo> <vX.Y.Z>` and `gitmap cn <repo> <vX.Y.Z>` — run from anywhere; gitmap chdirs in, fetches/pulls (rebase), auto-stashes, releases, then chdirs back and pops. Single-arg forms unchanged.
+  - New `gitmap has-change` (`hc`) command: prints `true`/`false` per dimension (`dirty`/`ahead`/`behind`) or `--all` for all three; `--fetch=false` for offline use.
+- 🐛 **Fixes:** `gitmap ssh` no longer exits 1 when `~/.ssh/id_rsa` already exists outside gitmap's DB — disk check moved before DB check; `--force` backs up to `id_rsa.bak.<unix-ts>` first.
+
+#### v3.30.0 — 2026-04-20 — Go Report Card badge URL
+
+- 🐛 **Fixes:** README badge now points at `goreportcard.com/badge/github.com/alimtvnetwork/gitmap-v5/gitmap` (real module path) instead of the repo root, which 404'd because there is no `go.mod` at the root.
+
+#### v3.28.0 — 2026-04-20 — Lucrative scan summary
+
+- ✨ **Enhancements:** `gitmap scan` summary regrouped into three labeled sections (`📦 Output Artifacts`, `🗄️ Database`, post-scan log) with category icons per row.
+
+#### v3.27.0 — 2026-04-20 — Real Go module path
+
+- 💥 **Breaking:** `go.mod` module path renamed from a placeholder to `github.com/alimtvnetwork/gitmap-v5/gitmap`. Anyone importing the module by the old path must update their import lines. CLI users are unaffected.
+
+#### v3.26.0 — 2026-04-20 — Constants collision audit + CI guard
+
+- ✨ **Enhancements:** new CI guard rejects PRs that introduce duplicate `Cmd*` / `Msg*` / `Err*` identifiers across `gitmap/constants/`. Backfilled audit caught 0 collisions on `main`.
+
+#### v3.25.0 — 2026-04-20 — `github-desktop` (`gd`) command
+
+- ✨ **Enhancements:** `gitmap gd` registers cwd repo with GitHub Desktop without running a full `scan` first. Pairs well with `clone-next`.
+
+#### v3.24.0 — 2026-04-20 — Quiet release output
+
+- 🐛 **Fixes:** suppressed cosmetic `LF will be replaced by CRLF` warnings during the release pipeline (kept underlying behavior identical; only stderr noise is muted).
+
+#### v3.22.0 — 2026-04-20 — Auto-register on release
+
+- ✨ **Enhancements:** `gitmap r` auto-registers the cwd repo in the database if it isn't tracked yet, instead of failing with "repo not found". The new repo is tagged with the current scan folder.
+
+> Versions older than v3.22 are summarized in [`CHANGELOG.md`](CHANGELOG.md). Notable jumps: **v3.21** (schema-version fast path + `db-migrate --force`), **v3.19** (bare release auto-bumps **minor** + multi-repo scan-dir release), **v3.17** (`Release.RepoId` foreign key + doctor duplicate-binary check), **v3.16** (repo renamed to `gitmap-v5`).
+
 ---
+
 
 <div align="center">
 
