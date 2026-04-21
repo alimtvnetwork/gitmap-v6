@@ -25,7 +25,7 @@ const SpecSectionCard = ({ section, isCollapsed, onToggle }: SpecSectionCardProp
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}${window.location.pathname}#${anchorId}`;
-    navigator.clipboard.writeText(url);
+    void copyToClipboard(url);
   };
 
   return (
