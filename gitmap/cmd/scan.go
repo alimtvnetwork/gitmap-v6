@@ -20,7 +20,7 @@ import (
 // runScan handles the "scan" subcommand.
 func runScan(args []string) {
 	checkHelp("scan", args)
-	dir, cfgPath, mode, output, outFile, outputPath, ghDesktop, openFolder, quiet, noVSCodeSync := parseScanFlags(args)
+	dir, cfgPath, mode, output, outFile, outputPath, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags := parseScanFlags(args)
 	cfg, err := config.LoadFromFile(cfgPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrConfigLoad, cfgPath, err)
@@ -32,11 +32,11 @@ func runScan(args []string) {
 		OutFile: outFile, OutputPath: outputPath,
 		GithubDesktop: ghDesktop, OpenFolder: openFolder, Quiet: quiet,
 	}
-	executeScan(dir, cfg, outFile, ghDesktop, openFolder, quiet, noVSCodeSync, cache)
+	executeScan(dir, cfg, outFile, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags, cache)
 }
 
 // executeScan performs the directory scan and outputs results.
-func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFolder, quiet, noVSCodeSync bool, cache model.ScanCache) {
+func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, cache model.ScanCache) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, dir, err)
@@ -75,7 +75,7 @@ func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFo
 	upsertProjectsToDB(detected, records, outputDir)
 	importReleases(absDir, outputDir)
 	addToDesktop(records, ghDesktop)
-	syncRecordsToVSCodePM(records, noVSCodeSync)
+	syncRecordsToVSCodePM(records, noVSCodeSync, noAutoTags)
 	openOutputFolder(outputDir, openFolder)
 	fmt.Print(constants.MsgSectionDone)
 
