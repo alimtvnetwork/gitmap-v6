@@ -12,9 +12,24 @@ import (
 )
 
 // ChangelogEntry represents one version section in CHANGELOG.md.
+//
+// Notes is preserved for backward compatibility (flat top-level bullets).
+// Title and Bullets are populated by the new structured parser used by the
+// pretty-printed `changelog --latest` console output.
 type ChangelogEntry struct {
 	Version string
+	Title   string
 	Notes   []string
+	Bullets []ChangelogBullet
+}
+
+// ChangelogBullet represents a single bullet line with its indent depth and
+// whether it was an ordered-list item. Depth 0 = top-level, 1 = nested, etc.
+type ChangelogBullet struct {
+	Depth   int
+	Ordered bool
+	Marker  string // "-", "*", or "1." — preserved for ordered numbering
+	Text    string
 }
 
 // ReadChangelog reads concise changelog entries from CHANGELOG.md.
@@ -25,43 +40,9 @@ func ReadChangelog() ([]ChangelogEntry, error) {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	var entries []ChangelogEntry
-	current := ChangelogEntry{}
-	inSection := false
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "## ") {
-			if inSection {
-				entries = append(entries, current)
-			}
-			version := parseVersionHeader(line)
-			if len(version) == 0 {
-				inSection = false
-				continue
-			}
-			current = ChangelogEntry{Version: version, Notes: []string{}}
-			inSection = true
-			continue
-		}
-
-		if inSection {
-			if strings.HasPrefix(line, "- ") || strings.HasPrefix(line, "* ") {
-				note := strings.TrimSpace(line[2:])
-				if len(note) > 0 {
-					current.Notes = append(current.Notes, note)
-				}
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
+	entries, err := parseChangelogStream(file)
+	if err != nil {
 		return nil, err
-	}
-
-	if inSection {
-		entries = append(entries, current)
 	}
 
 	if len(entries) == 0 {
