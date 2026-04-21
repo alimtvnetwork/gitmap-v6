@@ -88,10 +88,39 @@ const (
 	FlagSelfKeepData     = "--keep-data"
 	FlagSelfKeepSnippet  = "--keep-snippet"
 	FlagSelfFromVersion  = "--version"
-	FlagSelfDualShell    = "--dual-shell"
+	FlagSelfProfile      = "--profile"
+	FlagSelfDualShell    = "--dual-shell" // hidden alias for --profile both
 	FlagSelfShowPath     = "--show-path"
 	FlagSelfForceLock    = "--force-lock"
 )
+
+// SelfInstallProfileMode values accepted by --profile. `auto` is the
+// default (run detect_active_pwsh + $SHELL heuristics). `both` writes
+// PATH to every supported shell's profile file. The single-shell values
+// restrict writes to exactly one profile family (useful for CI / users
+// who manage other shells themselves).
+const (
+	ProfileModeAuto = "auto"
+	ProfileModeBoth = "both"
+	ProfileModeZsh  = "zsh"
+	ProfileModeBash = "bash"
+	ProfileModePwsh = "pwsh"
+	ProfileModeFish = "fish"
+)
+
+// SelfInstallProfileModes is the canonical set, used by validation and
+// help text so the list lives in exactly one place.
+var SelfInstallProfileModes = []string{
+	ProfileModeAuto,
+	ProfileModeBoth,
+	ProfileModeZsh,
+	ProfileModeBash,
+	ProfileModePwsh,
+	ProfileModeFish,
+}
+
+// ErrSelfInstallProfileInvalid fires when --profile gets an unknown value.
+const ErrSelfInstallProfileInvalid = "Error: --profile %q is not valid. Accepted: %s\n"
 
 // Flag descriptions.
 const (
@@ -101,7 +130,8 @@ const (
 	FlagDescSelfKeepData    = "Preserve the .gitmap data dir during self-uninstall"
 	FlagDescSelfKeepSnippet = "Leave the PATH snippet in shell profile during self-uninstall"
 	FlagDescSelfFromVersion = "Pin a specific gitmap version to install (e.g. v3.0.0)"
-	FlagDescSelfDualShell   = "Force write PATH to both zsh AND pwsh profiles (Unix; useful when launched from pwsh on macOS)"
+	FlagDescSelfProfile     = "Which shell profile(s) to write PATH into: auto|both|zsh|bash|pwsh|fish (default: auto)"
+	FlagDescSelfDualShell   = "Deprecated alias for --profile both (hidden; still works)"
 	FlagDescSelfShowPath    = "Print detected shell, chosen PATH target, and every profile file written"
 	FlagDescSelfForceLock   = "Bypass the duplicate-install guard (recover from a stale lock left by a crashed installer)"
 )

@@ -685,7 +685,7 @@ add_to_path() {
     # This ensures gitmap is available regardless of which shell the user opens.
 
     # zsh profiles (both, to cover login + interactive shells)
-    if [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; then
+    if should_write_profile zsh && { [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; }; then
         # .zshrc — interactive shells (most terminal emulators)
         if add_path_to_profile "${dir}" "${HOME}/.zshrc" false; then
             profiles_written="${profiles_written} ~/.zshrc"
@@ -701,7 +701,7 @@ add_to_path() {
     fi
 
     # bash profiles
-    if [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; then
+    if should_write_profile bash && { [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; }; then
         if add_path_to_profile "${dir}" "${HOME}/.bashrc" false; then
             profiles_written="${profiles_written} ~/.bashrc"
         else
@@ -716,15 +716,19 @@ add_to_path() {
         fi
     fi
 
-    # POSIX ~/.profile — catch-all for sh and other POSIX shells
-    if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
-        profiles_written="${profiles_written} ~/.profile"
-    else
-        profiles_skipped="${profiles_skipped} ~/.profile"
+    # POSIX ~/.profile — catch-all for sh and other POSIX shells.
+    # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
+    # the "only this shell family" contract.
+    if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
+        if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
+            profiles_written="${profiles_written} ~/.profile"
+        else
+            profiles_skipped="${profiles_skipped} ~/.profile"
+        fi
     fi
 
     # fish (only if fish is installed or is the default shell)
-    if [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; then
+    if should_write_profile fish && { [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; }; then
         local fish_config="${HOME}/.config/fish/config.fish"
         if add_path_to_profile "${dir}" "${fish_config}" fish; then
             profiles_written="${profiles_written} ~/.config/fish/config.fish"
@@ -735,9 +739,8 @@ add_to_path() {
 
     # PowerShell on Unix — detected when the installer was launched from
     # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
-    # The --dual-shell flag (DUAL_SHELL=true) forces this branch even
-    # when neither detection signal fires, so users who explicitly want
-    # both shells wired up can opt in deterministically.
+    # The --profile both / --dual-shell flag (DUAL_SHELL=true) forces
+    # this branch even when neither detection signal fires.
     # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     local pwsh_active=false
     if detect_active_pwsh; then
@@ -747,9 +750,9 @@ add_to_path() {
     local pwsh_force=false
     if [ "${DUAL_SHELL:-false}" = true ]; then
         pwsh_force=true
-        PATH_PWSH_DETECTED="forced (--dual-shell)"
+        PATH_PWSH_DETECTED="forced (--profile both)"
     fi
-    if [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; then
+    if should_write_profile pwsh && { [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; }; then
         if [ "${pwsh_active}" = false ] && [ "${pwsh_force}" = false ]; then
             PATH_PWSH_DETECTED="yes (pwsh on PATH)"
         fi
@@ -959,6 +962,13 @@ parse_args() {
     PROBE_CEILING=30
     DUAL_SHELL=false
     SHOW_PATH=false
+    # PROFILE_MODE controls which shell profiles get the PATH snippet.
+    # auto = run detection (current behavior, default)
+    # both = write all supported profiles (zsh + bash + .profile + fish + pwsh)
+    # zsh|bash|pwsh|fish = restrict writes to exactly that shell family
+    # See spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
+    # for the original motivating use case (pwsh user on macOS).
+    PROFILE_MODE="auto"
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -986,11 +996,24 @@ parse_args() {
                 PROBE_CEILING="$2"
                 shift 2
                 ;;
+            --profile)
+                # Accepts auto|both|zsh|bash|pwsh|fish. Validation is
+                # primarily done by the Go caller (gitmap self-install),
+                # but we re-validate here for users who invoke install.sh
+                # directly (curl | bash flow).
+                PROFILE_MODE="$2"
+                validate_profile_mode "${PROFILE_MODE}"
+                if [ "${PROFILE_MODE}" = "both" ]; then
+                    DUAL_SHELL=true
+                    export GITMAP_DUAL_SHELL=1
+                fi
+                shift 2
+                ;;
             --dual-shell)
-                # Force PATH writes to BOTH POSIX (zsh/bash/profile) AND
-                # the pwsh profile, regardless of detect_active_pwsh.
-                # Useful when launched from pwsh on macOS where the bash
-                # subshell may not inherit pwsh env signals.
+                # Hidden alias for --profile both. Kept for backward
+                # compatibility with v3.43–v3.45 callers; new code should
+                # use --profile both.
+                PROFILE_MODE="both"
                 DUAL_SHELL=true
                 export GITMAP_DUAL_SHELL=1
                 shift
@@ -1003,7 +1026,7 @@ parse_args() {
                 shift
                 ;;
             --help|-h)
-                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell] [--show-path]"
+                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--profile <mode>] [--show-path]"
                 echo ""
                 echo "Options:"
                 echo "  --version <tag>        Install a specific version (e.g. v2.55.0)"
@@ -1012,7 +1035,7 @@ parse_args() {
                 echo "  --no-path              Skip adding install directory to PATH"
                 echo "  --no-discovery         Skip versioned-repo discovery (install baseline)"
                 echo "  --probe-ceiling <N>    Highest -v<N> to probe (default: 30)"
-                echo "  --dual-shell           Force write PATH to both zsh AND pwsh profiles"
+                echo "  --profile <mode>       Which shell profile(s) to write: auto|both|zsh|bash|pwsh|fish"
                 echo "  --show-path            Print detected shell + every profile file written"
                 exit 0
                 ;;
@@ -1023,6 +1046,35 @@ parse_args() {
                 ;;
         esac
     done
+}
+
+# validate_profile_mode rejects unknown --profile values. Exits 1 with
+# a clear list so curl | bash users get the same error contract as
+# `gitmap self-install` users.
+validate_profile_mode() {
+    local mode="$1"
+    case "${mode}" in
+        auto|both|zsh|bash|pwsh|fish) return 0 ;;
+        *)
+            err "--profile '${mode}' is not valid. Accepted: auto|both|zsh|bash|pwsh|fish"
+            exit 1
+            ;;
+    esac
+}
+
+# should_write_profile reports whether the profile family $1 should
+# receive the PATH snippet, given the current PROFILE_MODE.
+#   auto → caller's existing detection logic decides (return 0 always;
+#          the caller's own `if` already filters).
+#   both → always yes.
+#   <shell> → only if it matches.
+should_write_profile() {
+    local family="$1"
+    case "${PROFILE_MODE}" in
+        auto|both) return 0 ;;
+        "${family}") return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 # ── Main ───────────────────────────────────────────────────────────

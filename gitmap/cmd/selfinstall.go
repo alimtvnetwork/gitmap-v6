@@ -23,9 +23,9 @@ type selfInstallOpts struct {
 	Dir       string
 	Yes       bool
 	Version   string
-	DualShell bool // --dual-shell: force PATH writes to zsh + pwsh profiles
-	ShowPath  bool // --show-path: expand install summary with PATH audit trail
-	ForceLock bool // --force-lock: bypass the duplicate-install guard
+	Profile   string // --profile: auto|both|zsh|bash|pwsh|fish (default auto)
+	ShowPath  bool   // --show-path: expand install summary with PATH audit trail
+	ForceLock bool   // --force-lock: bypass the duplicate-install guard
 }
 
 // runSelfInstall is the entry point for `gitmap self-install`. It picks
@@ -82,20 +82,53 @@ func acquireSelfInstallLock(opts selfInstallOpts) lockfile.Releaser {
 	return func() {} // unreachable; satisfies the compiler
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell / --show-path / --force-lock.
+// parseSelfInstallFlags reads --dir / --yes / --version / --profile / --dual-shell / --show-path / --force-lock.
+//
+// --dual-shell is kept as a hidden alias for --profile both: when both
+// flags are passed, --profile wins (explicit beats deprecated). This
+// preserves backward compat for existing scripts/CI without forcing a
+// breaking change.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
+	var dualShell bool
 	fs.StringVar(&opts.Dir, "dir", "", constants.FlagDescSelfDir)
 	fs.BoolVar(&opts.Yes, "yes", false, constants.FlagDescSelfYes)
 	fs.BoolVar(&opts.Yes, "y", false, constants.FlagDescSelfYes)
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
-	fs.BoolVar(&opts.DualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
+	fs.StringVar(&opts.Profile, "profile", constants.ProfileModeAuto, constants.FlagDescSelfProfile)
+	fs.BoolVar(&dualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
 	fs.BoolVar(&opts.ShowPath, "show-path", false, constants.FlagDescSelfShowPath)
 	fs.BoolVar(&opts.ForceLock, "force-lock", false, constants.FlagDescSelfForceLock)
 	fs.Parse(reorderFlagsBeforeArgs(args))
+	opts.Profile = resolveProfileMode(opts.Profile, dualShell)
+	validateProfileMode(opts.Profile)
 
 	return opts
+}
+
+// resolveProfileMode reconciles --profile and the deprecated --dual-shell
+// alias. Explicit --profile always wins; --dual-shell only upgrades the
+// default `auto` to `both` so it never silently overrides a user choice.
+func resolveProfileMode(profile string, dualShell bool) string {
+	if dualShell && profile == constants.ProfileModeAuto {
+		return constants.ProfileModeBoth
+	}
+
+	return profile
+}
+
+// validateProfileMode rejects unknown --profile values with a clear list
+// of accepted ones. Exits 1 — bad CLI input is unrecoverable.
+func validateProfileMode(mode string) {
+	for _, valid := range constants.SelfInstallProfileModes {
+		if mode == valid {
+			return
+		}
+	}
+	fmt.Fprintf(os.Stderr, constants.ErrSelfInstallProfileInvalid,
+		mode, strings.Join(constants.SelfInstallProfileModes, "|"))
+	os.Exit(1)
 }
 
 // resolveSelfInstallDir returns the install directory, prompting the
@@ -255,9 +288,9 @@ func buildSelfInstallCmd(name, path, dir string, opts selfInstallOpts) *exec.Cmd
 }
 
 // buildSelfInstallPwshCmd builds the Windows / pwsh invocation.
-// --dual-shell is currently a no-op on Windows (single-shell platform);
-// kept in the arg list for forward compatibility with future PSCore-on-
-// Linux / pwsh-side dual-write logic.
+// --profile is currently a no-op on Windows (single-shell platform —
+// pwsh is the only target); kept consistent with the Unix path for
+// forward compatibility with future PSCore-on-Linux dual-write logic.
 func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{"-ExecutionPolicy", "Bypass", "-NoProfile",
 		"-NoLogo", "-File", path, "-InstallDir", dir}
@@ -269,22 +302,21 @@ func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 }
 
 // buildSelfInstallBashCmd builds the Unix invocation and propagates
-// --dual-shell + --show-path through to install.sh. --dual-shell is
-// also exported as GITMAP_DUAL_SHELL=1 (belt-and-suspenders so
-// detect_active_pwsh fires from either signal).
+// --profile + --show-path through to install.sh. When the resolved
+// profile mode is `both`, GITMAP_DUAL_SHELL=1 is also exported as a
+// belt-and-suspenders signal so detect_active_pwsh inside install.sh
+// fires from either the env var OR the explicit flag.
 func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
 	if len(opts.Version) > 0 {
 		args = append(args, "--version", opts.Version)
 	}
-	if opts.DualShell {
-		args = append(args, constants.FlagSelfDualShell)
-	}
+	args = append(args, constants.FlagSelfProfile, opts.Profile)
 	if opts.ShowPath {
 		args = append(args, constants.FlagSelfShowPath)
 	}
 	cmd := exec.Command("bash", args...)
-	if opts.DualShell {
+	if opts.Profile == constants.ProfileModeBoth {
 		cmd.Env = append(os.Environ(), "GITMAP_DUAL_SHELL=1")
 	}
 
