@@ -15,8 +15,8 @@ interface InstallBlockProps {
 const CopyLine = ({ command }: { command: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(command);
+  const handleCopy = useCallback(async () => {
+    await copyToClipboard(command);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [command]);
