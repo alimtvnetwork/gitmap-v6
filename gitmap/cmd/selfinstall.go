@@ -22,6 +22,7 @@ type selfInstallOpts struct {
 	Yes       bool
 	Version   string
 	DualShell bool // --dual-shell: force PATH writes to zsh + pwsh profiles
+	ShowPath  bool // --show-path: expand install summary with PATH audit trail
 }
 
 // runSelfInstall is the entry point for `gitmap self-install`. It picks
@@ -41,7 +42,7 @@ func runSelfInstall(args []string) {
 	fmt.Print(constants.MsgSelfInstallReminder)
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell.
+// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell / --show-path.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
@@ -50,6 +51,7 @@ func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs.BoolVar(&opts.Yes, "y", false, constants.FlagDescSelfYes)
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
 	fs.BoolVar(&opts.DualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
+	fs.BoolVar(&opts.ShowPath, "show-path", false, constants.FlagDescSelfShowPath)
 	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	return opts
@@ -226,8 +228,9 @@ func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 }
 
 // buildSelfInstallBashCmd builds the Unix invocation and propagates
-// --dual-shell both as a CLI flag and as an env var (belt-and-suspenders
-// so detect_active_pwsh can fire from either signal).
+// --dual-shell + --show-path through to install.sh. --dual-shell is
+// also exported as GITMAP_DUAL_SHELL=1 (belt-and-suspenders so
+// detect_active_pwsh fires from either signal).
 func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
 	if len(opts.Version) > 0 {
@@ -235,6 +238,9 @@ func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	}
 	if opts.DualShell {
 		args = append(args, constants.FlagSelfDualShell)
+	}
+	if opts.ShowPath {
+		args = append(args, constants.FlagSelfShowPath)
 	}
 	cmd := exec.Command("bash", args...)
 	if opts.DualShell {

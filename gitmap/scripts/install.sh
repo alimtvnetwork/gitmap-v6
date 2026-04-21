@@ -43,6 +43,11 @@ PATH_TARGET=""
 PATH_LINE=""
 PATH_STATUS=""
 PATH_RELOAD=""
+# Per-profile audit trail used by --show-path. Populated by add_to_path
+# and consumed by print_install_summary; safe to read even when empty.
+PATH_PROFILES_WRITTEN=""
+PATH_PROFILES_SKIPPED=""
+PATH_PWSH_DETECTED="no"
 
 cleanup() {
     if [ -n "${TMP_DIR}" ] && [ -d "${TMP_DIR}" ]; then
@@ -729,12 +734,17 @@ add_to_path() {
     local pwsh_active=false
     if detect_active_pwsh; then
         pwsh_active=true
+        PATH_PWSH_DETECTED="yes (env signal)"
     fi
     local pwsh_force=false
     if [ "${DUAL_SHELL:-false}" = true ]; then
         pwsh_force=true
+        PATH_PWSH_DETECTED="forced (--dual-shell)"
     fi
     if [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; then
+        if [ "${pwsh_active}" = false ] && [ "${pwsh_force}" = false ]; then
+            PATH_PWSH_DETECTED="yes (pwsh on PATH)"
+        fi
         local pwsh_profile
         pwsh_profile="$(pwsh_profile_path)"
         if add_path_to_profile "${dir}" "${pwsh_profile}" pwsh; then
@@ -791,6 +801,11 @@ add_to_path() {
         step "Already present in:${profiles_skipped}"
     fi
 
+    # Persist the per-profile lists so print_install_summary can echo
+    # them when --show-path is set. Trailing-trimmed for clean display.
+    PATH_PROFILES_WRITTEN="${profiles_written# }"
+    PATH_PROFILES_SKIPPED="${profiles_skipped# }"
+
     if [ "${has_session_path}" = true ]; then
         return
     fi
@@ -815,6 +830,31 @@ print_install_summary() {
     printf '    Shell: %s\n' "${PATH_SHELL}" >&2
     printf '    PATH target: %s (%s)\n' "${PATH_TARGET}" "${PATH_STATUS}" >&2
     printf '    Reload: %s\n' "${PATH_RELOAD}" >&2
+
+    # --show-path expands the summary with the full audit trail so the
+    # user can confirm every profile file we touched and why a particular
+    # shell was chosen. Triggered by SHOW_PATH=true (set in parse_args).
+    if [ "${SHOW_PATH:-false}" = true ]; then
+        print_path_audit
+    fi
+}
+
+# print_path_audit dumps the detected shell, pwsh signal, and the full
+# list of profile files written/skipped. Called only under --show-path
+# to keep the default summary terse.
+print_path_audit() {
+    printf '\n  \033[36m%s\033[0m\n' "PATH audit (--show-path)" >&2
+    printf '    Detected SHELL env: %s\n' "${SHELL:-<unset>}" >&2
+    printf '    pwsh detected: %s\n' "${PATH_PWSH_DETECTED}" >&2
+    if [ -n "${PATH_PROFILES_WRITTEN}" ]; then
+        printf '    Profiles written: %s\n' "${PATH_PROFILES_WRITTEN}" >&2
+    else
+        printf '    Profiles written: <none — all already up to date>\n' >&2
+    fi
+    if [ -n "${PATH_PROFILES_SKIPPED}" ]; then
+        printf '    Profiles already present: %s\n' "${PATH_PROFILES_SKIPPED}" >&2
+    fi
+    printf '    PATH line: %s\n' "${PATH_LINE}" >&2
 }
 
 # ── Resolve install directory ──────────────────────────────────────
@@ -846,6 +886,7 @@ parse_args() {
     NO_DISCOVERY=false
     PROBE_CEILING=30
     DUAL_SHELL=false
+    SHOW_PATH=false
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -882,8 +923,15 @@ parse_args() {
                 export GITMAP_DUAL_SHELL=1
                 shift
                 ;;
+            --show-path)
+                # Expand the install summary with the per-profile audit
+                # trail (detected shell, pwsh signal, every profile file
+                # touched). Diagnostic flag; no behavior change otherwise.
+                SHOW_PATH=true
+                shift
+                ;;
             --help|-h)
-                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell]"
+                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell] [--show-path]"
                 echo ""
                 echo "Options:"
                 echo "  --version <tag>        Install a specific version (e.g. v2.55.0)"
@@ -893,6 +941,7 @@ parse_args() {
                 echo "  --no-discovery         Skip versioned-repo discovery (install baseline)"
                 echo "  --probe-ceiling <N>    Highest -v<N> to probe (default: 30)"
                 echo "  --dual-shell           Force write PATH to both zsh AND pwsh profiles"
+                echo "  --show-path            Print detected shell + every profile file written"
                 exit 0
                 ;;
             *)
