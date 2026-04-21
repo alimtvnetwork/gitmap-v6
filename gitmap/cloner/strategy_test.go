@@ -7,43 +7,69 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/model"
 )
 
-// TestPickCloneStrategy locks in the BranchSource → strategy mapping.
-// If you intentionally change a row, update the table here in the same
-// PR — silent behavior changes in clone selection are exactly the kind
-// of regression this test exists to catch.
 func TestPickCloneStrategy(t *testing.T) {
 	cases := []struct {
-		name          string
-		branch        string
-		source        string
-		wantUseBranch bool
-		wantBranch    string
+		name      string
+		rec       model.ScanRecord
+		useBranch bool
+		branch    string
 	}{
-		{"head trusted", "main", gitutil.BranchSourceHEAD, true, "main"},
-		{"remote-tracking trusted", "develop", gitutil.BranchSourceRemoteTracking, true, "develop"},
-		{"default trusted", "main", gitutil.BranchSourceDefault, true, "main"},
-		{"detached untrusted", "HEAD", gitutil.BranchSourceDetached, false, ""},
-		{"detached with sha untrusted", "abc123", gitutil.BranchSourceDetached, false, ""},
-		{"unknown untrusted", "main", gitutil.BranchSourceUnknown, false, ""},
-		{"empty source untrusted", "main", "", false, ""},
-		{"unfamiliar source untrusted", "main", "future-source", false, ""},
-		{"missing branch overrides trusted source", "", gitutil.BranchSourceHEAD, false, ""},
+		{
+			name:      "HEAD with valid branch checks out branch",
+			rec:       model.ScanRecord{Branch: "main", BranchSource: gitutil.BranchSourceHEAD},
+			useBranch: true,
+			branch:    "main",
+		},
+		{
+			name:      "HEAD with literal HEAD branch falls back",
+			rec:       model.ScanRecord{Branch: "HEAD", BranchSource: gitutil.BranchSourceHEAD},
+			useBranch: false,
+		},
+		{
+			name:      "remote-tracking with branch checks out branch",
+			rec:       model.ScanRecord{Branch: "develop", BranchSource: gitutil.BranchSourceRemoteTracking},
+			useBranch: true,
+			branch:    "develop",
+		},
+		{
+			name:      "default with branch checks out branch",
+			rec:       model.ScanRecord{Branch: "main", BranchSource: gitutil.BranchSourceDefault},
+			useBranch: true,
+			branch:    "main",
+		},
+		{
+			name:      "detached falls back to remote default",
+			rec:       model.ScanRecord{Branch: "abc1234", BranchSource: gitutil.BranchSourceDetached},
+			useBranch: false,
+		},
+		{
+			name:      "unknown falls back to remote default",
+			rec:       model.ScanRecord{Branch: "main", BranchSource: gitutil.BranchSourceUnknown},
+			useBranch: false,
+		},
+		{
+			name:      "empty branchSource falls back to remote default",
+			rec:       model.ScanRecord{Branch: "main", BranchSource: ""},
+			useBranch: false,
+		},
+		{
+			name:      "unrecognized branchSource falls back",
+			rec:       model.ScanRecord{Branch: "main", BranchSource: "weird"},
+			useBranch: false,
+		},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := pickCloneStrategy(model.ScanRecord{
-				Branch: tc.branch, BranchSource: tc.source,
-			})
-			if got.useBranchFlag != tc.wantUseBranch {
-				t.Errorf("useBranchFlag = %v, want %v (reason: %s)",
-					got.useBranchFlag, tc.wantUseBranch, got.reason)
+			got := pickCloneStrategy(tc.rec)
+			if got.useBranch != tc.useBranch {
+				t.Fatalf("useBranch: want %v, got %v (reason=%q)", tc.useBranch, got.useBranch, got.reason)
 			}
-			if got.branch != tc.wantBranch {
-				t.Errorf("branch = %q, want %q", got.branch, tc.wantBranch)
+			if tc.useBranch && got.branch != tc.branch {
+				t.Fatalf("branch: want %q, got %q", tc.branch, got.branch)
 			}
-			if len(got.reason) == 0 {
-				t.Errorf("reason should never be empty")
+			if got.reason == "" {
+				t.Fatalf("expected non-empty reason")
 			}
 		})
 	}

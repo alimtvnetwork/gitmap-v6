@@ -25,6 +25,22 @@ c
 - For file-based clone: run `gitmap scan` first to generate output files
 - For URL clone: just provide the HTTPS or SSH URL
 
+## Branch selection strategy
+
+`gitmap clone` decides whether to pass `-b <branch>` to `git clone` based on
+each record's `branchSource` (captured during scan):
+
+| branchSource     | Behavior                                                   |
+|------------------|------------------------------------------------------------|
+| `HEAD`           | Checkout the recorded branch (`-b <branch>`).              |
+| `remote-tracking`| Checkout the recorded tracking branch (`-b <branch>`).     |
+| `default`        | Checkout the recorded repo default (`-b <branch>`).        |
+| `detached`       | Omit `-b`; let the remote's default HEAD decide.           |
+| `unknown` / empty| Omit `-b`; let the remote's default HEAD decide.           |
+
+This prevents "Remote branch not found" errors when a scan captured a
+detached HEAD or a literal `HEAD` value that cannot be checked out.
+
 ## Idempotent clone cache
 
 Repeated `gitmap clone` runs are idempotent. After each successful clone or
@@ -36,25 +52,6 @@ re-cloned or re-pulled. If the remote is unreachable (offline), gitmap
 trusts the cache as long as the local HEAD still matches.
 
 Delete the cache file to force a full reclone of every entry.
-
-## Branch selection strategy
-
-When cloning from a scan output file, gitmap consults the `branchSource`
-field recorded for each repo to decide how to invoke `git clone`:
-
-| Source            | Behavior                                                |
-|-------------------|---------------------------------------------------------|
-| `HEAD`            | `git clone -b <branch> ...` — recorded branch trusted   |
-| `remote-tracking` | `git clone -b <branch> ...` — recorded branch trusted   |
-| `default`         | `git clone -b <branch> ...` — recorded branch trusted   |
-| `detached`        | `git clone <url> <dest>` — falls back to remote `HEAD`  |
-| `unknown` / empty | `git clone <url> <dest>` — falls back to remote `HEAD`  |
-
-This prevents `fatal: Remote branch '' not found` failures on repos
-that were scanned in a detached or unresolvable state, and avoids
-silently checking out a stale or fabricated branch name. The decision
-made for each repo is recorded in `CloneResult.Notes` so it can be
-audited via `--verbose` runs or programmatic consumers.
 
 ## Examples
 

@@ -1,3 +1,10 @@
+// Package cloner — branch selection strategy.
+//
+// pickCloneStrategy decides whether `git clone` should be invoked with an
+// explicit `-b <branch>` flag or without it (letting the remote's default
+// HEAD decide). The decision is driven by ScanRecord.BranchSource so that
+// untrustworthy values (literal "HEAD", a detached SHA, or "unknown") never
+// reach the git command line and produce "Remote branch not found" errors.
 package cloner
 
 import (
@@ -5,76 +12,78 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/model"
 )
 
-// cloneStrategy describes how a single repo should be cloned given the
-// confidence we have in its recorded branch. The strategy is a pure
-// function of the ScanRecord's Branch + BranchSource fields — no I/O,
-// so it is trivially unit-testable.
+// cloneStrategy describes how a clone should be invoked.
 type cloneStrategy struct {
-	// useBranchFlag controls whether `git clone -b <branch>` is used.
-	// When false we let the remote's HEAD pick the initial branch,
-	// which is the only safe choice when our recorded branch is
-	// missing or untrustworthy.
-	useBranchFlag bool
-	// branch is the branch name to pass to `-b` when useBranchFlag is
-	// true. Empty otherwise.
+	// useBranch is true when `-b <branch>` should be passed to git clone.
+	useBranch bool
+	// branch is the branch name to check out (only used when useBranch).
 	branch string
-	// reason is a short human-readable label describing why this
-	// strategy was selected. Surfaced in verbose / debug output and in
-	// CloneResult.Notes so users can audit decisions after the fact.
+	// reason is a short human-readable description of why this strategy
+	// was chosen. It is propagated into CloneResult.Notes for diagnostics.
 	reason string
 }
 
-// pickCloneStrategy maps (branch, branchSource) → cloneStrategy.
-//
-// Decision matrix:
-//
-//	BranchSource     | Branch present? | Strategy
-//	-----------------+-----------------+------------------------------------
-//	HEAD             | yes             | -b <branch>           (trusted)
-//	remote-tracking  | yes             | -b <branch>           (trusted)
-//	default          | yes             | -b <branch>           (trusted)
-//	detached         | *               | no -b, follow remote HEAD
-//	unknown          | *               | no -b, follow remote HEAD
-//	(any)            | no              | no -b, follow remote HEAD
-//
-// "Detached" is treated as untrustworthy because the recorded value is
-// often a commit SHA or the literal string "HEAD", neither of which is
-// a valid argument for `git clone -b`. Letting the remote's HEAD pick
-// the initial branch is always safe — the user can switch later.
+// pickCloneStrategy decides whether to checkout the recorded branch, the
+// remote-tracking branch, the repo default, or fall back to the remote's
+// default HEAD. Decisions are made from BranchSource so that scans that
+// captured a detached / unknown state never produce "branch not found"
+// errors during clone.
 func pickCloneStrategy(rec model.ScanRecord) cloneStrategy {
-	if len(rec.Branch) == 0 {
+	branch := rec.Branch
+
+	switch rec.BranchSource {
+	case gitutil.BranchSourceHEAD:
+		if branch == "" || branch == gitutil.BranchSourceHEAD {
+			return cloneStrategy{
+				reason: "branchSource=HEAD but branch empty; using remote default",
+			}
+		}
+
 		return cloneStrategy{
-			useBranchFlag: false,
-			reason:        "no recorded branch — using remote HEAD",
+			useBranch: true,
+			branch:    branch,
+			reason:    "branchSource=HEAD; checking out detected branch",
+		}
+
+	case gitutil.BranchSourceRemoteTracking:
+		if branch == "" {
+			return cloneStrategy{
+				reason: "branchSource=remote-tracking but branch empty; using remote default",
+			}
+		}
+
+		return cloneStrategy{
+			useBranch: true,
+			branch:    branch,
+			reason:    "branchSource=remote-tracking; checking out tracked branch",
+		}
+
+	case gitutil.BranchSourceDefault:
+		if branch == "" {
+			return cloneStrategy{
+				reason: "branchSource=default but branch empty; using remote default",
+			}
+		}
+
+		return cloneStrategy{
+			useBranch: true,
+			branch:    branch,
+			reason:    "branchSource=default; checking out repo default branch",
+		}
+
+	case gitutil.BranchSourceDetached:
+		return cloneStrategy{
+			reason: "branchSource=detached; using remote default HEAD",
+		}
+
+	case gitutil.BranchSourceUnknown, "":
+		return cloneStrategy{
+			reason: "branchSource=unknown; using remote default HEAD",
 		}
 	}
 
-	switch rec.BranchSource {
-	case gitutil.BranchSourceHEAD,
-		gitutil.BranchSourceRemoteTracking,
-		gitutil.BranchSourceDefault:
-		return cloneStrategy{
-			useBranchFlag: true,
-			branch:        rec.Branch,
-			reason:        "trusted source: " + rec.BranchSource,
-		}
-	case gitutil.BranchSourceDetached:
-		return cloneStrategy{
-			useBranchFlag: false,
-			reason:        "detached HEAD — using remote HEAD",
-		}
-	case gitutil.BranchSourceUnknown, "":
-		return cloneStrategy{
-			useBranchFlag: false,
-			reason:        "unknown branch source — using remote HEAD",
-		}
-	default:
-		// Forward-compat: an unfamiliar source is treated as
-		// untrusted. Better to land on remote HEAD than to fail
-		// with `Remote branch X not found`.
-		return cloneStrategy{
-			useBranchFlag: false,
-			reason:        "unrecognized branch source: " + rec.BranchSource,
-		}
+	// Unrecognized source label — be safe and skip -b.
+	return cloneStrategy{
+		reason: "branchSource=" + rec.BranchSource + " (unrecognized); using remote default HEAD",
 	}
 }

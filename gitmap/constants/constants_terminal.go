@@ -129,14 +129,6 @@ const (
 	TermCloneHeader  = "  ■ How to Clone on Another Machine"
 	TermSeparator    = "  ──────────────────────────────────────────"
 	TermTableRule    = "──────────────────────────────────────────────────────────────────────"
-	// Branch source debug section (--branch-source-debug). Renders one
-	// line per repo plus a small tally so users can see at a glance
-	// whether a tree is dominated by HEAD lookups, remote-tracking
-	// fallbacks, hardcoded defaults, or unknowns.
-	TermBranchSrcHeader   = "  ■ Branch Source Debug"
-	TermBranchSrcRowFmt   = "  %-32s %-10s %s\n"
-	TermBranchSrcTallyFmt = "  Totals: %s\n"
-	TermBranchSrcCountFmt = "%s=%d"
 )
 
 // Terminal repo entry formats.

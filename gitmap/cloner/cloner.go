@@ -171,26 +171,21 @@ func cloneOne(rec model.ScanRecord, targetDir string) model.CloneResult {
 	return runClone(rec, dest)
 }
 
-// runClone executes `git clone`, choosing the branch arguments based on
-// how confident we are in the recorded branch (see pickCloneStrategy).
+// runClone executes the git clone command.
 //
-// When the recorded branch comes from a trusted source (HEAD,
-// remote-tracking, or default), we pass `-b <branch>` so the clone
-// lands directly on that branch. When the source is detached/unknown
-// or the branch is empty, we omit `-b` entirely and let the remote's
-// HEAD pick the initial branch — never silently swap to a wrong
-// branch and never fail with "Remote branch '' not found".
-//
-// The chosen strategy's reason is propagated into CloneResult.Notes
-// so users can audit `--branch-source-debug` output and clone results
-// against each other.
+// The branch-selection strategy is driven by ScanRecord.BranchSource so
+// that records captured in a detached or unknown state never produce
+// "Remote branch not found" errors. When the source is trusted (HEAD,
+// remote-tracking, default) the recorded branch is passed via -b; when it
+// is untrusted (detached, unknown) git clone is invoked without -b and
+// the remote's default HEAD decides the checkout.
 func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	url := pickURL(rec)
-	strategy := pickCloneStrategy(rec)
+	strat := pickCloneStrategy(rec)
 
 	args := []string{constants.GitClone}
-	if strategy.useBranchFlag {
-		args = append(args, constants.GitBranchFlag, strategy.branch)
+	if strat.useBranch {
+		args = append(args, constants.GitBranchFlag, strat.branch)
 	}
 	args = append(args, url, dest)
 
@@ -199,16 +194,10 @@ func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	if err != nil {
 		msg := fmt.Sprintf("%s: %s", err.Error(), string(out))
 
-		return model.CloneResult{
-			Record: rec, Success: false, Error: msg,
-			Notes: strategy.reason,
-		}
+		return model.CloneResult{Record: rec, Success: false, Error: msg, Notes: strat.reason}
 	}
 
-	return model.CloneResult{
-		Record: rec, Success: true,
-		Notes: strategy.reason,
-	}
+	return model.CloneResult{Record: rec, Success: true, Notes: strat.reason}
 }
 
 // pickURL selects the best available URL from a record.

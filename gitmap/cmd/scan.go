@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +10,6 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/config"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/desktop"
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/formatter"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/mapper"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/model"
@@ -23,26 +20,26 @@ import (
 // runScan handles the "scan" subcommand.
 func runScan(args []string) {
 	checkHelp("scan", args)
-	f := ParseScanFlags(args)
-	cfg, err := config.LoadFromFile(f.ConfigPath)
+	dir, cfgPath, mode, output, outFile, outputPath, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags, workers := parseScanFlags(args)
+	cfg, err := config.LoadFromFile(cfgPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, constants.ErrConfigLoad, f.ConfigPath, err)
+		fmt.Fprintf(os.Stderr, constants.ErrConfigLoad, cfgPath, err)
 		os.Exit(1)
 	}
-	cfg = config.MergeWithFlags(cfg, f.Mode, f.Output, f.OutputPath)
+	cfg = config.MergeWithFlags(cfg, mode, output, outputPath)
 	cache := model.ScanCache{
-		Dir: f.Dir, ConfigPath: f.ConfigPath, Mode: f.Mode, Output: f.Output,
-		OutFile: f.OutFile, OutputPath: f.OutputPath,
-		GithubDesktop: f.GHDesktop, OpenFolder: f.OpenFolder, Quiet: f.Quiet,
+		Dir: dir, ConfigPath: cfgPath, Mode: mode, Output: output,
+		OutFile: outFile, OutputPath: outputPath,
+		GithubDesktop: ghDesktop, OpenFolder: openFolder, Quiet: quiet,
 	}
-	executeScan(f, cfg, cache)
+	executeScan(dir, cfg, outFile, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags, workers, cache)
 }
 
 // executeScan performs the directory scan and outputs results.
-func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
-	absDir, err := filepath.Abs(f.Dir)
+func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int, cache model.ScanCache) {
+	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, f.Dir, err)
+		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, dir, err)
 		os.Exit(1)
 	}
 
@@ -57,18 +54,8 @@ func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
 		defer taskDB.Close()
 	}
 
-	// Install a Ctrl+C handler scoped to the directory walk. Once the
-	// scan returns we tear it down so downstream steps (DB upsert,
-	// project detection, etc.) keep using their normal exit semantics.
-	ctx, cancel := newCancellableContext()
-	repos, err := scanner.ScanDirContext(ctx, absDir, cfg.ExcludeDirs, f.Workers)
-	cancel()
+	repos, err := scanner.ScanDirWithWorkers(absDir, cfg.ExcludeDirs, workers)
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			failPendingTask(taskDB, taskID, "scan cancelled by user")
-			fmt.Fprintln(os.Stderr, "  ⚠ Scan cancelled — no artifacts written.")
-			os.Exit(130)
-		}
 		failPendingTask(taskDB, taskID, fmt.Sprintf(constants.ErrScanFailed, absDir, err))
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, absDir, err)
 		os.Exit(1)
@@ -76,25 +63,20 @@ func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
 	records := mapper.BuildRecords(repos, cfg.DefaultMode, cfg.Notes)
 	outputDir := resolveOutputDir(cfg.OutputDir, absDir)
 	fmt.Printf(constants.MsgSectionArtifacts, outputDir)
-	writeAllOutputs(records, outputDir, f.OutFile, f.Quiet)
-	// Branch-source debug section is opt-in via --branch-source-debug.
-	// Rendered AFTER the standard output so default scans stay clean.
-	if f.BranchSourceDebug {
-		formatter.BranchSourceDebug(os.Stdout, records)
-	}
+	writeAllOutputs(records, outputDir, outFile, quiet)
 	saveScanCache(outputDir, cache)
 	fmt.Print(constants.MsgSectionDatabase)
 	upsertToDB(records, outputDir)
-	tagReposWithScanFolder(absDir, records, f.Quiet)
+	tagReposWithScanFolder(absDir, records, quiet)
 	records = alignRecordsWithDB(records, outputDir)
 	fmt.Print(constants.MsgSectionProjects)
 	detected := detectAllProjects(records)
 	writeProjectJSONFiles(detected, outputDir)
 	upsertProjectsToDB(detected, records, outputDir)
 	importReleases(absDir, outputDir)
-	addToDesktop(records, f.GHDesktop)
-	syncRecordsToVSCodePM(records, f.NoVSCodeSync, f.NoAutoTags)
-	openOutputFolder(outputDir, f.OpenFolder)
+	addToDesktop(records, ghDesktop)
+	syncRecordsToVSCodePM(records, noVSCodeSync, noAutoTags)
+	openOutputFolder(outputDir, openFolder)
 	fmt.Print(constants.MsgSectionDone)
 
 	// Mark scan task as completed after all steps succeed.

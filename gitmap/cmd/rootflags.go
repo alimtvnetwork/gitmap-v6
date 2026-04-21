@@ -6,29 +6,8 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
-// ScanFlags bundles every parsed scan-command flag so callers don't have
-// to thread a long positional return list through helper functions.
-type ScanFlags struct {
-	Dir               string
-	ConfigPath        string
-	Mode              string
-	Output            string
-	OutFile           string
-	OutputPath        string
-	GHDesktop         bool
-	OpenFolder        bool
-	Quiet             bool
-	NoVSCodeSync      bool
-	NoAutoTags        bool
-	Workers           int
-	BranchSourceDebug bool
-}
-
-// ParseScanFlags parses flags for the scan command into a ScanFlags
-// struct. New flags are added as fields here rather than as additional
-// positional return values, keeping the call sites stable as the flag
-// surface grows.
-func ParseScanFlags(args []string) ScanFlags {
+// parseScanFlags parses flags for the scan command.
+func parseScanFlags(args []string) (dir, configPath, mode, output, outFile, outputPath string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int) {
 	fs := flag.NewFlagSet(constants.CmdScan, flag.ExitOnError)
 	cfgFlag := fs.String("config", constants.DefaultConfigPath, constants.FlagDescConfig)
 	modeFlag := fs.String("mode", "", constants.FlagDescMode)
@@ -39,24 +18,11 @@ func ParseScanFlags(args []string) ScanFlags {
 	noVSCodeSyncFlag := fs.Bool(constants.FlagNoVSCodeSync, false, constants.FlagDescNoVSCodeSync)
 	noAutoTagsFlag := fs.Bool(constants.FlagNoAutoTags, false, constants.FlagDescNoAutoTags)
 	workersFlag := fs.Int(constants.FlagScanWorkers, constants.DefaultScanWorkers, constants.FlagDescScanWorkers)
-	branchSrcDebugFlag := fs.Bool(constants.FlagBranchSourceDebug, false, constants.FlagDescBranchSourceDebug)
 	fs.Parse(args)
 
-	return ScanFlags{
-		Dir:               resolveScanDir(fs),
-		ConfigPath:        *cfgFlag,
-		Mode:              *modeFlag,
-		Output:            *outputFlag,
-		OutFile:           *outFileFlag,
-		OutputPath:        *outputPathFlag,
-		GHDesktop:         *ghDesktopFlag,
-		OpenFolder:        *openFlag,
-		Quiet:             *quietFlag,
-		NoVSCodeSync:      *noVSCodeSyncFlag,
-		NoAutoTags:        *noAutoTagsFlag,
-		Workers:           *workersFlag,
-		BranchSourceDebug: *branchSrcDebugFlag,
-	}
+	dir = resolveScanDir(fs)
+
+	return dir, *cfgFlag, *modeFlag, *outputFlag, *outFileFlag, *outputPathFlag, *ghDesktopFlag, *openFlag, *quietFlag, *noVSCodeSyncFlag, *noAutoTagsFlag, *workersFlag
 }
 
 // registerScanBoolFlags registers boolean flags for the scan command.

@@ -148,12 +148,6 @@ const (
 	FlagScanWorkers       = "workers"
 	FlagDescScanWorkers   = "Worker pool size for scan (0 = auto, capped at 16)"
 	DefaultScanWorkers    = 0
-	// FlagBranchSourceDebug toggles a per-repo breakdown showing how each
-	// repo's BranchSource was determined (HEAD / detached / remote-tracking
-	// / default / unknown). Useful for diagnosing "why is this repo on the
-	// wrong branch?" without grep-ing through CSV/JSON output.
-	FlagBranchSourceDebug     = "branch-source-debug"
-	FlagDescBranchSourceDebug = "Print how each repo's branch was determined (HEAD/remote-tracking/default/unknown)"
 	FlagDescSetupConfig   = "Path to git-setup.json config file"
 	FlagDescDryRun        = "Preview changes without applying them"
 	FlagDescAssets        = "Directory or file to attach to the release"

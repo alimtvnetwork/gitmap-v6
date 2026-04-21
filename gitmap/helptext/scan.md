@@ -24,7 +24,6 @@ s
 | --no-vscode-sync | false | Skip syncing into VS Code Project Manager projects.json |
 | --no-auto-tags | false | Skip auto-derived tags (git/node/go/...) when syncing |
 | --workers \<n\> | 0 (auto) | Worker-pool size for the parallel directory walker. `0` picks `min(NumCPU, 16)`; explicit values are clamped into `[1, 16]` to stay under the per-process file-descriptor budget |
-| --branch-source-debug | false | Print how each repo's `BranchSource` was determined (`HEAD` / `detached` / `remote-tracking` / `default` / `unknown`) plus a tally line. Diagnostic only — the section is appended to the terminal output and is **not** written to CSV/JSON or cached for `rescan` |
 
 ## Prerequisites
 

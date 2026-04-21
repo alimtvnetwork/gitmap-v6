@@ -62,9 +62,9 @@ func DefaultConfig() Config {
 
 // CloneResult tracks the outcome of a single clone operation.
 //
-// Notes carries a short human-readable explanation of decisions made
-// during the clone (e.g. which branch-source strategy was applied).
-// Empty for cache-skipped or trivially-successful clones.
+// Notes carries non-fatal diagnostics about how the clone was performed —
+// for example, which branch-selection strategy was applied based on the
+// record's BranchSource.
 type CloneResult struct {
 	Record  ScanRecord
 	Success bool
