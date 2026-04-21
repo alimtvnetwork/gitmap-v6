@@ -105,9 +105,14 @@ const (
   🪟  Windows · PowerShell
      irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 `
+	// Trailing blank line (the second \n after the curl command) ensures
+	// the shell prompt (PS1) lands on its own visually-separated line
+	// instead of sitting flush under the install one-liner. Matches the
+	// auto-register message convention (releaseautoregister.go line 48).
 	MsgInstallHintUnix = `
   🐧  Linux / macOS
      curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
+
 `
 )
 
