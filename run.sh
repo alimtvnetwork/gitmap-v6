@@ -487,6 +487,13 @@ copy_docs_site() {
 
     # 3. Auto-build the root Vite app if package.json + npm available
     if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg"; then
+        if [[ ! -d "$REPO_ROOT/node_modules" ]] || [[ ! -x "$REPO_ROOT/node_modules/.bin/vite" ]]; then
+            write_info "Installing docs dependencies (npm install) at repo root..."
+            if ! (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1); then
+                write_warn "npm install failed - skipping docs build"
+                return
+            fi
+        fi
         write_info "Auto-building docs (npm run build) at repo root..."
         if (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) && [[ -d "$root_dist" ]]; then
             local dist_dest="$docs_dest/dist"
