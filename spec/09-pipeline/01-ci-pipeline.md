@@ -16,7 +16,23 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    # Manual escape hatches for the golangci-lint baseline cache. See the
+    # "Job: Lint Baseline Diff" section below for full semantics.
+    inputs:
+      lint_baseline_cache_version:
+        description: "Bump to invalidate the golangci-lint baseline cache (e.g. v2)"
+        required: false
+        default: "v1"
+        type: string
+      lint_baseline_disable:
+        description: "Skip restoring/saving the lint baseline cache for this run"
+        required: false
+        default: false
+        type: boolean
 ```
+
+The two `workflow_dispatch` inputs let an operator manually intervene when the cached lint baseline becomes stale (linter version bump, configuration change, or a partial earlier run that seeded the cache with bogus findings) **without** having to delete the cache through the GitHub UI. Default behavior on `push` / `pull_request` is unchanged: `lint_baseline_cache_version` falls back to `"v1"` and `lint_baseline_disable` to `false`.
 
 ### Concurrency Control
 
@@ -134,6 +150,69 @@ Runs static analysis using `go vet` and `golangci-lint`.
     working-directory: <module-root>
     args: --timeout=5m
 ```
+
+---
+
+## Job: Lint Baseline Diff
+
+Soft-gate companion to **Job: Lint**. Runs `golangci-lint` with `--issues-exit-code=0 --out-format=json` so the raw report is collected even when findings exist, then diffs the current findings against a baseline cached from the last successful `main` run. **Fails only on NEW findings.** Pre-existing findings are surfaced in the PR sticky comment as `UNCHANGED` but never block the build — contributors can land incremental improvements without being forced to fix every historical lint issue at once.
+
+### Cache strategy
+
+| Aspect | Behavior |
+|---|---|
+| Cache key | `golangci-baseline-main-${cache_version}-${github.sha}` |
+| Restore key (fallback) | `golangci-baseline-main-${cache_version}-` (rolling, single slot) |
+| Save trigger | Only on `push` to `main` (or `workflow_dispatch` from `main`) after a green diff |
+| PR behavior | Restore-only — PRs read the baseline but never advance it |
+| Miss behavior | **Seeding mode** — diff script exits 0 and emits all current findings as warnings so the next run has a baseline to compare against |
+
+### `workflow_dispatch` cache controls
+
+Both inputs are optional; defaults preserve normal CI behavior.
+
+#### `lint_baseline_cache_version` *(string, default `"v1"`)*
+
+Bumps the cache key suffix. Old caches are abandoned (GitHub evicts them after 7 days of inactivity); the next `main`-branch run reseeds under the new version. Free-form string — common values are `"v2"`, `"v3"`, or a date stamp like `"2026-04-21"`. The `restore-keys` fallback also carries this version, so a pre-bump baseline is **never** accidentally restored.
+
+**When to bump:** golangci-lint version upgrade, `.golangci.yml` rule changes that broaden coverage, or recovery from a poisoned cache that contains findings the diff script can't normalize.
+
+#### `lint_baseline_disable` *(boolean, default `false`)*
+
+When `true`, **skips both the restore and save steps for this run.** The diff job enters seeding mode (exits 0, surfaces all current findings as warnings) without touching the cache. Use this to diagnose suspected stale-cache issues without losing baseline history — the next normal `main` run will continue using the existing cached baseline.
+
+### Example usage
+
+**Bump the cache version (recommended after a `golangci-lint` upgrade):**
+
+```bash
+gh workflow run ci.yml \
+  --ref main \
+  -f lint_baseline_cache_version=v2
+```
+
+**One-off run that ignores the baseline entirely (diagnostic):**
+
+```bash
+gh workflow run ci.yml \
+  --ref main \
+  -f lint_baseline_disable=true
+```
+
+**Combine both — bump the version AND skip restore/save for the dispatch run** (useful when you suspect the most recent `main` run poisoned the cache and you want to inspect raw findings before committing to a reseed):
+
+```bash
+gh workflow run ci.yml \
+  --ref main \
+  -f lint_baseline_cache_version=v2 \
+  -f lint_baseline_disable=true
+```
+
+After verifying the dispatch output looks correct, push a no-op commit to `main` (or re-dispatch with `lint_baseline_disable=false`) to seed the new `v2` cache.
+
+### Sticky PR comment
+
+After every diff, `lint-suggest.py` writes an actionable suggestions block to `/tmp/lint-suggestions/comment.md`. On `pull_request` events, `peter-evans/find-comment` locates the previous comment via the `<!-- gitmap-lint-suggestions -->` sentinel and `peter-evans/create-or-update-comment` edits it in place — preventing the PR from accumulating stale lint comments on every push. On `push` / `workflow_dispatch` events the comment is mirrored to `GITHUB_STEP_SUMMARY` instead.
 
 ---
 
