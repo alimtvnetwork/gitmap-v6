@@ -710,41 +710,35 @@ add_to_path() {
     PATH_SHELL="${shell_name}"
 
     local primary_profile=""
-    local profiles_written=""
-    local profiles_skipped=""
+    # Three outcome lists drive both the live per-file table and the
+    # final summary. Lists are space-separated paths, populated by
+    # record_profile_outcome from add_path_to_profile's exit code.
+    local profiles_added=""
+    local profiles_updated=""
+    local profiles_unchanged=""
 
     # ── Write to all relevant POSIX/bash/zsh profiles ──────────────
     # This ensures gitmap is available regardless of which shell the user opens.
 
+    step "Writing PATH snippet to shell profiles..."
+
     # zsh profiles (both, to cover login + interactive shells)
     if should_write_profile zsh && { [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; }; then
         # .zshrc — interactive shells (most terminal emulators)
-        if add_path_to_profile "${dir}" "${HOME}/.zshrc" false; then
-            profiles_written="${profiles_written} ~/.zshrc"
-        else
-            profiles_skipped="${profiles_skipped} ~/.zshrc"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.zshrc" false
+        record_profile_outcome $? "~/.zshrc"
         # .zprofile — login shells (macOS Terminal.app)
-        if add_path_to_profile "${dir}" "${HOME}/.zprofile" false; then
-            profiles_written="${profiles_written} ~/.zprofile"
-        else
-            profiles_skipped="${profiles_skipped} ~/.zprofile"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.zprofile" false
+        record_profile_outcome $? "~/.zprofile"
     fi
 
     # bash profiles
     if should_write_profile bash && { [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; }; then
-        if add_path_to_profile "${dir}" "${HOME}/.bashrc" false; then
-            profiles_written="${profiles_written} ~/.bashrc"
-        else
-            profiles_skipped="${profiles_skipped} ~/.bashrc"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.bashrc" false
+        record_profile_outcome $? "~/.bashrc"
         if [ -f "${HOME}/.bash_profile" ]; then
-            if add_path_to_profile "${dir}" "${HOME}/.bash_profile" false; then
-                profiles_written="${profiles_written} ~/.bash_profile"
-            else
-                profiles_skipped="${profiles_skipped} ~/.bash_profile"
-            fi
+            add_path_to_profile "${dir}" "${HOME}/.bash_profile" false
+            record_profile_outcome $? "~/.bash_profile"
         fi
     fi
 
@@ -752,21 +746,15 @@ add_to_path() {
     # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
     # the "only this shell family" contract.
     if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
-        if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
-            profiles_written="${profiles_written} ~/.profile"
-        else
-            profiles_skipped="${profiles_skipped} ~/.profile"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.profile" false
+        record_profile_outcome $? "~/.profile"
     fi
 
     # fish (only if fish is installed or is the default shell)
     if should_write_profile fish && { [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; }; then
         local fish_config="${HOME}/.config/fish/config.fish"
-        if add_path_to_profile "${dir}" "${fish_config}" fish; then
-            profiles_written="${profiles_written} ~/.config/fish/config.fish"
-        else
-            profiles_skipped="${profiles_skipped} ~/.config/fish/config.fish"
-        fi
+        add_path_to_profile "${dir}" "${fish_config}" fish
+        record_profile_outcome $? "~/.config/fish/config.fish"
     fi
 
     # PowerShell on Unix — detected when the installer was launched from
@@ -790,11 +778,8 @@ add_to_path() {
         fi
         local pwsh_profile
         pwsh_profile="$(pwsh_profile_path)"
-        if add_path_to_profile "${dir}" "${pwsh_profile}" pwsh; then
-            profiles_written="${profiles_written} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
-        else
-            profiles_skipped="${profiles_skipped} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
-        fi
+        add_path_to_profile "${dir}" "${pwsh_profile}" pwsh
+        record_profile_outcome $? "~/.config/powershell/Microsoft.PowerShell_profile.ps1"
     fi
 
     # If the user is actively in pwsh, the pwsh profile becomes the primary
