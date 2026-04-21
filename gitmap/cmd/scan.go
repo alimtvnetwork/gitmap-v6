@@ -22,26 +22,26 @@ import (
 // runScan handles the "scan" subcommand.
 func runScan(args []string) {
 	checkHelp("scan", args)
-	dir, cfgPath, mode, output, outFile, outputPath, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags, workers := parseScanFlags(args)
-	cfg, err := config.LoadFromFile(cfgPath)
+	f := ParseScanFlags(args)
+	cfg, err := config.LoadFromFile(f.ConfigPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, constants.ErrConfigLoad, cfgPath, err)
+		fmt.Fprintf(os.Stderr, constants.ErrConfigLoad, f.ConfigPath, err)
 		os.Exit(1)
 	}
-	cfg = config.MergeWithFlags(cfg, mode, output, outputPath)
+	cfg = config.MergeWithFlags(cfg, f.Mode, f.Output, f.OutputPath)
 	cache := model.ScanCache{
-		Dir: dir, ConfigPath: cfgPath, Mode: mode, Output: output,
-		OutFile: outFile, OutputPath: outputPath,
-		GithubDesktop: ghDesktop, OpenFolder: openFolder, Quiet: quiet,
+		Dir: f.Dir, ConfigPath: f.ConfigPath, Mode: f.Mode, Output: f.Output,
+		OutFile: f.OutFile, OutputPath: f.OutputPath,
+		GithubDesktop: f.GHDesktop, OpenFolder: f.OpenFolder, Quiet: f.Quiet,
 	}
-	executeScan(dir, cfg, outFile, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags, workers, cache)
+	executeScan(f, cfg, cache)
 }
 
 // executeScan performs the directory scan and outputs results.
-func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int, cache model.ScanCache) {
-	absDir, err := filepath.Abs(dir)
+func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
+	absDir, err := filepath.Abs(f.Dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, dir, err)
+		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, f.Dir, err)
 		os.Exit(1)
 	}
 
