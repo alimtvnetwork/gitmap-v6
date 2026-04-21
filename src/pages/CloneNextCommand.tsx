@@ -202,6 +202,117 @@ const CloneNextCommandPage = () => {
         <hr className="docs-hr" />
 
         <div>
+          <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">URL rewrite — HTTPS and SSH</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            clone-next reads <code className="docs-inline-code">git remote get-url origin</code> from the
+            current repo and rewrites it with{" "}
+            <code className="docs-inline-code">strings.Replace(url, currentRepo, targetRepo, 1)</code>. The
+            same rule applies whether the origin is HTTPS or SSH — only the substring matching the current
+            repo name is swapped, so credentials, hosts, and paths are preserved untouched.
+          </p>
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-4 docs-h3">HTTPS origin</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Inside <code className="docs-inline-code">D:\repos\macro-ahk-v11\</code> with origin{" "}
+            <code className="docs-inline-code">https://github.com/alimtvnetwork/macro-ahk-v11.git</code>:
+          </p>
+          <CodeBlock code={`gitmap cn v++`} title="Terminal" />
+          <CodeBlock
+            language="bash"
+            title="Resolved rewrite"
+            code={`current : https://github.com/alimtvnetwork/macro-ahk-v11.git
+target  : https://github.com/alimtvnetwork/macro-ahk-v12.git
+folder  : macro-ahk/   (flattened, base name)
+git cmd : git clone https://github.com/alimtvnetwork/macro-ahk-v12.git macro-ahk`}
+          />
+          <p className="text-sm text-muted-foreground mt-2">
+            Jumping to a specific version uses the same substitution:
+          </p>
+          <CodeBlock code={`gitmap cn v15`} title="Terminal" />
+          <CodeBlock
+            language="bash"
+            title="Resolved rewrite"
+            code={`current : https://github.com/alimtvnetwork/macro-ahk-v11.git
+target  : https://github.com/alimtvnetwork/macro-ahk-v15.git
+folder  : macro-ahk/`}
+          />
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-6 docs-h3">SSH origin</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Inside <code className="docs-inline-code">D:\repos\macro-ahk-v11\</code> with origin{" "}
+            <code className="docs-inline-code">git@github.com:alimtvnetwork/macro-ahk-v11.git</code>:
+          </p>
+          <CodeBlock code={`gitmap cn v++`} title="Terminal" />
+          <CodeBlock
+            language="bash"
+            title="Resolved rewrite"
+            code={`current : git@github.com:alimtvnetwork/macro-ahk-v11.git
+target  : git@github.com:alimtvnetwork/macro-ahk-v12.git
+folder  : macro-ahk/
+git cmd : git clone git@github.com:alimtvnetwork/macro-ahk-v12.git macro-ahk`}
+          />
+          <p className="text-sm text-muted-foreground mt-2">
+            Use <code className="docs-inline-code">--ssh-key, -K &lt;name&gt;</code> to route the clone
+            through a named key from <code className="docs-inline-code">gitmap ssh list</code> — gitmap sets{" "}
+            <code className="docs-inline-code">GIT_SSH_COMMAND="ssh -i &lt;path&gt; -o IdentitiesOnly=yes"</code>{" "}
+            for the duration of the clone:
+          </p>
+          <CodeBlock code={`gitmap cn v++ --ssh-key work`} title="Terminal" />
+          <CodeBlock
+            language="bash"
+            title="Resolved rewrite"
+            code={`current : git@github.com:alimtvnetwork/macro-ahk-v11.git
+target  : git@github.com:alimtvnetwork/macro-ahk-v12.git
+folder  : macro-ahk/
+ssh key : ~/.ssh/id_work     (resolved from named key "work")
+git cmd : GIT_SSH_COMMAND="ssh -i ~/.ssh/id_work -o IdentitiesOnly=yes" \\
+          git clone git@github.com:alimtvnetwork/macro-ahk-v12.git macro-ahk`}
+          />
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-6 docs-h3">SSH alias host (per-key Host entries)</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            If <code className="docs-inline-code">~/.ssh/config</code> defines a per-key alias such as{" "}
+            <code className="docs-inline-code">Host github.com-work</code>, the rewrite still operates only on
+            the repo-name segment — the alias host is preserved:
+          </p>
+          <CodeBlock
+            language="bash"
+            title="Resolved rewrite"
+            code={`current : git@github.com-work:alimtvnetwork/macro-ahk-v11.git
+target  : git@github.com-work:alimtvnetwork/macro-ahk-v12.git
+folder  : macro-ahk/`}
+          />
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-6 docs-h3">Unsuffixed origin (implicit v1)</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            When the origin has no <code className="docs-inline-code">-vN</code> suffix, gitmap treats the repo
+            as v1 and rewrites by appending <code className="docs-inline-code">-vN</code> to the bare name —
+            same rule for HTTPS and SSH:
+          </p>
+          <CodeBlock
+            language="bash"
+            title="HTTPS"
+            code={`current : https://github.com/alimtvnetwork/macro-ahk.git
+target  : https://github.com/alimtvnetwork/macro-ahk-v2.git
+folder  : macro-ahk/`}
+          />
+          <CodeBlock
+            language="bash"
+            title="SSH"
+            code={`current : git@github.com:alimtvnetwork/macro-ahk.git
+target  : git@github.com:alimtvnetwork/macro-ahk-v2.git
+folder  : macro-ahk/`}
+          />
+          <p className="text-sm text-muted-foreground mt-2">
+            The target repo must already exist on GitHub. To auto-provision it, pass{" "}
+            <code className="docs-inline-code">--create-remote</code> with{" "}
+            <code className="docs-inline-code">GITHUB_TOKEN</code> set in the environment.
+          </p>
+        </div>
+
+        <hr className="docs-hr" />
+
+        <div>
           <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Examples</h2>
 
           <h3 className="text-base font-heading font-semibold mb-2 mt-4 docs-h3">Increment version by one</h3>
