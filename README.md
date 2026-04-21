@@ -685,6 +685,113 @@ Concise, grouped per version. Each entry calls out **💥 Breaking**, **✨ Enha
 
 > Versions older than v3.22 are summarized in [`CHANGELOG.md`](CHANGELOG.md). Notable jumps: **v3.21** (schema-version fast path + `db-migrate --force`), **v3.19** (bare release auto-bumps **minor** + multi-repo scan-dir release), **v3.17** (`Release.RepoId` foreign key + doctor duplicate-binary check), **v3.16** (repo renamed to `gitmap-v5`).
 
+### Copy-paste workflows — scan, output, re-clone
+
+End-to-end recipes for the data pipeline that feeds a release: discover repos with `scan`, capture the result as CSV/JSON, and rebuild the same set on another machine with `clone`. Every block below is a single copy-paste — no placeholders to edit unless wrapped in `<…>`.
+
+#### Scan with HTTPS clone URLs (default)
+
+```bash
+# Scan the current directory tree, terminal output only
+gitmap scan
+
+# Scan a specific folder
+gitmap scan D:\wp-work
+
+# Quiet mode (skip the post-scan clone-help section)
+gitmap scan D:\wp-work --quiet
+```
+
+#### Scan with SSH clone URLs
+
+```bash
+# SSH-style URLs (git@github.com:owner/repo.git) instead of HTTPS
+gitmap scan D:\wp-work --mode ssh
+
+# SSH + auto-register every repo with GitHub Desktop
+gitmap scan D:\wp-work --mode ssh --github-desktop
+```
+
+#### Output to CSV
+
+```bash
+# Write CSV to the default location: ./.gitmap/output/gitmap.csv
+gitmap scan D:\wp-work --output csv
+
+# CSV + custom output directory
+gitmap scan D:\wp-work --output csv --output-path ./reports
+
+# CSV + SSH URLs in one go
+gitmap scan D:\wp-work --output csv --mode ssh --output-path ./reports
+```
+
+#### Output to JSON
+
+```bash
+# Write JSON to the default location: ./.gitmap/output/gitmap.json
+gitmap scan D:\wp-work --output json
+
+# JSON + custom directory + open the folder when done
+gitmap scan D:\wp-work --output json --output-path ./reports --open
+
+# JSON + SSH URLs (handy for piping into another tool)
+gitmap scan D:\wp-work --output json --mode ssh
+```
+
+> Every `gitmap scan` run **also** writes the standard artifact bundle to `./.gitmap/output/` regardless of `--output`: `gitmap.csv`, `gitmap.json`, `gitmap.txt`, `folder-structure.md`, `clone.ps1`, `direct-clone.ps1`, `direct-clone-ssh.ps1`, `register-desktop.ps1`, `last-scan.json`. The `--output` flag controls the **terminal** representation only.
+
+#### Re-clone everything from a scan file
+
+```bash
+# Re-clone from the JSON file produced by a previous scan
+gitmap clone ./.gitmap/output/gitmap.json
+
+# Re-clone from CSV
+gitmap clone ./.gitmap/output/gitmap.csv
+
+# Re-clone from a plain text list
+gitmap clone ./.gitmap/output/gitmap.txt
+
+# Re-clone into a specific base directory
+gitmap clone ./.gitmap/output/gitmap.json --target-dir D:\restored
+
+# Re-clone + safe pull on existing repos (retries + diagnostics)
+gitmap clone ./.gitmap/output/gitmap.json --target-dir D:\restored --safe-pull
+
+# Re-clone + auto-register everything with GitHub Desktop (no prompt)
+gitmap clone ./.gitmap/output/gitmap.json --target-dir D:\restored --github-desktop
+```
+
+#### One-shot single repo (no scan file needed)
+
+```bash
+# Clone a single URL — versioned URLs (e.g. -v13) auto-flatten to <base>/
+gitmap clone https://github.com/alimtvnetwork/wp-onboarding-v13.git
+
+# Clone into a custom folder name (skips auto-flatten)
+gitmap clone https://github.com/alimtvnetwork/wp-onboarding-v13.git my-onboarding
+
+# Clone via SSH
+gitmap clone git@github.com:alimtvnetwork/wp-onboarding-v13.git
+```
+
+#### Full backup-and-restore round-trip
+
+```bash
+# === On the source machine ===
+gitmap scan D:\wp-work --mode ssh --output json
+# → produces D:\wp-work\.gitmap\output\gitmap.json (+ all sibling artifacts)
+
+# Copy the file to the new machine, then:
+
+# === On the target machine ===
+gitmap clone gitmap.json --target-dir D:\wp-work --github-desktop --safe-pull
+# → re-clones every repo via SSH, registers each with GitHub Desktop,
+#   and pulls if any of them already exist on disk.
+```
+
+→ Detailed help: [scan](gitmap/helptext/scan.md) · [rescan](gitmap/helptext/rescan.md) · [clone](gitmap/helptext/clone.md) · [clone-next](gitmap/helptext/clone-next.md)
+
 ---
 
 
