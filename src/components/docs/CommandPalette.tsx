@@ -51,6 +51,10 @@ const pages = [
   { title: "Diff Profiles", url: "/diff-profiles" },
   { title: "Spec Index", url: "/spec" },
   { title: "Spec: scan all", url: "/scan-all" },
+  { title: "Spec: desktop-sync (ds = gd)", url: "/desktop-sync" },
+  { title: "Spec: github-desktop (gd)", url: "/github-desktop" },
+  { title: "Spec: scan gd (bulk)", url: "/scan-gd" },
+  { title: "Spec: clone multi-URL", url: "/clone-multi" },
 ];
 
 const CommandPalette = () => {

@@ -1,61 +1,70 @@
 # gitmap desktop-sync
 
-Sync all tracked repositories with GitHub Desktop.
+Register git repositories with GitHub Desktop.
+
+> **`desktop-sync` (`ds`) is an alias of `github-desktop` (`gd`).**
+> Both commands do the same thing. Use whichever you remember.
 
 ## Alias
 
-ds
+ds (also: gd, github-desktop)
 
 ## Usage
 
-    gitmap desktop-sync
+    gitmap ds                       # register CWD or every DB-tracked repo under CWD
+    gitmap gd                       # same thing
+    gitmap ds D:\path\to\repo       # register an explicit folder
+    gitmap ds --all                 # register every repo in the gitmap DB
 
 ## Flags
 
-None.
+    --all      Register every repo currently tracked in the gitmap database,
+               regardless of where you ran the command from.
 
 ## Prerequisites
 
-- Run `gitmap scan` first to populate the database (see scan.md)
-- GitHub Desktop must be installed
+- GitHub Desktop installed with the `github` CLI on PATH.
+- A git repo at CWD, explicit path, or under a registered scan root.
+- **No prior `gitmap scan` is required.**
+
+## Resolution order (no args)
+
+1. Is GitHub Desktop installed? If not → exit with install hint.
+2. Is CWD itself a git repo (`.git` dir OR `.git` file for worktrees)? Register it.
+3. Is CWD inside a registered scan root? Bulk-register every tracked repo under it.
+4. Otherwise → friendly hint + exit 3.
 
 ## Examples
 
-### Example 1: Sync all repos to GitHub Desktop
+### Example 1: Register the current folder (single repo)
 
-    gitmap desktop-sync
-
-**Output:**
-
-    Syncing 42 repos to GitHub Desktop...
-    [1/42] my-api... added
-    [2/42] web-app... added
-    [3/42] billing-svc... already registered
-    [4/42] auth-gateway... added
-    ...
-    ✓ 42 repos synced to GitHub Desktop
-      15 newly added
-      27 already registered
-
-### Example 2: Sync after a rescan (picks up new repos)
-
-    gitmap rescan
+    cd D:\wp-work\riseup-asia\macro-ahk
     gitmap ds
 
 **Output:**
 
-    Re-scanning D:\wp-work...
-    Found 44 repositories (+2 new)
-    ✓ Database updated
+    ✓ Registered: macro-ahk
+    GitHub Desktop: 1 added · 0 skipped · 0 failed
 
-    Syncing 44 repos to GitHub Desktop...
-    [1/44] new-service... added
-    [2/44] analytics-api... added
+### Example 2: Bulk-register everything under a scan root
+
+    cd D:\wp-work
+    gitmap gd
+
+**Output:**
+
+    [1/14] my-api ............ ✓
+    [2/14] web-app ........... ✓
+    [3/14] billing-svc ....... already registered
     ...
-    ✓ 44 repos synced (2 new, 42 existing)
+    GitHub Desktop: 12 added · 2 skipped · 0 failed
+
+### Example 3: Register every DB-tracked repo regardless of CWD
+
+    gitmap ds --all
 
 ## See Also
 
-- [scan](scan.md) — Scan directories to populate the database
-- [clone](clone.md) — Clone repos from output files
-- [list](list.md) — View tracked repos
+- [github-desktop](github-desktop.md) — same command, different name
+- [scan](scan.md) — populate the database first if you want bulk mode
+- [clone](clone.md) — `--github-desktop` registers as it clones

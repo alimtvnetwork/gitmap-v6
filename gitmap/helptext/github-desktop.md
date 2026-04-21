@@ -1,44 +1,50 @@
 # gitmap github-desktop
 
-Register the current git repository (or a path you pass) with GitHub Desktop in one shot. No prior scan required.
+Register git repositories with GitHub Desktop.
+
+> **`github-desktop` (`gd`) and `desktop-sync` (`ds`) are the same command.**
+> Use whichever you remember.
 
 ## Alias
 
-gd
+gd (also: ds, desktop-sync)
 
 ## Usage
 
-    gitmap github-desktop          # register cwd
-    gitmap gd                      # short alias
-    gitmap gd D:\path\to\repo      # register an explicit path
+    gitmap gd                       # register CWD or every DB-tracked repo under CWD
+    gitmap ds                       # same thing
+    gitmap gd D:\path\to\repo       # register an explicit folder
+    gitmap gd --all                 # register every repo in the gitmap DB
 
 ## Flags
 
-None.
+    --all      Register every repo currently tracked in the gitmap database,
+               regardless of where you ran the command from.
 
 ## Prerequisites
 
-- GitHub Desktop must be installed and its `github` CLI must be on PATH.
-- The target directory must contain a `.git` folder (or `.git` file for worktrees).
+- GitHub Desktop installed with the `github` CLI on PATH.
+- A git repo at CWD, an explicit path, or under a registered scan root.
+- **No prior `gitmap scan` is required.**
 
-## How it differs from `desktop-sync`
+## Resolution order (no args)
 
-| Command | Source of repos | Needs prior `gitmap scan`? |
-|---------|-----------------|----------------------------|
-| `github-desktop` (gd) | The single cwd (or explicit path arg) | No |
-| `desktop-sync` (ds)   | Every repo in last scan output JSON    | Yes |
+1. Is GitHub Desktop installed? If not → exit with install hint.
+2. Is CWD itself a git repo (`.git` dir OR `.git` file for worktrees)? Register it.
+3. Is CWD inside a registered scan root? Bulk-register every tracked repo under it.
+4. Otherwise → friendly hint + exit 3.
 
 ## Examples
 
 ### Example 1: Register the current repo
 
-    cd D:\wp-work\riseup-asia\my-api
+    cd D:\wp-work\riseup-asia\macro-ahk
     gitmap gd
 
 **Output:**
 
-    Registering with GitHub Desktop: D:\wp-work\riseup-asia\my-api
-    ✓ Registered with GitHub Desktop: D:\wp-work\riseup-asia\my-api
+    ✓ Registered: macro-ahk
+    GitHub Desktop: 1 added · 0 skipped · 0 failed
 
 ### Example 2: Register an explicit path
 
@@ -46,11 +52,24 @@ None.
 
 **Output:**
 
-    Registering with GitHub Desktop: D:\projects\billing-svc
-    ✓ Registered with GitHub Desktop: D:\projects\billing-svc
+    ✓ Registered: billing-svc
+    GitHub Desktop: 1 added · 0 skipped · 0 failed
+
+### Example 3: Bulk-register under a scan root
+
+    cd D:\wp-work
+    gitmap gd
+
+**Output:**
+
+    [1/14] my-api ............ ✓
+    [2/14] web-app ........... ✓
+    ...
+    GitHub Desktop: 14 added · 0 skipped · 0 failed
 
 ## See Also
 
-- [desktop-sync](desktop-sync.md) — Bulk-sync every repo from the last scan
-- [scan](scan.md) — Use `--github-desktop` to register during scan
-- [clone](clone.md) — Use `--github-desktop` to register during clone
+- [desktop-sync](desktop-sync.md) — same command, different name
+- [scan](scan.md) — `--github-desktop` registers during scan
+- [clone](clone.md) — `--github-desktop` registers during clone
+- [scan-gd (spec 102)](../spec/01-app/102-scan-gd.md) — design doc for bulk mode

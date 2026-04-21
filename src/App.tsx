@@ -48,6 +48,10 @@ import HelpDashboardPage from "./pages/HelpDashboard";
 import PostMortemsPage from "./pages/PostMortems";
 import VersionHistoryPage from "./pages/VersionHistory";
 import ScanAllSpecPage from "./pages/ScanAllSpec";
+import DesktopSyncSpecPage from "./pages/DesktopSyncSpec";
+import GitHubDesktopSpecPage from "./pages/GitHubDesktopSpec";
+import ScanGdSpecPage from "./pages/ScanGdSpec";
+import CloneMultiSpecPage from "./pages/CloneMultiSpec";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +106,10 @@ const App = () => (
           <Route path="/help-dashboard" element={<HelpDashboardPage />} />
           <Route path="/post-mortems" element={<PostMortemsPage />} />
           <Route path="/scan-all" element={<ScanAllSpecPage />} />
+          <Route path="/desktop-sync" element={<DesktopSyncSpecPage />} />
+          <Route path="/github-desktop" element={<GitHubDesktopSpecPage />} />
+          <Route path="/scan-gd" element={<ScanGdSpecPage />} />
+          <Route path="/clone-multi" element={<CloneMultiSpecPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
