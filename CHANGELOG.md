@@ -1,5 +1,42 @@
 # Changelog
 
+## v3.53.0 — (2026-04-21) — `gitmap lfs-common`: one-shot Git LFS tracking for common binary types
+
+### Added
+
+- **`gitmap lfs-common` (alias `lfsc`)** — registers a curated set of 18 common binary file extensions with Git LFS in the current repository. Verifies the working tree is a git repo and that `git lfs` is on PATH, runs `git lfs install --local` (idempotent), then calls `git lfs track "<pattern>"` for each entry. The standard `<pattern> filter=lfs diff=lfs merge=lfs -text` lines are appended to `.gitattributes` by Git LFS itself, keeping the on-disk format canonical and tool-compatible.
+- **Default tracked patterns:** `*.pptx`, `*.ppt`, `*.eps`, `*.psd`, `*.ttf`, `*.wott`, `*.svg`, `*.ai`, `*.jpg`, `*.bmp`, `*.png`, `*.zip`, `*.gz`, `*.tar`, `*.rar`, `*.7z`, `*.mp4`, `*.aep`. Order is preserved so `.gitattributes` diffs are stable across machines and re-runs.
+- **`--dry-run` flag** — previews which patterns *would* be added vs. are *already tracked*, without touching `.gitattributes` or invoking `git lfs install`. Safe to run in any repo to audit existing LFS coverage against the recommended baseline.
+- **Idempotent re-runs** — before tracking, the command parses `.gitattributes` and skips any pattern already carrying `filter=lfs`. The summary line reports `N added, M already tracked, K failed (of 18 total)`, so repeated invocations are harmless and the second run is a no-op when the baseline is already in place.
+
+### Changed
+
+- **`gitmap help`** — the *Git Operations* section now lists `lfs-common (lfsc)` between `latest-branch` and the navigation block.
+- **`gitmap help lfs-common`** — new embedded help page (`gitmap/helptext/lfs-common.md`) documenting flags, the full pattern list, the post-run commit recipe, and a callout that `git lfs migrate import` is still required to convert *existing* committed binaries (this command only sets up tracking for *future* writes).
+
+### Implementation
+
+- `gitmap/cmd/lfscommon.go` — new file. `runLFSCommon` orchestrates flag parsing → repo check (`git rev-parse --is-inside-work-tree`) → LFS check (`git lfs version`) → `git lfs install --local` → per-pattern `git lfs track` loop. All shell-outs use `exec.CombinedOutput` so failures bubble up with the underlying git/lfs message attached.
+- Reuses the existing `gitTopLevel()` helper from `gitmap/cmd/as.go` instead of re-declaring it — `cmd/` shares one Go namespace and the duplicate would have produced a `redeclared in this block` build break (per the `cmd/` collision-prone naming rule enforced by `.github/scripts/check-cmd-naming.sh`).
+- `loadTrackedPatterns()` reads `<repo-root>/.gitattributes`, skips blank/comment lines, and treats any line containing `filter=lfs` as a tracked pattern keyed by the first whitespace-separated field. Used both in dry-run preview and in the live tracker to short-circuit no-op patterns.
+- Helpers (`insideGitRepo`, `lfsAvailable`, `runGitLFSInstall`, `trackLFSPatterns`, `trackOnePattern`, `loadTrackedPatterns`, `printLFSCommonBanner`, `printLFSCommonDryRun`, `printLFSCommonSummary`) are all domain-qualified so they pass the `cmd/` naming guard. Output uses the existing `constants.ColorCyan/Green/Yellow/Dim/Reset` palette for consistency with `setup` and `doctor`.
+- `gitmap/cmd/lfscommon_test.go` — new file. Two table-driven tests:
+  - `TestLFSCommonPatternsMatchSpec` — locks in the exact 18 entries and ordering against the user-supplied spec, so accidental edits, typos, or removals are caught by CI before they ship.
+  - `TestLFSCommonPatternsAreUnique` — guarantees no pattern appears twice (a duplicate would cause `git lfs track` to write the same line into `.gitattributes` twice on first run).
+- `gitmap/cmd/rootutility.go` — added the `CmdLFSCommon` / `CmdLFSCommonAlias` branch to `dispatchUtility`, after `vscode-pm-path` and before the `return false` fallthrough.
+- `gitmap/cmd/rootusage.go` — `printGroupGitOps` now prints `HelpLFSCommon` after `HelpLatestBr`, matching where the command sits semantically (it operates on the current repo's git/LFS state).
+- `gitmap/constants/constants_cli.go` — added `CmdLFSCommon = "lfs-common"`, `CmdLFSCommonAlias = "lfsc"`, and `HelpLFSCommon` (the one-line help row). No new flag descriptions were required — the command reuses the existing `FlagDescDryRun`.
+- `gitmap/helptext/lfs-common.md` — new embedded help file. Bundled automatically via the existing `//go:embed *.md` directive in `gitmap/helptext/print.go`, so `gitmap help lfs-common` works without any registration changes.
+- `gitmap/constants/constants.go` — `Version = "3.53.0"`.
+
+### Compatibility
+
+- Pure addition. No existing command, flag, output format, or file layout changes. Repos that have never run `lfs-common` are unaffected; repos that have can re-run safely — the command is fully idempotent.
+- Existing `.gitattributes` files are preserved: Git LFS appends only the patterns that aren't already tracked, and we additionally skip those patterns ourselves so `git lfs track` is never invoked redundantly.
+- No new third-party Go dependencies. The command shells out to the user's installed `git` and `git lfs`, both of which are already required by the rest of the gitmap workflow.
+
+---
+
 ## v3.52.0 — (2026-04-21) — Document `workflow_dispatch` lint baseline cache controls
 
 ### Changed
