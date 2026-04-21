@@ -19,6 +19,8 @@
 #   --no-self-install     Skip the chained `gitmap self-install` step.
 #   --allow-fallback      Use newest patch in same vMAJOR.MINOR if missing.
 #   --quiet               Suppress prompts and progress output.
+#   --json-errors         Emit fatal errors as a single-line JSON object on
+#                         stderr (machine-readable contract for CI).
 # ─────────────────────────────────────────────────────────────────────
 
 # Re-exec under bash if invoked under sh/dash.
