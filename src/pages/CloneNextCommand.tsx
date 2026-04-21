@@ -1,5 +1,6 @@
 import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
+import CloneNextCommandBuilder from "@/components/docs/CloneNextCommandBuilder";
 
 const flags = [
   { flag: "--force, -f", default: "false", desc: "Force flatten when cwd IS the target folder (chdir to parent first; refuses versioned-folder fallback)" },
@@ -308,6 +309,19 @@ folder  : macro-ahk/`}
             <code className="docs-inline-code">--create-remote</code> with{" "}
             <code className="docs-inline-code">GITHUB_TOKEN</code> set in the environment.
           </p>
+        </div>
+
+        <hr className="docs-hr" />
+
+        <div>
+          <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Copy commands</h2>
+          <p className="text-sm text-muted-foreground mb-3">
+            Configure any flag combo and copy the exact <code className="docs-inline-code">gitmap</code>{" "}
+            invocation plus the underlying <code className="docs-inline-code">git clone</code> it expands to.
+            Useful for previewing what gitmap will run before committing to a destructive flatten, or for
+            scripting the same action without gitmap installed.
+          </p>
+          <CloneNextCommandBuilder />
         </div>
 
         <hr className="docs-hr" />
