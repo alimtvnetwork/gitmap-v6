@@ -115,6 +115,93 @@ const CloneNextCommandPage = () => {
         <hr className="docs-hr" />
 
         <div>
+          <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Edge cases</h2>
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-2 docs-h3">Target version folder already exists</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            When the flattened target folder (e.g. <code className="docs-inline-code">macro-ahk/</code>)
+            already exists, clone-next removes it <strong>without prompting</strong> before cloning. There is
+            no <code className="docs-inline-code">--yes</code> confirmation — flatten is destructive by design.
+          </p>
+          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 mb-3">
+            <li>
+              <strong>cwd is not the target folder:</strong>{" "}
+              <code className="docs-inline-code">os.RemoveAll(target)</code> runs immediately, then the clone
+              proceeds into the freshly emptied path.
+            </li>
+            <li>
+              <strong>cwd IS the target folder (Windows lock):</strong> removal fails because the shell holds a
+              file handle on the cwd. Without <code className="docs-inline-code">-f</code>, gitmap falls back
+              to a versioned folder name (e.g. <code className="docs-inline-code">macro-ahk-v22/</code>) and
+              prints <code className="docs-inline-code">MsgFlattenFallback</code> with a hint to retry with{" "}
+              <code className="docs-inline-code">-f</code>.
+            </li>
+            <li>
+              <strong>cwd IS the target folder + <code className="docs-inline-code">-f</code>:</strong> gitmap{" "}
+              <code className="docs-inline-code">chdir</code>s to the parent first to release the lock, removes
+              the folder, clones, then <code className="docs-inline-code">chdir</code>s back into the new
+              flattened folder. If removal still fails (another process holds the lock), gitmap aborts with{" "}
+              <code className="docs-inline-code">ErrCloneNextForceFailed</code> and exits 1 — it
+              <strong> never silently degrades</strong> to a versioned folder when{" "}
+              <code className="docs-inline-code">-f</code> is set.
+            </li>
+            <li>
+              <strong>Target folder is locked by another process:</strong> see the lock-detection example below
+              — gitmap lists the offending PIDs (e.g. <code className="docs-inline-code">Code.exe</code>,{" "}
+              <code className="docs-inline-code">explorer.exe</code>) and offers to terminate them.
+            </li>
+          </ul>
+
+          <h3 className="text-base font-heading font-semibold mb-2 mt-6 docs-h3">Origin has no <code className="docs-inline-code">-vN</code> suffix</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            clone-next derives the next remote URL by parsing a trailing{" "}
+            <code className="docs-inline-code">-vN</code> suffix on the current repo name. The parser
+            (<code className="docs-inline-code">clonenext.ParseRepoName</code>) handles unsuffixed repos as
+            <strong> implicit v1</strong>:
+          </p>
+          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 mb-3">
+            <li>
+              <code className="docs-inline-code">macro-ahk</code> → base{" "}
+              <code className="docs-inline-code">macro-ahk</code>, current version{" "}
+              <code className="docs-inline-code">1</code>,{" "}
+              <code className="docs-inline-code">HasVersion=false</code>.
+            </li>
+            <li>
+              <code className="docs-inline-code">cn v++</code> targets{" "}
+              <code className="docs-inline-code">macro-ahk-v2</code> (current + 1 = 2).
+            </li>
+            <li>
+              <code className="docs-inline-code">cn v15</code> targets{" "}
+              <code className="docs-inline-code">macro-ahk-v15</code> directly.
+            </li>
+            <li>
+              Remote URL rewrite uses{" "}
+              <code className="docs-inline-code">strings.Replace(url, currentRepo, targetRepo, 1)</code>.
+              When the origin has no suffix, gitmap looks for the bare repo name in the URL and produces a
+              suffixed URL — so the target repo <strong>must already exist on GitHub</strong> (or pass{" "}
+              <code className="docs-inline-code">--create-remote</code> with a{" "}
+              <code className="docs-inline-code">GITHUB_TOKEN</code> to provision it).
+            </li>
+            <li>
+              Local folder is still flattened to the base name, so cloning{" "}
+              <code className="docs-inline-code">macro-ahk-v2</code> from inside{" "}
+              <code className="docs-inline-code">macro-ahk/</code> places it back into{" "}
+              <code className="docs-inline-code">macro-ahk/</code> (the existing-folder rules above apply).
+            </li>
+          </ul>
+          <p className="text-sm text-muted-foreground">
+            If the version argument cannot be parsed (e.g.{" "}
+            <code className="docs-inline-code">cn foo</code>,{" "}
+            <code className="docs-inline-code">cn v0</code>,{" "}
+            <code className="docs-inline-code">cn v-1</code>), gitmap exits with{" "}
+            <code className="docs-inline-code">invalid version argument: ... (expected v++, v+1, or vN)</code>{" "}
+            and makes no network or filesystem changes.
+          </p>
+        </div>
+
+        <hr className="docs-hr" />
+
+        <div>
           <h2 className="text-xl font-heading font-semibold mb-3 docs-h2">Examples</h2>
 
           <h3 className="text-base font-heading font-semibold mb-2 mt-4 docs-h3">Increment version by one</h3>
