@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Copy, Check, Terminal } from "lucide-react";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface InstallTab {
   label: string;
