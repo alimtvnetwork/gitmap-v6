@@ -57,6 +57,7 @@ import ScanCommandPage from "./pages/ScanCommand";
 import CloneCommandPage from "./pages/CloneCommand";
 import CloneNextCommandPage from "./pages/CloneNextCommand";
 import ScanCloneFlagsPage from "./pages/ScanCloneFlags";
+import TroubleshootingPage from "./pages/Troubleshooting";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const App = () => (
           <Route path="/clone-command" element={<CloneCommandPage />} />
           <Route path="/clone-next-command" element={<CloneNextCommandPage />} />
           <Route path="/scan-clone-flags" element={<ScanCloneFlagsPage />} />
+          <Route path="/troubleshooting" element={<TroubleshootingPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
