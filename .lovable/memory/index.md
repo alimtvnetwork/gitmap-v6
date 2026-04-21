@@ -33,6 +33,7 @@ Current version: v3.21.0 (schema-version fast-path + db-migrate --force + post-u
 - [Probe Depth](mem://features/probe-depth) — `gitmap probe --depth N` (default 1, max 10) walks up to N newer tags, shallow-clones each to verify, inserts one VersionProbe row per verified version. Adds optional IsPreRelease column. Backwards compatible. Spec 103. (planned v3.36.0)
 - [Desktop Sync = GD Merge](mem://features/desktop-sync-merge) — `ds` is now an alias of `gd`. No scan dependency. GitHub Desktop install check is step 1. `.git` worktree files detected. Spec 11 + 10. (v3.37.0)
 - [Clone Multi-URL](mem://features/clone-multi) — `gitmap clone` accepts space- and/or comma-separated URL lists; each positional arg is split on commas and flattened. `--github-desktop` registers each clone immediately. Spec 104. (planned v3.38.0)
+- [Release-Version Script](mem://features/release-version-script) — Dedicated `release-version.ps1` / `.sh` for `/release/:version` pages. Pinned, never auto-upgrades. Ships as generic-parameterized + per-version baked snapshot. Spec 105. (planned v3.39.0)
 - [Code Constraints](mem://style/code-constraints) — Strict rules for code style, structure, and pull requests
 - [Code Quality Process](mem://style/code-quality-improvement-process) — Architectural principles and resilience patterns
 - [README Branding](mem://style/readme-branding) — Strict layout and linking requirements for the project author section
