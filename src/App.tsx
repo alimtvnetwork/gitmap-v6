@@ -55,6 +55,7 @@ import ScanGdSpecPage from "./pages/ScanGdSpec";
 import CloneMultiSpecPage from "./pages/CloneMultiSpec";
 import ScanCommandPage from "./pages/ScanCommand";
 import CloneCommandPage from "./pages/CloneCommand";
+import ScanCloneFlagsPage from "./pages/ScanCloneFlags";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
           <Route path="/clone-multi" element={<CloneMultiSpecPage />} />
           <Route path="/scan-command" element={<ScanCommandPage />} />
           <Route path="/clone-command" element={<CloneCommandPage />} />
+          <Route path="/scan-clone-flags" element={<ScanCloneFlagsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
