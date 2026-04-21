@@ -56,6 +56,7 @@ import CloneMultiSpecPage from "./pages/CloneMultiSpec";
 import ScanCommandPage from "./pages/ScanCommand";
 import CloneCommandPage from "./pages/CloneCommand";
 import ScanCloneFlagsPage from "./pages/ScanCloneFlags";
+import TroubleshootingPage from "./pages/Troubleshooting";
 
 const queryClient = new QueryClient();
 
