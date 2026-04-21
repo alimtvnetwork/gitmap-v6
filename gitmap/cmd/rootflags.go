@@ -8,40 +8,26 @@ import (
 
 // ScanFlags bundles every parsed scan-command flag so callers don't have
 // to thread a long positional return list through helper functions.
-// Adding a new flag here is preferred over extending the tuple returned
-// by parseScanFlags — the latter is kept only for backward compatibility
-// with existing call sites.
 type ScanFlags struct {
-	Dir                string
-	ConfigPath         string
-	Mode               string
-	Output             string
-	OutFile            string
-	OutputPath         string
-	GHDesktop          bool
-	OpenFolder         bool
-	Quiet              bool
-	NoVSCodeSync       bool
-	NoAutoTags         bool
-	Workers            int
-	BranchSourceDebug  bool
+	Dir               string
+	ConfigPath        string
+	Mode              string
+	Output            string
+	OutFile           string
+	OutputPath        string
+	GHDesktop         bool
+	OpenFolder        bool
+	Quiet             bool
+	NoVSCodeSync      bool
+	NoAutoTags        bool
+	Workers           int
+	BranchSourceDebug bool
 }
 
-// parseScanFlags parses flags for the scan command.
-//
-// NOTE: The positional return tuple is preserved for backward
-// compatibility with callers that destructure it directly. New flags
-// are exposed via ParseScanFlags (struct form) instead so the tuple
-// doesn't keep growing without bound.
-func parseScanFlags(args []string) (dir, configPath, mode, output, outFile, outputPath string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int) {
-	f := ParseScanFlags(args)
-
-	return f.Dir, f.ConfigPath, f.Mode, f.Output, f.OutFile, f.OutputPath,
-		f.GHDesktop, f.OpenFolder, f.Quiet, f.NoVSCodeSync, f.NoAutoTags, f.Workers
-}
-
-// ParseScanFlags is the struct-returning form. New code MUST use this
-// rather than the legacy tuple form.
+// ParseScanFlags parses flags for the scan command into a ScanFlags
+// struct. New flags are added as fields here rather than as additional
+// positional return values, keeping the call sites stable as the flag
+// surface grows.
 func ParseScanFlags(args []string) ScanFlags {
 	fs := flag.NewFlagSet(constants.CmdScan, flag.ExitOnError)
 	cfgFlag := fs.String("config", constants.DefaultConfigPath, constants.FlagDescConfig)
