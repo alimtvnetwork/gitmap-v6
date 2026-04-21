@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import SearchBar from "@/components/docs/SearchBar";
-import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench } from "lucide-react";
+import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check } from "lucide-react";
 
 type Category = "paths" | "config" | "auth" | "network" | "locks" | "git" | "build";
 
@@ -343,6 +343,9 @@ const Troubleshooting = () => {
                     {categoryMeta[issue.category].label}
                   </p>
                 </div>
+                {issue.fixCommand && (
+                  <CopyFixButton command={issue.fixCommand} altCommand={issue.altCommand} />
+                )}
               </header>
 
               <div className="p-5 space-y-4">
@@ -432,6 +435,54 @@ const Troubleshooting = () => {
         </ul>
       </aside>
     </DocsLayout>
+  );
+};
+
+interface CopyFixButtonProps {
+  command: string;
+  altCommand?: string;
+}
+
+// CopyFixButton — one-click copy of the primary fix command (and optional
+// alternative) shown in the issue header. Uses the same clipboard API path as
+// CodeBlock so behavior is consistent across the page.
+const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    const payload = altCommand
+      ? `${command}\n\n# Alternative\n${altCommand}`
+      : command;
+    navigator.clipboard.writeText(payload).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  }, [command, altCommand]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? "Fix command copied" : "Copy fix command"}
+      title={copied ? "Copied!" : "Copy fix command"}
+      className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+        copied
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
+      }`}
+    >
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5" />
+          Copied
+        </>
+      ) : (
+        <>
+          <Copy className="h-3.5 w-3.5" />
+          Copy fix
+        </>
+      )}
+    </button>
   );
 };
 
