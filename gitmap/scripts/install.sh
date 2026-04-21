@@ -787,6 +787,10 @@ add_to_path() {
             PATH_RELOAD="source ${primary_profile}"
             ;;
         pwsh)
+            # Dot-source the pwsh profile — `. $PROFILE` is the canonical
+            # PowerShell idiom for re-loading the current user's profile
+            # in the active session. `source` is a bash builtin and would
+            # error inside pwsh (`source: The term 'source' is not recognized`).
             PATH_LINE="\$env:PATH = \"\$env:PATH:${dir}\""
             PATH_RELOAD=". \$PROFILE"
             ;;
@@ -795,6 +799,14 @@ add_to_path() {
             PATH_RELOAD=". ${primary_profile}"
             ;;
     esac
+
+    # Cross-shell reload hint: when the installer wrote BOTH the active
+    # shell's profile AND the other family's profile (typical under
+    # --dual-shell or when pwsh is detected alongside zsh on macOS),
+    # expose the *other* shell's reload command as PATH_RELOAD_ALT.
+    # Without this, a pwsh user could see `source ~/.zshrc` (which fails
+    # in pwsh) or a zsh user could see `. $PROFILE` (which fails in zsh).
+    resolve_alt_reload "${profiles_written}"
 
     # Report what was written
     if [ -n "${profiles_written}" ]; then
