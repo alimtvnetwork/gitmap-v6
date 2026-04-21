@@ -163,6 +163,12 @@ func handleHandoffError(err error) {
 // runUpdateRunner is a hidden command that performs the real update work.
 // After the binary update completes, it triggers a best-effort schema
 // migration so the next CLI invocation never has to repair the database.
+//
+// At the end, scheduleHandoffSelfDelete arranges for the running handoff
+// copy (gitmap-update-<pid>.exe) to remove itself after exit. This is
+// required on Windows because the binary is locked while running and
+// `gitmap update-cleanup` cannot delete it from inside the same process
+// tree. See spec/02-app-issues/01-update-file-lock.md.
 func runUpdateRunner() {
 	repoPath := resolveRepoPath()
 	report := resolveReportErrors()
@@ -173,6 +179,47 @@ func runUpdateRunner() {
 	executeUpdate(repoPath, report)
 	runPostUpdateMigrate()
 	report.summarize()
+	scheduleHandoffSelfDelete()
+}
+
+// scheduleHandoffSelfDelete schedules deletion of the running handoff
+// binary after this process exits. On Windows we spawn a detached
+// cmd.exe that pings briefly (so our process can exit and release the
+// file lock) and then `del`s the file. On Unix we just unlink in place.
+//
+// Best-effort: silent on failure. Only runs when the active executable
+// matches the handoff naming pattern, so a normally-deployed gitmap.exe
+// is never touched even if invoked with `update-runner` manually.
+func scheduleHandoffSelfDelete() {
+	self, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	base := filepath.Base(self)
+	if !isUpdateHandoffName(base) {
+		return
+	}
+
+	if runtime.GOOS != constants.OSWindows {
+		_ = os.Remove(self)
+
+		return
+	}
+
+	cmd := exec.Command("cmd.exe", "/C",
+		"ping", "127.0.0.1", "-n", "2", ">nul", "&", "del", "/F", "/Q", self)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	_ = cmd.Start()
+}
+
+// isUpdateHandoffName reports whether base looks like a handoff copy
+// produced by createHandoffCopy (e.g. "gitmap-update-22112.exe").
+func isUpdateHandoffName(base string) bool {
+	const prefix = "gitmap-update-"
+
+	return len(base) > len(prefix) && base[:len(prefix)] == prefix
 }
 
 // getFlagValue returns the value following a flag like --repo-path <value>.

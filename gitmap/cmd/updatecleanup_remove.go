@@ -4,8 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+)
+
+// cleanupRemoveMaxAttempts caps the retry loop for transient Windows file locks
+// (e.g. a freshly-renamed .old still settling, or AV scanners holding a handle).
+const (
+	cleanupRemoveMaxAttempts = 5
+	cleanupRemoveRetryDelay  = 200 * time.Millisecond
 )
 
 // cleanupTempArtifacts removes update handoff copies and generated scripts.
@@ -79,17 +87,28 @@ func isActiveCleanupPath(normalizedPath, selfPath string) bool {
 }
 
 // removeCleanupFile removes a cleanup candidate and prints the success message.
+// Retries a few times with a small delay because Windows can briefly hold a
+// handle on a file we just renamed (e.g. gitmap.exe.old) or on a binary that
+// our handoff process is still releasing.
 func removeCleanupFile(match, cleanPath, successMsg string) bool {
-	err := os.Remove(match)
-	if err != nil {
-		logUpdateCleanupRemoveError(cleanPath, err)
+	var lastErr error
+	for attempt := 1; attempt <= cleanupRemoveMaxAttempts; attempt++ {
+		err := os.Remove(match)
+		if err == nil {
+			fmt.Printf(successMsg, filepath.Base(match))
 
-		return false
+			return true
+		}
+
+		lastErr = err
+		if attempt < cleanupRemoveMaxAttempts {
+			time.Sleep(cleanupRemoveRetryDelay)
+		}
 	}
 
-	fmt.Printf(successMsg, filepath.Base(match))
+	logUpdateCleanupRemoveError(cleanPath, lastErr)
 
-	return true
+	return false
 }
 
 // logUpdateCleanupExecutableError reports os.Executable failures.
