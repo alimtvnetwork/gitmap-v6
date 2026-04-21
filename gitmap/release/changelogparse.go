@@ -133,7 +133,7 @@ func extractBulletMarker(body string) (string, string, bool) {
 	return extractOrderedMarker(body)
 }
 
-// extractOrderedMarker recognises "<digits>. " ordered list markers.
+// extractOrderedMarker recognizes "<digits>. " ordered list markers.
 func extractOrderedMarker(body string) (string, string, bool) {
 	end := 0
 	for end < len(body) && unicode.IsDigit(rune(body[end])) {
