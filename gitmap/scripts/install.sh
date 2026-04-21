@@ -660,13 +660,20 @@ resolve_path_snippet() {
 # with the supplied snippet. Compares byte-for-byte before writing so we
 # can return 1 (unchanged) vs 2 (updated) — this is what powers the
 # "already present" vs "updated" distinction in the per-file report.
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+#
+# NOTE: awk vars are named open_marker / close_marker because `close`
+# is a reserved gawk builtin and `close=...` triggers a fatal error.
 rewrite_marker_block() {
     local profile_file="$1" open="$2" close="$3" snippet="$4"
     local tmp
     tmp="$(mktemp)"
-    awk -v open="${open}" -v close="${close}" -v body="${snippet}" '
-        $0 == open { skip = 1; print body; next }
-        skip && $0 == close { skip = 0; next }
+    awk -v open_marker="${open}" -v close_marker="${close}" -v body="${snippet}" '
+        $0 == open_marker { skip = 1; print body; next }
+        skip && $0 == close_marker { skip = 0; next }
         !skip { print }
     ' "${profile_file}" > "${tmp}"
     if cmp -s "${tmp}" "${profile_file}"; then
