@@ -13,14 +13,15 @@ import (
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
 )
 
-// Pair is one (rootPath, name, paths) tuple to upsert into projects.json.
-// Paths is the gitmap-managed multi-root list; the Sync function UNIONs it
-// with whatever the user already added in the VS Code UI — gitmap never
-// silently removes a user-added path.
+// Pair is one (rootPath, name, paths, tags) tuple to upsert into
+// projects.json. Both Paths (multi-root, v3.39.0+) and Tags (auto-derived,
+// v3.40.0+) are UNIONed with whatever the user already has on disk so
+// gitmap never silently removes a user-added path or tag.
 type Pair struct {
 	RootPath string
 	Name     string
 	Paths    []string
+	Tags     []string
 }
 
 // Sync reconciles projects.json with the supplied DB-side pairs.
@@ -132,25 +133,28 @@ func mergePairs(existing []Entry, pairs []Pair) ([]Entry, SyncSummary) {
 
 		idx, found := indexByPath[key]
 		if !found {
-			existing = append(existing, newEntry(p.RootPath, p.Name, p.Paths))
+			existing = append(existing, newEntry(p.RootPath, p.Name, p.Paths, p.Tags))
 			indexByPath[key] = len(existing) - 1
 			summary.Added++
 
 			continue
 		}
 
-		merged := unionPaths(existing[idx].Paths, p.Paths)
+		mergedPaths := unionPaths(existing[idx].Paths, p.Paths)
+		mergedTags := unionTags(existing[idx].Tags, p.Tags)
 		nameChanged := existing[idx].Name != p.Name
-		pathsChanged := len(merged) != len(existing[idx].Paths)
+		pathsChanged := len(mergedPaths) != len(existing[idx].Paths)
+		tagsChanged := len(mergedTags) != len(existing[idx].Tags)
 
-		if !nameChanged && !pathsChanged {
+		if !nameChanged && !pathsChanged && !tagsChanged {
 			summary.Unchanged++
 
 			continue
 		}
 
 		existing[idx].Name = p.Name
-		existing[idx].Paths = merged
+		existing[idx].Paths = mergedPaths
+		existing[idx].Tags = mergedTags
 		summary.Updated++
 	}
 

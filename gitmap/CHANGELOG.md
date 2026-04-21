@@ -1,5 +1,58 @@
 # Changelog
 
+## v3.40.0 — (2026-04-21) — Auto-derived tags for VS Code Project Manager sync
+
+### Added
+
+- **Auto-tag detection** — every entry synced into `projects.json` (via
+  `gitmap scan`, `gitmap code`, `gitmap as`) now gets a deterministic set
+  of `tags` derived from top-level marker files in the rootPath:
+
+  | Marker                                                | Tag      |
+  |-------------------------------------------------------|----------|
+  | `.git`                                                | `git`    |
+  | `package.json`                                        | `node`   |
+  | `go.mod`                                              | `go`     |
+  | `pyproject.toml`, `requirements.txt`                  | `python` |
+  | `Cargo.toml`                                          | `rust`   |
+  | `Dockerfile`, `compose.yaml`, `docker-compose.yml`    | `docker` |
+
+- **Additive UNION semantics** — auto-tags are merged into the existing
+  `tags` array. Tags you added manually in the VS Code UI are NEVER
+  removed by gitmap.
+- **`--no-auto-tags` flag on `gitmap scan`** — opts out of auto-tagging
+  for that run (e.g. when you want a tag-free baseline).
+- New `vscodepm.DetectTags(rootPath)` helper + `vscodepm.unionTags`
+  internal merger. Detector is shallow, read-only, deterministic.
+- New `constants.AutoTagMarkers` / `AutoTagOrder` registry — single
+  source of truth for which markers map to which tags and in what order.
+
+### Changed
+
+- `vscodepm.Pair` gains a `Tags []string` field. Existing call sites
+  populate it from `DetectTags()`; passing `nil` simply skips tagging.
+- Sync summary now treats a tag-set change as an "Updated" event (same
+  as a name or paths change).
+
+### Files
+
+- New: `gitmap/vscodepm/autotags.go`,
+  `gitmap/vscodepm/autotags_test.go`,
+  `gitmap/constants/constants_vscode_pm_autotags.go`.
+- Updated: `gitmap/vscodepm/{sync,entry,overwrite}.go`,
+  `gitmap/cmd/{scan,vscodepmsync,code,rootflags}.go`,
+  `gitmap/constants/constants.go`,
+  `gitmap/helptext/{code,scan}.md`, `src/data/commands.ts`,
+  `spec/01-vscode-project-manager-sync/README.md`.
+
+### Compatibility
+
+- Pure additive change. Legacy `tags` content is preserved; gitmap only
+  appends. No DB migration required (tags are not stored in SQLite —
+  they live exclusively in `projects.json`).
+- Single-arg `gitmap code [alias]` and the existing `paths` subcommand
+  continue to work unchanged.
+
 ## v3.39.0 — (2026-04-21) — Multi-root `paths` for VS Code Project Manager sync
 
 ### Added

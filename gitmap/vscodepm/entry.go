@@ -24,16 +24,20 @@ type SyncSummary struct {
 // newEntry builds a default Entry for a freshly registered tuple.
 // Tags and Paths are always emitted as non-nil empty slices so the encoded
 // JSON contains `[]` rather than `null` (matches the sample fixture).
-func newEntry(rootPath, name string, paths []string) Entry {
+// Auto-detected tags arrive via the `tags` parameter (v3.40.0+).
+func newEntry(rootPath, name string, paths, tags []string) Entry {
 	if paths == nil {
 		paths = []string{}
+	}
+	if tags == nil {
+		tags = []string{}
 	}
 
 	return Entry{
 		Name:     name,
 		RootPath: rootPath,
 		Paths:    paths,
-		Tags:     []string{},
+		Tags:     tags,
 		Enabled:  true,
 		Profile:  "",
 	}

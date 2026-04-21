@@ -25,12 +25,16 @@ VS Code. Supports a multi-root **`paths`** subcommand (v3.39.0+).
 1. Resolves the absolute `rootPath`.
 2. Upserts the `VSCodeProject` row keyed by `rootPath` (case-insensitive).
 3. UNIONs any `extraPath...` into the DB-side `Paths` column (JSON-encoded).
-4. Atomically syncs the entry into the alefragnani.project-manager
-   `projects.json` file. Foreign entries plus user-edited `tags` /
-   `enabled` / `profile` are preserved verbatim. Paths added in the VS
-   Code UI are also preserved — gitmap only ever adds (or, via
-   `paths rm`, explicitly removes a single entry).
-5. Launches VS Code on the resolved root path. The `paths` subcommand
+4. **Detects auto-tags** (v3.40.0+): inspects the rootPath for top-level
+   markers (`.git`, `package.json`, `go.mod`, `pyproject.toml`,
+   `Cargo.toml`, `Dockerfile`, ...) and UNIONs them into the entry's
+   `tags` array. User-edited tags are never removed.
+5. Atomically syncs the entry into the alefragnani.project-manager
+   `projects.json` file. Foreign entries plus user-edited
+   `enabled` / `profile` are preserved verbatim. Paths and tags added in
+   the VS Code UI are also preserved — gitmap only ever adds (or, via
+   `paths rm`, explicitly removes a single path entry).
+6. Launches VS Code on the resolved root path. The `paths` subcommand
    skips this step.
 
 ## Multi-root semantics
@@ -39,8 +43,22 @@ VS Code. Supports a multi-root **`paths`** subcommand (v3.39.0+).
   is **additive**: existing extras (DB-managed or UI-added) are kept.
 - `paths rm` is the only way to drop a path — it overwrites `paths` so
   the deletion sticks across re-syncs.
-- `gitmap as <newalias>` only renames `name`. Extras and other user
-  fields are left exactly as set.
+- `gitmap as <newalias>` only renames `name`. Extras, tags, and other
+  user fields are left exactly as set.
+
+## Auto-tag detection (v3.40.0+)
+
+| Marker file / dir                                   | Tag      |
+|-----------------------------------------------------|----------|
+| `.git`                                              | `git`    |
+| `package.json`                                      | `node`   |
+| `go.mod`                                            | `go`     |
+| `pyproject.toml` / `requirements.txt`               | `python` |
+| `Cargo.toml`                                        | `rust`   |
+| `Dockerfile` / `compose.yaml` / `docker-compose.yml`| `docker` |
+
+Detection is shallow (top-level only) and read-only. To skip auto-tagging
+entirely during a bulk scan, use `gitmap scan --no-auto-tags`.
 
 ## Examples
 

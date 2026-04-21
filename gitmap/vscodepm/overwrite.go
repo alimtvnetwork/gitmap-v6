@@ -40,7 +40,7 @@ func OverwritePaths(rootPath, name string, paths []string) error {
 	}
 
 	if !found {
-		entries = append(entries, newEntry(rootPath, name, paths))
+		entries = append(entries, newEntry(rootPath, name, paths, nil))
 	}
 
 	if err := writeEntriesAtomic(path, entries); err != nil {

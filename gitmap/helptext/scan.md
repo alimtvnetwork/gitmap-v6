@@ -21,6 +21,8 @@ s
 | --github-desktop | false | Add repos to GitHub Desktop |
 | --open | false | Open output folder after scan |
 | --quiet | false | Suppress clone help section |
+| --no-vscode-sync | false | Skip syncing into VS Code Project Manager projects.json |
+| --no-auto-tags | false | Skip auto-derived tags (git/node/go/...) when syncing |
 
 ## Prerequisites
 

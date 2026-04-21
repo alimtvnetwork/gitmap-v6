@@ -204,8 +204,10 @@ func pathKey(p string) string {
 	return filepath.Clean(p)
 }
 
-// syncCodeEntry pushes the (rootPath, name, paths) tuple into projects.json.
-// Soft-fails when VS Code or the extension is missing.
+// syncCodeEntry pushes the (rootPath, name, paths, auto-tags) tuple into
+// projects.json. Auto-tags are derived from rootPath's filesystem markers
+// and UNIONed with any user-edited tags. Soft-fails when VS Code or the
+// extension is missing.
 func syncCodeEntry(rootPath, name string, extras []string) {
 	resolved := resolveExtras(extras)
 
@@ -213,6 +215,7 @@ func syncCodeEntry(rootPath, name string, extras []string) {
 		RootPath: rootPath,
 		Name:     name,
 		Paths:    resolved,
+		Tags:     vscodepm.DetectTags(rootPath),
 	}})
 	if err != nil {
 		reportVSCodePMSoftError(err)
@@ -398,10 +401,12 @@ func persistAliasPaths(rootPath, alias string, paths []string) {
 	}
 }
 
-// syncAliasEntry pushes a UNION-style upsert (preserves user-added paths).
+// syncAliasEntry pushes a UNION-style upsert (preserves user-added paths
+// and tags). Auto-derived tags from the rootPath are added on every call.
 func syncAliasEntry(rootPath, name string, paths []string) {
 	if _, err := vscodepm.Sync([]vscodepm.Pair{{
 		RootPath: rootPath, Name: name, Paths: paths,
+		Tags: vscodepm.DetectTags(rootPath),
 	}}); err != nil {
 		reportVSCodePMSoftError(err)
 	}

@@ -14,10 +14,15 @@ import (
 // syncRecordsToVSCodePM upserts every scanned record into the VSCodeProject
 // table and reconciles the alefragnani.project-manager projects.json file.
 //
+// When noAutoTags is false (default), each pair is enriched with auto-detected
+// tags (git/node/go/...) based on the rootPath's top-level files. Tags are
+// UNIONed with whatever the user already set in the VS Code UI — gitmap
+// never silently removes a user-added tag.
+//
 // Soft-fails: when the user-data root or the extension dir is missing, the
 // function reports a one-line note to stdout and returns without error so
 // `gitmap scan` keeps working on machines without VS Code installed.
-func syncRecordsToVSCodePM(records []model.ScanRecord, skip bool) {
+func syncRecordsToVSCodePM(records []model.ScanRecord, skip, noAutoTags bool) {
 	if skip {
 		fmt.Print(constants.MsgVSCodePMSyncSkipped)
 
@@ -36,7 +41,11 @@ func syncRecordsToVSCodePM(records []model.ScanRecord, skip bool) {
 
 	pairs := make([]vscodepm.Pair, 0, len(records))
 	for _, r := range records {
-		pairs = append(pairs, vscodepm.Pair{RootPath: r.AbsolutePath, Name: r.RepoName})
+		pairs = append(pairs, vscodepm.Pair{
+			RootPath: r.AbsolutePath,
+			Name:     r.RepoName,
+			Tags:     autoTagsFor(r.AbsolutePath, noAutoTags),
+		})
 	}
 
 	summary, err := vscodepm.Sync(pairs)
@@ -48,6 +57,16 @@ func syncRecordsToVSCodePM(records []model.ScanRecord, skip bool) {
 
 	fmt.Printf(constants.MsgVSCodePMSyncSummary,
 		summary.Added, summary.Updated, summary.Unchanged, summary.Total)
+}
+
+// autoTagsFor returns the auto-detected tags for rootPath, or nil when
+// auto-tagging has been disabled via --no-auto-tags.
+func autoTagsFor(rootPath string, disabled bool) []string {
+	if disabled {
+		return nil
+	}
+
+	return vscodepm.DetectTags(rootPath)
 }
 
 // upsertVSCodePMRecords pushes every record into the DB. Errors are

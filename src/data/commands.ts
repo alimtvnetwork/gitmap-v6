@@ -63,13 +63,15 @@ export const commands: CommandDef[] = [
       { flag: "--open", description: "Open output folder after scan" },
       { flag: "--quiet", description: "Suppress clone help section" },
       { flag: "--no-vscode-sync", description: "Skip syncing scanned repos into VS Code Project Manager projects.json (default: sync ON)" },
+      { flag: "--no-auto-tags", description: "Skip auto-derived tags (git/node/go/python/rust/docker) when syncing (default: tags ON)" },
     ],
     examples: [
-      { command: "gitmap scan ~/projects", description: "Scan all repos under ~/projects (auto-syncs into VS Code Project Manager)" },
+      { command: "gitmap scan ~/projects", description: "Scan all repos under ~/projects (auto-syncs into VS Code Project Manager + auto-tags)" },
       { command: "gitmap s --output json --mode ssh", description: "JSON output with SSH clone URLs" },
       { command: "gitmap scan C:\\dev --github-desktop --open", description: "Scan, register in GitHub Desktop, open folder" },
       { command: "gitmap s --output csv --output-path ./backup", description: "CSV output to custom directory" },
       { command: "gitmap scan ~/projects --no-vscode-sync", description: "Scan without touching VS Code Project Manager" },
+      { command: "gitmap scan ~/projects --no-auto-tags", description: "Sync without auto-derived language/tooling tags" },
     ],
     seeAlso: [
       { name: "rescan", description: "Re-scan using cached parameters" },
@@ -805,10 +807,10 @@ export const commands: CommandDef[] = [
   },
   {
     category: "navigation",
-    name: "code", description: "Register the current repo (or any path) with the alefragnani.project-manager VS Code extension and open VS Code on it. Supports multi-root extras and a `paths` subcommand (v3.39.0+).",
+    name: "code", description: "Register the current repo (or any path) with the alefragnani.project-manager VS Code extension and open VS Code on it. Supports multi-root extras (v3.39.0+) and auto-derived tags (v3.40.0+).",
     usage: "gitmap code [alias] [path] [extraPath...]\ngitmap code paths add|rm|list <alias> [path]",
     examples: [
-      { command: "gitmap code", description: "Register the git repo root (or CWD) — alias defaults to folder basename" },
+      { command: "gitmap code", description: "Register the git repo root (or CWD) — alias defaults to folder basename, tags auto-detected" },
       { command: "gitmap code backend", description: "Override the alias to 'backend' for the resolved path" },
       { command: "gitmap code docs ~/Documents/spec", description: "Register any path (no git requirement) with alias 'docs'" },
       { command: "gitmap code mono ~/work/main ~/work/main/frontend ~/work/main/backend", description: "Register a multi-root entry: root + variadic extras (additive, never clobbers UI-added paths)" },
