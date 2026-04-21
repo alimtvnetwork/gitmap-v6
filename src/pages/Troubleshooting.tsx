@@ -259,9 +259,35 @@ const issues: Issue[] = [
   },
 ];
 
+const isValidCategoryKey = (v: string): v is Category =>
+  (Object.keys(categoryMeta) as string[]).includes(v);
+
 const Troubleshooting = () => {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category | "all">("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") ?? searchParams.get("q") ?? "";
+  const initialCategoryRaw = searchParams.get("category") ?? "all";
+  const initialCategory: Category | "all" =
+    initialCategoryRaw === "all" || isValidCategoryKey(initialCategoryRaw)
+      ? (initialCategoryRaw as Category | "all")
+      : "all";
+
+  const [search, setSearch] = useState(initialSearch);
+  const [activeCategory, setActiveCategory] = useState<Category | "all">(initialCategory);
+  const scrolledIdRef = useRef<string | null>(null);
+
+  // Sync state -> URL (replace, no history entry per keystroke).
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (search) next.set("search", search);
+    else next.delete("search");
+    next.delete("q");
+    if (activeCategory !== "all") next.set("category", activeCategory);
+    else next.delete("category");
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, activeCategory]);
 
   const filtered = useMemo(() => {
     let rows = issues;
