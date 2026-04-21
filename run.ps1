@@ -644,9 +644,20 @@ function Copy-DocsSite {
     if ((Test-Path $rootPkg) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
         $pkgRaw = Get-Content $rootPkg -Raw
         if ($pkgRaw -match '"build"\s*:') {
-            Write-Info "Auto-building docs (npm run build) at repo root..."
             Push-Location $RepoRoot
             try {
+                $nodeModules = Join-Path $RepoRoot "node_modules"
+                $viteBin = Join-Path $nodeModules ".bin\vite.cmd"
+                if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
+                    Write-Info "Installing docs dependencies (npm install) at repo root..."
+                    npm install --no-audit --no-fund --silent 2>&1 | Out-Null
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Warn "npm install failed - skipping docs build"
+                        Pop-Location
+                        return
+                    }
+                }
+                Write-Info "Auto-building docs (npm run build) at repo root..."
                 npm run build 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
