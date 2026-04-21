@@ -72,8 +72,17 @@ func printGroupGitOps() {
 	fmt.Println(constants.HelpExec)
 	fmt.Println(constants.HelpStatus)
 	fmt.Println(constants.HelpWatch)
+// printGroupGitOps prints the git operations commands.
+func printGroupGitOps() {
+	fmt.Println()
+	fmt.Println(constants.HelpGroupGitOps)
+	fmt.Println(constants.HelpPull)
+	fmt.Println(constants.HelpExec)
+	fmt.Println(constants.HelpStatus)
+	fmt.Println(constants.HelpWatch)
 	fmt.Println(constants.HelpHasAnyUpdates)
 	fmt.Println(constants.HelpLatestBr)
+	fmt.Println(constants.HelpLFSCommon)
 }
 
 // printGroupNavigation prints the navigation commands.

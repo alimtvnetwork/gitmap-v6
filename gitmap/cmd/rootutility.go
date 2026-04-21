@@ -114,6 +114,11 @@ func dispatchUtility(command string) bool {
 
 		return true
 	}
+	if command == constants.CmdLFSCommon || command == constants.CmdLFSCommonAlias {
+		runLFSCommon(os.Args[2:])
+
+		return true
+	}
 
 	return false
 }
