@@ -34,6 +34,15 @@ func RemoteURL(repoPath string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// Branch source labels describe how a repo's branch was determined.
+const (
+	BranchSourceHEAD            = "HEAD"
+	BranchSourceDetached        = "detached"
+	BranchSourceRemoteTracking  = "remote-tracking"
+	BranchSourceDefault         = "default"
+	BranchSourceUnknown         = "unknown"
+)
+
 // CurrentBranch returns the current branch name for a repo.
 func CurrentBranch(repoPath string) (string, error) {
 	out, err := runGit(repoPath,
@@ -43,6 +52,44 @@ func CurrentBranch(repoPath string) (string, error) {
 	}
 
 	return strings.TrimSpace(out), nil
+}
+
+// DetectBranch returns the branch name and a label describing how it was
+// detected. Resolution order:
+//  1. HEAD via `git rev-parse --abbrev-ref HEAD` — labelled "HEAD" when on a
+//     named branch, or "detached" when HEAD points directly at a commit.
+//  2. Remote-tracking branch via `git symbolic-ref refs/remotes/origin/HEAD`
+//     — labelled "remote-tracking".
+//  3. Built-in default branch — labelled "default".
+// If no resolution succeeds the returned source is "unknown".
+func DetectBranch(repoPath string) (branch, source string) {
+	out, err := runGit(repoPath,
+		constants.GitRevParse, constants.GitAbbrevRef, constants.GitHEAD)
+	if err == nil {
+		name := strings.TrimSpace(out)
+		if name == constants.GitHEAD {
+			return name, BranchSourceDetached
+		}
+		if len(name) > 0 {
+			return name, BranchSourceHEAD
+		}
+	}
+
+	out, err = runGit(repoPath,
+		"symbolic-ref", "refs/remotes/origin/HEAD")
+	if err == nil {
+		ref := strings.TrimSpace(out)
+		const prefix = "refs/remotes/origin/"
+		if strings.HasPrefix(ref, prefix) {
+			return strings.TrimPrefix(ref, prefix), BranchSourceRemoteTracking
+		}
+	}
+
+	if len(constants.DefaultBranch) > 0 {
+		return constants.DefaultBranch, BranchSourceDefault
+	}
+
+	return "", BranchSourceUnknown
 }
 
 // Status returns the full live status of a repository.

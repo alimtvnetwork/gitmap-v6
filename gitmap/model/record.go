@@ -11,6 +11,7 @@ type ScanRecord struct {
 	HTTPSUrl         string `json:"httpsUrl"          csv:"httpsUrl"`
 	SSHUrl           string `json:"sshUrl"            csv:"sshUrl"`
 	Branch           string `json:"branch"            csv:"branch"`
+	BranchSource     string `json:"branchSource"      csv:"branchSource"`
 	RelativePath     string `json:"relativePath"      csv:"relativePath"`
 	AbsolutePath     string `json:"absolutePath"      csv:"absolutePath"`
 	CloneInstruction string `json:"cloneInstruction"  csv:"cloneInstruction"`
