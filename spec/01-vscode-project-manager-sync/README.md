@@ -271,12 +271,12 @@ sync projects.json   (no VS Code launch)
 print summary  (added / updated / skipped / total)
 ```
 
-## 11. Out of scope (v1)
+## 11. Out of scope
 
-- Multi-root workspace support via `paths`.
-- Auto-derived tags (`git`, `node`, `go`, language detection).
 - Reverse sync (mutating DB from external `projects.json` edits).
 - Profile assignment (always `""` on insert; preserved on upsert).
+- Custom tag rules beyond the built-in marker set (deferred — would
+  require a per-user config file).
 
 ## 12. See also
 
