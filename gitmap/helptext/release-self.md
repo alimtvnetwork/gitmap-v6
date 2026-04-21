@@ -34,8 +34,12 @@ All flags from `release` are supported. See `gitmap release --help`.
       ✓ Created branch release/v2.45.1
       ✓ Created tag v2.45.1
       ✓ Pushed branch and tag to origin
-      Release v2.45.1 complete.
+      ✓ Auto-committed release metadata
+
+      ── Release v2.45.1 complete ──
+
     ✓ Returned to /home/user/projects/other-repo
+    $
 
 ### Example 2: Auto-fallback when not in a Git repo
 
@@ -50,8 +54,12 @@ All flags from `release` are supported. See `gitmap release --help`.
       ✓ Created branch release/v2.46.0
       ✓ Created tag v2.46.0
       ✓ Pushed branch and tag to origin
-      Release v2.46.0 complete.
+      ✓ Auto-committed release metadata
+
+      ── Release v2.46.0 complete ──
+
     ✓ Returned to /tmp
+    $
 
 ## See Also
 
