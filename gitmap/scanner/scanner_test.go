@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"testing"
 
@@ -168,5 +169,90 @@ func TestScanDirContextNotCancelled(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Fatalf("expected 2 repos, got %d (%+v)", len(got), got)
+	}
+}
+
+// TestScanDirRaceManyReposHighConcurrency is a stress test designed to
+// surface data races in the repo-collection path under `-race`. Run via
+// `go test -race -count=10 ./scanner/...`. The channel-collector design
+// means there is no shared mutation to race on; this test guards against
+// regressions back to a shared-slice + mutex pattern.
+func TestScanDirRaceManyReposHighConcurrency(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	const n = 200
+	for i := 0; i < n; i++ {
+		makeRepo(t, root, filepath.Join("w", string(rune('a'+i%26)), string(rune('a'+(i/26)%26)), "r"))
+	}
+
+	got, err := ScanDirContext(context.Background(), root, nil, MaxScanWorkers)
+	if err != nil {
+		t.Fatalf("ScanDirContext: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatalf("expected some repos, got 0")
+	}
+	seen := make(map[string]bool, len(got))
+	for _, r := range got {
+		if seen[r.AbsolutePath] {
+			t.Errorf("duplicate repo in result: %s", r.AbsolutePath)
+		}
+		seen[r.AbsolutePath] = true
+	}
+}
+
+// TestScanDirRaceCancelMidFlight cancels the context while the walk is
+// still in progress. A racy shutdown would either deadlock (test
+// timeout) or panic on send-to-closed-channel. Under `-race -count=10`
+// this catches improper close ordering.
+func TestScanDirRaceCancelMidFlight(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	for i := 0; i < 50; i++ {
+		makeRepo(t, root, filepath.Join("d", string(rune('a'+i%10)), "x", "y", "z", "r"))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		// Yield a few times so the walk has actually started before
+		// cancellation lands. Avoids time.Sleep per spec.
+		for i := 0; i < 100; i++ {
+			runtime.Gosched()
+		}
+		cancel()
+	}()
+
+	_, err := ScanDirContext(ctx, root, nil, MaxScanWorkers)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestScanDirRaceFirstErrorWins seeds two unreadable subtrees so two
+// workers race to report failures. The CAS-based recordErr must
+// surface exactly one error (not panic, not double-report).
+func TestScanDirRaceFirstErrorWins(t *testing.T) {
+	t.Parallel()
+	if os.Getuid() == 0 {
+		t.Skip("root bypasses chmod; cannot create unreadable dir")
+	}
+	root := t.TempDir()
+	makeRepo(t, root, "ok")
+
+	for _, name := range []string{"locked1", "locked2"} {
+		p := filepath.Join(root, name, "child")
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.Chmod(filepath.Join(root, name), 0o000); err != nil {
+			t.Fatalf("chmod: %v", err)
+		}
+		dir := filepath.Join(root, name)
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	}
+
+	_, err := ScanDirContext(context.Background(), root, nil, 4)
+	if err == nil {
+		t.Fatalf("expected an error from unreadable dirs, got nil")
 	}
 }

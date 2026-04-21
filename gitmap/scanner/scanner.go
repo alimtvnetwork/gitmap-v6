@@ -21,6 +21,21 @@
 //     stop dispatching new directories and drain quickly. The partial
 //     repo list collected so far is returned alongside ctx.Err() so
 //     callers can decide whether to surface results or discard them.
+//
+// Race-safety design (spec/05-coding-guidelines/16-concurrency-patterns.md):
+//   - Repos are NEVER appended from worker goroutines. Each discovery is
+//     sent on a buffered results channel and a single dedicated collector
+//     goroutine owns the result slice. This eliminates the
+//     "slice-append-under-mutex" pattern flagged by the spec.
+//   - Errors use an atomic compare-and-swap on *scanError so the first
+//     failure wins without taking a mutex on the hot path.
+//   - The dispatch counter (`inflight`) is an atomic.Int64. Workers only
+//     touch shared mutable state via channels and atomics — never via
+//     a shared slice or map.
+//   - All loops select on ctx.Done() so cancellation is observed within
+//     one directory of work.
+//
+// Run `go test -race ./scanner/...` to validate.
 package scanner
 
 import (
@@ -29,6 +44,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
@@ -42,6 +58,15 @@ const scanWorkersMax = 16
 // validators) that want to clamp user-provided values into the supported
 // range.
 const MaxScanWorkers = scanWorkersMax
+
+// queueBuffer sizes the directory FIFO. Generous so workers rarely block
+// on enqueue; bounded so a pathological tree can't exhaust memory.
+const queueBuffer = 1024
+
+// resultsBuffer sizes the discovered-repo channel. Repos are extremely
+// cheap to enqueue (two strings) and the collector drains continuously,
+// so a modest buffer absorbs bursts without blocking workers.
+const resultsBuffer = 256
 
 // RepoInfo holds raw data extracted from a discovered Git repo.
 type RepoInfo struct {
@@ -120,77 +145,155 @@ func buildExcludeSet(dirs []string) map[string]bool {
 	return set
 }
 
-// scanState bundles the shared mutable state passed to every worker. It
-// keeps the worker function tiny (well under the per-func line limit) and
-// makes the synchronization rules obvious in one place.
+// scanError boxes an error so it can be stored atomically. We need a
+// pointer wrapper because atomic.Pointer requires a concrete type and
+// `error` is an interface (which is two words and not atomically
+// loadable on all architectures).
+type scanError struct{ err error }
+
+// scanState bundles shared state passed to every worker. Every field
+// is either immutable after construction or accessed exclusively via
+// channels / atomics — there is NO shared slice or map mutated by
+// workers, by design.
 type scanState struct {
 	ctx     context.Context
 	root    string
 	exclude map[string]bool
 
-	queue chan string    // pending directories to walk
-	wg    sync.WaitGroup // tracks outstanding queued items, NOT workers
-
-	mu       sync.Mutex
-	repos    []RepoInfo
-	firstErr error
+	queue    chan string                 // pending directories to walk
+	results  chan RepoInfo               // discovered repos → collector
+	inflight atomic.Int64                // outstanding queued items
+	firstErr atomic.Pointer[scanError]   // first error wins via CAS
 }
 
 // walkParallel runs a fixed-size worker pool that consumes directories
-// from a buffered FIFO and enqueues child directories back. The queue is
-// closed when wg drops to zero — i.e. every dispatched directory has
-// been fully processed and produced no new work — OR when ctx is
-// cancelled and the drain helper has accounted for every outstanding
-// enqueue counter.
+// from a buffered FIFO and enqueues child directories back. Discovered
+// repos are streamed on a results channel to a single collector
+// goroutine that owns the result slice — no shared-slice mutation.
+//
+// Shutdown sequence (race-safe):
+//  1. Workers process queue items; each completed item decrements
+//     `inflight`. A dispatched item that enqueues N children offsets
+//     its own decrement by adding N before doing its decrement.
+//  2. A watcher goroutine waits until `inflight == 0` (work drained)
+//     OR `ctx.Done()` (cancellation), then closes the queue.
+//  3. Workers exit their `for range queue` loop and the worker WG
+//     fires.
+//  4. With all workers gone, the results channel is closed.
+//  5. The collector returns the assembled slice. No goroutine outlives
+//     this function — verifiable with `goleak`.
 func walkParallel(ctx context.Context, root string, exclude map[string]bool, workers int) ([]RepoInfo, error) {
 	st := &scanState{
 		ctx:     ctx,
 		root:    root,
 		exclude: exclude,
-		// Buffer sized generously so workers rarely block on enqueue.
-		// A bounded buffer is fine — if it fills, workers backpressure
-		// each other, which is acceptable; deadlock is impossible
-		// because every send is paired with a wg.Add and the closer
-		// only fires after wg.Done across all sends.
-		queue: make(chan string, 1024),
+		queue:   make(chan string, queueBuffer),
+		results: make(chan RepoInfo, resultsBuffer),
 	}
 
-	st.wg.Add(1)
+	st.inflight.Add(1)
 	st.queue <- root
 
-	var workerWG sync.WaitGroup
+	collected := startCollector(st.results)
+	workerWG := startWorkers(st, workers)
+	startWatcher(st, workerWG)
+
+	repos := <-collected
+
+	if err := ctx.Err(); err != nil {
+		return repos, err
+	}
+	if boxed := st.firstErr.Load(); boxed != nil {
+		return repos, boxed.err
+	}
+
+	return repos, nil
+}
+
+// startCollector spins up the single goroutine that owns the result
+// slice. It returns a channel that delivers exactly one value — the
+// final slice — when `results` is closed.
+//
+// Owning the slice in one goroutine is the safest possible pattern:
+// no mutex, no atomic, no shared write set. The race detector has
+// nothing to complain about because there is genuinely no shared
+// mutation.
+func startCollector(results <-chan RepoInfo) <-chan []RepoInfo {
+	done := make(chan []RepoInfo, 1)
+	go func() {
+		var repos []RepoInfo
+		for r := range results {
+			repos = append(repos, r)
+		}
+		done <- repos
+	}()
+
+	return done
+}
+
+// startWorkers launches the fixed-size worker pool and returns a
+// WaitGroup the caller can wait on to know when every worker has
+// exited (i.e. the queue has been closed and drained).
+func startWorkers(st *scanState, workers int) *sync.WaitGroup {
+	var wg sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		workerWG.Add(1)
+		wg.Add(1)
 		go func() {
-			defer workerWG.Done()
+			defer wg.Done()
 			for dir := range st.queue {
 				st.processDir(dir)
-				st.wg.Done()
+				st.completeOne()
 			}
 		}()
 	}
 
-	// Closer goroutine: once every queued dir has been processed (and
-	// thus had a chance to enqueue its children), close the queue so
-	// workers exit their range loop.
+	return &wg
+}
+
+// startWatcher coordinates orderly shutdown. It owns BOTH closes:
+//   - close(queue)   — once inflight drains OR ctx is cancelled
+//   - close(results) — once every worker has exited
+//
+// Centralizing both closes in one goroutine eliminates the classic
+// "who closes the channel?" race. Workers never close anything.
+func startWatcher(st *scanState, workerWG *sync.WaitGroup) {
 	go func() {
-		st.wg.Wait()
+		st.waitForDrain()
 		close(st.queue)
+		workerWG.Wait()
+		close(st.results)
 	}()
+}
 
-	workerWG.Wait()
-
-	st.mu.Lock()
-	defer st.mu.Unlock()
-
-	// Surface ctx.Err() as the dominant failure mode. If the walk was
-	// cancelled mid-flight, prefer that over any incidental I/O error
-	// the cancellation may have triggered (e.g. a closed handle).
-	if err := ctx.Err(); err != nil {
-		st.recordCancelErrLocked(err)
+// waitForDrain blocks until either every dispatched directory has
+// completed (inflight == 0) or the context is cancelled. Polling is
+// cheap (the scan itself is I/O bound) and avoids needing a separate
+// "all done" channel that would have to be signalled exactly once.
+//
+// We poll on a sync.Cond-style condition via a tiny ticker because
+// `inflight` is touched from many workers and using a channel would
+// require either a mutex or atomic compare-loop in every worker.
+func (st *scanState) waitForDrain() {
+	// Fast path: most scans complete quickly; check immediately.
+	if st.inflight.Load() == 0 {
+		return
 	}
-
-	return st.repos, st.firstErr
+	// Tick frequency is a tradeoff between shutdown latency and CPU.
+	// 5ms is invisible to humans and negligible on a CPU even when
+	// the scan runs for minutes.
+	const tickEvery = 5_000_000 // 5ms in ns; avoids time import churn
+	t := newTicker(tickEvery)
+	defer t.stop()
+	for {
+		select {
+		case <-st.ctx.Done():
+			return
+		case <-t.c:
+			if st.inflight.Load() == 0 {
+				return
+			}
+		}
+	}
 }
 
 // processDir reads one directory and dispatches its child directories
@@ -228,55 +331,64 @@ func (st *scanState) handleSubdir(parent string, entry os.DirEntry) {
 		return
 	}
 	if name == constants.ExtGit {
-		st.recordRepo(parent)
+		st.emitRepo(parent)
 
 		return
 	}
 	st.enqueue(filepath.Join(parent, name))
 }
 
-// enqueue dispatches a directory for processing. When the context has
-// been cancelled, we skip the send entirely — no wg.Add either — so
-// the closer goroutine can fire promptly and unblock workers.
+// enqueue dispatches a directory for processing. Cancellation is
+// checked twice — once before the inflight increment and once via
+// the select — because a cancellation between Load() and Add() would
+// otherwise leak a counter that the watcher will never see go to zero
+// (the queue close is what unblocks workers, but the watcher waits on
+// inflight first).
 func (st *scanState) enqueue(path string) {
 	if st.ctx.Err() != nil {
 		return
 	}
-	st.wg.Add(1)
-	st.queue <- path
+	st.inflight.Add(1)
+	select {
+	case st.queue <- path:
+	case <-st.ctx.Done():
+		// Watcher will see ctx.Done() and close the queue; we must
+		// undo the inflight bump so it can reach zero.
+		st.inflight.Add(-1)
+	}
 }
 
-// recordRepo appends a discovered repo (parent of the .git dir) under
-// the shared mutex. Repo recording is the only mutex contention point.
-func (st *scanState) recordRepo(repoPath string) {
+// completeOne is the paired decrement for the initial Add(1) that put
+// a directory on the queue. Called exactly once per dequeued item by
+// the worker that processed it.
+func (st *scanState) completeOne() {
+	st.inflight.Add(-1)
+}
+
+// emitRepo streams a discovered repo to the collector. We take care to
+// honor cancellation here because if the collector has already been
+// asked to drain (it hasn't — only the watcher closes results — but in
+// principle), or if the buffer is full and nobody is reading, we must
+// not block forever.
+func (st *scanState) emitRepo(repoPath string) {
 	rel, err := filepath.Rel(st.root, repoPath)
 	if err != nil {
 		st.recordErr(err)
 
 		return
 	}
-	st.mu.Lock()
-	st.repos = append(st.repos, RepoInfo{
-		AbsolutePath: repoPath,
-		RelativePath: rel,
-	})
-	st.mu.Unlock()
-}
-
-// recordErr stores the FIRST error to occur. Later errors are dropped to
-// keep the public signature single-error and avoid a noisy multi-error.
-func (st *scanState) recordErr(err error) {
-	st.mu.Lock()
-	if st.firstErr == nil {
-		st.firstErr = err
+	info := RepoInfo{AbsolutePath: repoPath, RelativePath: rel}
+	select {
+	case st.results <- info:
+	case <-st.ctx.Done():
+		return
 	}
-	st.mu.Unlock()
 }
 
-// recordCancelErrLocked replaces firstErr with the cancellation cause.
-// Caller MUST hold st.mu. We intentionally overwrite any prior I/O
-// error because cancellation is the user-visible reason the scan
-// stopped — the I/O error is almost certainly a side effect.
-func (st *scanState) recordCancelErrLocked(err error) {
-	st.firstErr = err
+// recordErr stores the FIRST error to occur using a CAS on the atomic
+// pointer. Later errors are dropped to keep the public signature
+// single-error and avoid a noisy multi-error. No mutex needed.
+func (st *scanState) recordErr(err error) {
+	boxed := &scanError{err: err}
+	st.firstErr.CompareAndSwap(nil, boxed)
 }
