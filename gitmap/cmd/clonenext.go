@@ -86,6 +86,13 @@ func runCloneNext(args []string) {
 	flattenedFolder := parsed.BaseName
 	targetPath := filepath.Join(parentDir, flattenedFolder)
 
+	// Stage 1/3 banner — only emitted in -f mode where the multi-stage
+	// nature actually helps. Default mode keeps the legacy terse output
+	// so we don't break existing screenshots / scripts that grep it.
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStagePrepare, currentFolder, flattenedFolder)
+	}
+
 	// Force-flatten pre-step: if the user passed -f / --force AND their
 	// shell cwd is exactly the target folder (the "already flattened"
 	// case from a previous cn run), Windows holds an open handle on
@@ -160,6 +167,9 @@ func runCloneNext(args []string) {
 		}
 	}
 
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStageClone, targetName)
+	}
 	fmt.Printf(constants.MsgFlattenCloning, targetName, flattenedFolder)
 	cloneResult := runGitClone(targetURL, targetPath)
 	if !cloneResult {
@@ -167,6 +177,10 @@ func runCloneNext(args []string) {
 		os.Exit(1)
 	}
 	fmt.Printf(constants.MsgFlattenDone, targetName, flattenedFolder)
+
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStageFinalize)
+	}
 
 	// Record version history in DB.
 	recordVersionHistory(targetPath, parsed.CurrentVersion, targetVersion, flattenedFolder)
@@ -176,8 +190,12 @@ func runCloneNext(args []string) {
 	}
 
 	// Handle removal of the old versioned folder (only if different from flattened path).
+	// With -f / --force the user has already opted into a flat layout, so we
+	// auto-skip the "Remove current folder?" prompt and the lock-detector loop
+	// that follows it. Without -f, behavior is unchanged.
 	if currentFolder != flattenedFolder {
-		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, cnFlags.Keep)
+		keep := cnFlags.Keep || cnFlags.Force
+		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, keep)
 	}
 
 	// Set GITMAP_SHELL_HANDOFF for the shell wrapper to cd into the new folder.
@@ -185,6 +203,10 @@ func runCloneNext(args []string) {
 
 	// Open in VS Code if available.
 	openInVSCode(targetPath)
+
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNDone, flattenedFolder)
+	}
 }
 
 // extractRepoName extracts the repository name from a remote URL.

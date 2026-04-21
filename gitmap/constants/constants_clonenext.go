@@ -16,7 +16,14 @@ const (
 	// trick that releases the Windows file lock on the cwd. Telling the
 	// user "I'm leaving X" up front keeps the subsequent removal log
 	// from looking like an unrelated jump.
-	MsgForceReleasing = "  → Force-flatten: leaving %s to release lock...\n"
+	MsgForceReleasing = "  → Stepping out of %s to release the file lock\n"
+	// Stage-banner messages emitted by `cn` to group the output into
+	// three clear phases (PREPARE → CLONE → FINALIZE). Plain ASCII rule
+	// glyphs so PowerShell renders them identically to bash.
+	MsgCNStagePrepare  = "\n  ── 1/3  Preparing flatten (%s → %s) ──\n"
+	MsgCNStageClone    = "\n  ── 2/3  Cloning %s ──\n"
+	MsgCNStageFinalize = "\n  ── 3/3  Finalizing ──\n"
+	MsgCNDone          = "\n  ── ✓ Done — now in %s ──\n\n"
 )
 
 // Clone-next error and warning messages.
