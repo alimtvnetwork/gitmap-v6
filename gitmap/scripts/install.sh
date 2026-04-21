@@ -562,9 +562,17 @@ pwsh_profile_path() {
 # add_path_to_profile writes a marker-block snippet (per
 # spec/04-generic-cli/21-post-install-shell-activation) to a single
 # profile file. Idempotent: rewrites the existing block if present.
+# Third arg is the snippet shell flavour: "bash" | "fish" | "pwsh".
+# (Legacy callers passed "false"/"true" — both are coerced to bash/fish.)
 # Returns 0 if written, 1 if no-op.
 add_path_to_profile() {
-    local dir="$1" profile_file="$2" is_fish="$3"
+    local dir="$1" profile_file="$2" shell_kind="$3"
+
+    # Back-compat coercion for old boolean callers.
+    case "${shell_kind}" in
+        true)  shell_kind="fish" ;;
+        false|"") shell_kind="bash" ;;
+    esac
 
     local marker_open="# gitmap shell wrapper v2 - managed by gitmap installer. Do not edit manually."
     local marker_close="# gitmap shell wrapper v2 end"
@@ -574,8 +582,6 @@ add_path_to_profile() {
     # if the binary isn't on PATH yet (called before install_binary
     # completed).
     local snippet=""
-    local snippet_shell="bash"
-    [ "${is_fish}" = true ] && snippet_shell="fish"
     local gitmap_bin=""
     if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
         gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
@@ -587,20 +593,10 @@ add_path_to_profile() {
     fi
     if [ -n "${gitmap_bin}" ]; then
         snippet="$("${gitmap_bin}" setup print-path-snippet \
-            --shell "${snippet_shell}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
+            --shell "${shell_kind}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
     fi
     if [ -z "${snippet}" ]; then
-        if [ "${is_fish}" = true ]; then
-            snippet="${marker_open}
-set -gx GITMAP_WRAPPER 1
-fish_add_path ${dir}
-${marker_close}"
-        else
-            snippet="${marker_open}
-export GITMAP_WRAPPER=1
-case \":\${PATH}:\" in *\":${dir}:\"*) ;; *) export PATH=\"\$PATH:${dir}\" ;; esac
-${marker_close}"
-        fi
+        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
     fi
 
     mkdir -p "$(dirname "${profile_file}")"
@@ -619,6 +615,24 @@ ${marker_close}"
 
     printf '\n%s\n' "${snippet}" >> "${profile_file}"
     return 0
+}
+
+# fallback_snippet renders the marker-block snippet body when the
+# freshly-installed gitmap binary is unavailable to do it for us.
+# Kept tiny and shell-specific so the per-shell flavour stays explicit.
+fallback_snippet() {
+    local kind="$1" dir="$2" open="$3" close="$4"
+    case "${kind}" in
+        fish)
+            printf '%s\nset -gx GITMAP_WRAPPER 1\nfish_add_path %s\n%s' "${open}" "${dir}" "${close}"
+            ;;
+        pwsh)
+            printf '%s\n$env:GITMAP_WRAPPER = "1"\nif (-not ($env:PATH -split '"'"':'"'"' | Where-Object { $_ -eq '"'"'%s'"'"' })) { $env:PATH = "$env:PATH:%s" }\n%s' "${open}" "${dir}" "${dir}" "${close}"
+            ;;
+        *)
+            printf '%s\nexport GITMAP_WRAPPER=1\ncase ":${PATH}:" in *":%s:"*) ;; *) export PATH="$PATH:%s" ;; esac\n%s' "${open}" "${dir}" "${dir}" "${close}"
+            ;;
+    esac
 }
 
 add_to_path() {
