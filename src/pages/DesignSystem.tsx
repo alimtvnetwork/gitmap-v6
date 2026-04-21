@@ -2,6 +2,7 @@ import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const colorTokens = [
   { token: "--background", light: "220 20% 97%", dark: "220 25% 6%", usage: "Page background" },
