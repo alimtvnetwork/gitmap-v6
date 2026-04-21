@@ -115,6 +115,55 @@ function Write-ReportError {
     }
 }
 
+# -- Repo-detect debug -----------------------------------------
+# Emits structured diagnostics describing why docs auto-build was skipped
+# or executed. Active when -DebugRepoDetect is passed OR
+# $env:GITMAP_DEBUG_REPO_DETECT is set (typically by `gitmap update
+# --debug-repo-detect`). Output is also mirrored to the report file when
+# --report-errors json is active, with stage="repo-detect" and level=info.
+function Test-DebugRepoDetect {
+    if ($script:DebugRepoDetect) { return $true }
+    return ($env:GITMAP_DEBUG_REPO_DETECT -eq "1")
+}
+
+function Write-RepoDetect {
+    param(
+        [string]$Check,
+        [string]$Result,
+        [string]$Detail = ""
+    )
+    if (-not (Test-DebugRepoDetect)) { return }
+    Write-Host "  [DETECT] " -ForegroundColor DarkCyan -NoNewline
+    Write-Host ("{0,-28} = " -f $Check) -ForegroundColor Cyan -NoNewline
+    Write-Host $Result -ForegroundColor White -NoNewline
+    if ($Detail.Length -gt 0) {
+        Write-Host "  ($Detail)" -ForegroundColor DarkGray
+    } else {
+        Write-Host ""
+    }
+    # Mirror to JSONL report file when active.
+    Write-ReportError -Stage "repo-detect" -Command $Check -ExitCode 0 `
+        -Message $Result -Paths @{ detail = $Detail; level = "info" }
+}
+
+function Write-RepoDetectSnippet {
+    param([string]$Title, [string]$Path, [int]$MaxLines = 6)
+    if (-not (Test-DebugRepoDetect)) { return }
+    Write-Host "  [DETECT] $Title :" -ForegroundColor Cyan
+    if (-not (Test-Path $Path)) {
+        Write-Host "    (file not found: $Path)" -ForegroundColor DarkGray
+        return
+    }
+    try {
+        $lines = Get-Content -Path $Path -TotalCount $MaxLines -ErrorAction Stop
+        foreach ($l in $lines) {
+            Write-Host "    $l" -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host "    (could not read: $_)" -ForegroundColor DarkGray
+    }
+}
+
 # -- Banner ----------------------------------------------------
 function Show-Banner {
     Write-Host ""
