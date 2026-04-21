@@ -676,6 +676,15 @@ resolve_path_snippet() {
 # is a reserved gawk builtin and `close=...` triggers a fatal error.
 # Diff uses `diff -q` (POSIX, ubiquitous) instead of `cmp` because some
 # minimal containers omit cmp from the busybox build.
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+#
+# NOTE: awk vars are named open_marker / close_marker because `close`
+# is a reserved gawk builtin and `close=...` triggers a fatal error.
+# Comparison uses files_equal (pure-bash byte read) so we don't depend
+# on `cmp` or `diff` — both are missing in some minimal containers.
 rewrite_marker_block() {
     local profile_file="$1" open="$2" close="$3" snippet="$4"
     local tmp
@@ -685,7 +694,7 @@ rewrite_marker_block() {
         skip && $0 == close_marker { skip = 0; next }
         !skip { print }
     ' "${profile_file}" > "${tmp}"
-    if diff -q "${tmp}" "${profile_file}" >/dev/null 2>&1; then
+    if files_equal "${tmp}" "${profile_file}"; then
         rm -f "${tmp}"
 
         return 1 # unchanged
@@ -693,6 +702,22 @@ rewrite_marker_block() {
     mv "${tmp}" "${profile_file}"
 
     return 2 # updated
+}
+
+# files_equal returns 0 iff $1 and $2 have identical bytes. Pure bash
+# (no cmp/diff dependency). Compares size first as a fast path.
+files_equal() {
+    local a="$1" b="$2"
+    local size_a size_b
+    size_a=$(wc -c < "${a}" 2>/dev/null || echo -1)
+    size_b=$(wc -c < "${b}" 2>/dev/null || echo -1)
+    if [ "${size_a}" != "${size_b}" ]; then
+        return 1
+    fi
+    local hash_a hash_b
+    hash_a=$(sha1sum "${a}" 2>/dev/null | awk '{print $1}')
+    hash_b=$(sha1sum "${b}" 2>/dev/null | awk '{print $1}')
+    [ -n "${hash_a}" ] && [ "${hash_a}" = "${hash_b}" ]
 }
 
 # fallback_snippet renders the marker-block snippet body when the
