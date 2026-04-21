@@ -53,6 +53,8 @@ import DesktopSyncSpecPage from "./pages/DesktopSyncSpec";
 import GitHubDesktopSpecPage from "./pages/GitHubDesktopSpec";
 import ScanGdSpecPage from "./pages/ScanGdSpec";
 import CloneMultiSpecPage from "./pages/CloneMultiSpec";
+import ScanCommandPage from "./pages/ScanCommand";
+import CloneCommandPage from "./pages/CloneCommand";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +114,8 @@ const App = () => (
           <Route path="/github-desktop" element={<GitHubDesktopSpecPage />} />
           <Route path="/scan-gd" element={<ScanGdSpecPage />} />
           <Route path="/clone-multi" element={<CloneMultiSpecPage />} />
+          <Route path="/scan-command" element={<ScanCommandPage />} />
+          <Route path="/clone-command" element={<CloneCommandPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
