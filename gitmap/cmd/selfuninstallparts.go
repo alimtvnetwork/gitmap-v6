@@ -287,6 +287,9 @@ func isMarkerOpen(line string) bool {
 }
 
 // defaultProfileForOS picks the conventional rc file for the current OS.
+// Kept for back-compat with older callers; new code should prefer
+// resolveProfilesForShellMode which returns the full deterministic list
+// for a --shell-mode value.
 func defaultProfileForOS() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -297,4 +300,116 @@ func defaultProfileForOS() string {
 	}
 
 	return filepath.Join(home, ".bashrc")
+}
+
+// resolveProfilesForShellMode returns the deterministic list of profile
+// files self-uninstall should strip the PATH snippet from for the given
+// --shell-mode value. Mirrors install.sh's should_write_profile gating
+// so uninstall touches exactly the same files self-install touched.
+//
+// Behavior:
+//   - "auto" / "both": every known profile across every family (safest
+//     for full removal — clears any snippet self-install may have left).
+//   - singleton ("zsh"|"bash"|"pwsh"|"fish"): only that family's files.
+//   - combo ("zsh+pwsh", etc.): strict union of the listed families;
+//     skips ~/.profile and any unlisted family. Same contract as
+//     self-install combos.
+//
+// Output is de-duplicated and order-stable so the printed target list
+// matches what executeSelfUninstall actually touches.
+func resolveProfilesForShellMode(mode string) []string {
+	families := shellModeFamilies(mode)
+	seen := map[string]bool{}
+	var out []string
+	for _, fam := range families {
+		for _, p := range profilesForFamily(fam) {
+			if len(p) == 0 || seen[p] {
+				continue
+			}
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+
+	return out
+}
+
+// shellModeFamilies expands a --shell-mode value into the concrete shell
+// families it covers. `auto` and `both` expand to every supported family;
+// singletons return themselves; combos split on ShellModeComboSep.
+func shellModeFamilies(mode string) []string {
+	allFamilies := []string{
+		constants.ShellModeZsh,
+		constants.ShellModeBash,
+		constants.ShellModePwsh,
+		constants.ShellModeFish,
+	}
+	if mode == constants.ShellModeAuto || mode == constants.ShellModeBoth || len(mode) == 0 {
+		return allFamilies
+	}
+	if strings.Contains(mode, constants.ShellModeComboSep) {
+		return strings.Split(mode, constants.ShellModeComboSep)
+	}
+
+	return []string{mode}
+}
+
+// profilesForFamily returns the conventional profile files for one
+// shell family on the current OS. Returns nil for unknown families
+// (caller dedups, so this is safe).
+func profilesForFamily(family string) []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	if isWindows() {
+		return windowsProfilesForFamily(home, family)
+	}
+
+	return unixProfilesForFamily(home, family)
+}
+
+// unixProfilesForFamily lists the rc files for one shell family on Unix.
+// pwsh covers both the legacy and Core profile names under
+// ~/.config/powershell to mirror allProfilePaths().
+func unixProfilesForFamily(home, family string) []string {
+	switch family {
+	case constants.ShellModeZsh:
+		return []string{
+			filepath.Join(home, ".zshrc"),
+			filepath.Join(home, ".zprofile"),
+		}
+	case constants.ShellModeBash:
+		return []string{
+			filepath.Join(home, ".bashrc"),
+			filepath.Join(home, ".bash_profile"),
+		}
+	case constants.ShellModePwsh:
+		return []string{
+			filepath.Join(home, ".config", "powershell", "profile.ps1"),
+			filepath.Join(home, ".config", "powershell", "Microsoft.PowerShell_profile.ps1"),
+		}
+	case constants.ShellModeFish:
+		return []string{filepath.Join(home, ".config", "fish", "config.fish")}
+	}
+
+	return nil
+}
+
+// windowsProfilesForFamily lists the rc files for one shell family on
+// Windows. Only pwsh is meaningful on Windows; other families resolve
+// to nil so a Linux-style `--shell-mode zsh+pwsh` invocation on Windows
+// still cleans the pwsh profiles without erroring.
+func windowsProfilesForFamily(home, family string) []string {
+	if family != constants.ShellModePwsh {
+		return nil
+	}
+	docs := filepath.Join(home, "Documents")
+
+	return []string{
+		filepath.Join(docs, "PowerShell", "profile.ps1"),
+		filepath.Join(docs, "PowerShell", "Microsoft.PowerShell_profile.ps1"),
+		filepath.Join(docs, "WindowsPowerShell", "profile.ps1"),
+		filepath.Join(docs, "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1"),
+	}
 }
