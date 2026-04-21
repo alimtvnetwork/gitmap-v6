@@ -12,6 +12,7 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/config"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/desktop"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/formatter"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/mapper"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/model"
@@ -60,7 +61,7 @@ func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
 	// scan returns we tear it down so downstream steps (DB upsert,
 	// project detection, etc.) keep using their normal exit semantics.
 	ctx, cancel := newCancellableContext()
-	repos, err := scanner.ScanDirContext(ctx, absDir, cfg.ExcludeDirs, workers)
+	repos, err := scanner.ScanDirContext(ctx, absDir, cfg.ExcludeDirs, f.Workers)
 	cancel()
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -75,20 +76,25 @@ func executeScan(f ScanFlags, cfg model.Config, cache model.ScanCache) {
 	records := mapper.BuildRecords(repos, cfg.DefaultMode, cfg.Notes)
 	outputDir := resolveOutputDir(cfg.OutputDir, absDir)
 	fmt.Printf(constants.MsgSectionArtifacts, outputDir)
-	writeAllOutputs(records, outputDir, outFile, quiet)
+	writeAllOutputs(records, outputDir, f.OutFile, f.Quiet)
+	// Branch-source debug section is opt-in via --branch-source-debug.
+	// Rendered AFTER the standard output so default scans stay clean.
+	if f.BranchSourceDebug {
+		formatter.BranchSourceDebug(os.Stdout, records)
+	}
 	saveScanCache(outputDir, cache)
 	fmt.Print(constants.MsgSectionDatabase)
 	upsertToDB(records, outputDir)
-	tagReposWithScanFolder(absDir, records, quiet)
+	tagReposWithScanFolder(absDir, records, f.Quiet)
 	records = alignRecordsWithDB(records, outputDir)
 	fmt.Print(constants.MsgSectionProjects)
 	detected := detectAllProjects(records)
 	writeProjectJSONFiles(detected, outputDir)
 	upsertProjectsToDB(detected, records, outputDir)
 	importReleases(absDir, outputDir)
-	addToDesktop(records, ghDesktop)
-	syncRecordsToVSCodePM(records, noVSCodeSync, noAutoTags)
-	openOutputFolder(outputDir, openFolder)
+	addToDesktop(records, f.GHDesktop)
+	syncRecordsToVSCodePM(records, f.NoVSCodeSync, f.NoAutoTags)
+	openOutputFolder(outputDir, f.OpenFolder)
 	fmt.Print(constants.MsgSectionDone)
 
 	// Mark scan task as completed after all steps succeed.
