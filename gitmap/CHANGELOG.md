@@ -1,5 +1,95 @@
 # Changelog
 
+## v3.48.0 — (2026-04-21) — `gitmap self-install --shell-mode` with strict `zsh+pwsh` combos
+
+### Added
+
+- **`--shell-mode` flag on `gitmap self-install`** — the canonical way to
+  pick which shell-profile family (or families) receive the gitmap PATH
+  snippet. Replaces the previous `--profile` / `--dual-shell` flags as
+  the documented entry point; both old names still work as hidden
+  aliases so existing scripts and CI keep running unchanged.
+
+  | Value                  | Behavior                                                                                  |
+  |------------------------|-------------------------------------------------------------------------------------------|
+  | `auto` (default)       | Detect via `$SHELL` + `detect_active_pwsh` and write to the matching profile only.        |
+  | `both`                 | Write to every supported profile gitmap can locate.                                       |
+  | `zsh` / `bash` / `pwsh` / `fish` | Singleton — write only the named family's profile, skip everything else.        |
+  | Combo (e.g. `zsh+pwsh`) | **Strict union** of the listed families; everything else (incl. `~/.profile`) is skipped. |
+
+- **Strict `+`-joined combos** — any `+`-joined combination of the four
+  concrete singletons (`zsh`, `bash`, `pwsh`, `fish`) is now a valid
+  `--shell-mode` value: `zsh+pwsh`, `bash+fish`, `zsh+bash+pwsh`, etc.
+  Combos differ from `both` in that they are deterministic and exclusive
+  — only the listed shells are written, so `--shell-mode zsh+pwsh` from
+  inside `pwsh` on macOS guarantees the zsh profile is also touched, and
+  guarantees that bash/fish are NOT.
+
+- **Deterministic pwsh propagation** — when the resolved mode includes
+  `pwsh` (as a singleton or anywhere inside a combo), `selfinstall`
+  exports `GITMAP_DUAL_SHELL=1` to `install.sh`. This is a
+  belt-and-suspenders signal alongside the explicit `--shell-mode`
+  argument so `detect_active_pwsh` inside the bash installer fires from
+  either path.
+
+### Changed
+
+- `--profile` and `--dual-shell` are now hidden aliases for
+  `--shell-mode`. Precedence when more than one is passed:
+  `--shell-mode` > `--profile` > `--dual-shell`. They all collapse onto
+  a single resolved `opts.ShellMode` value before any write logic runs,
+  so downstream code only ever sees one source of truth.
+- `selfInstallOpts.Profile` is renamed to `selfInstallOpts.ShellMode`.
+  Internal-only struct field; no public API impact.
+- The bash `should_write_profile` helper in `install.sh` now gates on
+  the resolved `${PROFILE_MODE}` against `auto`, `both`, the singleton
+  family, OR a `+`-bracketed substring match for combo membership.
+
+### Validation
+
+- Added Go-side `validateShellMode` and bash-side `validate_shell_mode`.
+  Both reject:
+  - unknown singletons (`--shell-mode tcsh`),
+  - meta values inside combos (`auto+zsh`, `both+pwsh`),
+  - duplicate tokens (`zsh+zsh`, `pwsh+bash+pwsh`),
+  - empty / single-token combos (`zsh+`, `+pwsh`).
+  Failures exit 1 with a message naming the bad value and listing
+  accepted singletons + the combo syntax — bad CLI input is treated as
+  unrecoverable.
+
+### Files
+
+- `gitmap/cmd/selfinstall.go` — `opts.Profile` → `opts.ShellMode`,
+  `resolveShellMode` collapser, `validateShellMode` +
+  `isValidComboShellMode` + `isConcreteShellFamily`,
+  `shellModeRequiresPwsh` for the `GITMAP_DUAL_SHELL` env-export
+  decision.
+- `gitmap/cmd/releaseargs.go` — `--shell-mode` registered as a
+  value-consuming flag in `valueFlags` so it survives
+  `reorderFlagsBeforeArgs`.
+- `gitmap/constants/constants_selfinstall.go` — new
+  `ShellMode{Auto,Both,Zsh,Bash,Pwsh,Fish}` constants,
+  `ShellModeComboSep`, `SelfInstallShellModes`,
+  `FlagSelfShellMode`, `FlagDescSelfShellMode`,
+  `ErrSelfInstallShellModeInvalid`. Back-compat `ProfileMode*` aliases
+  are kept as identical-value identifiers so existing references keep
+  compiling.
+- `gitmap/scripts/install.sh` — argument parser handles
+  `--shell-mode <value>`, `should_write_profile` updated for combo
+  gating, `validate_shell_mode` rejects bad combos, help text
+  rewritten with singleton/combo tables.
+- `gitmap/helptext/self-install.md` — singleton + combo tables, usage
+  examples, `--profile` / `--dual-shell` documented as hidden aliases.
+
+### Compatibility
+
+- All existing `--profile <value>` and `--dual-shell` invocations
+  continue to behave identically. The collapser ensures they map onto
+  the same code path as the new `--shell-mode <value>` form.
+- `auto` remains the default — invocations with no shell-mode flag at
+  all are byte-for-byte unchanged from v3.47.x.
+- No DB schema, no on-disk artifact, no PATH-snippet format change.
+
 ## v3.40.0 — (2026-04-21) — Auto-derived tags for VS Code Project Manager sync
 
 ### Added
