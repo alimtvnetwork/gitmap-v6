@@ -179,8 +179,7 @@ function Resolve-RequestedVersion([string]$requested) {
         exit $EXIT_VERSION_MISSING
     }
 
-    $isInteractive = -not $Quiet -and [Environment]::UserInteractive -and ([Console]::IsInputRedirected -eq $false)
-    if (-not $isInteractive) {
+    if (-not (Test-Interactive)) {
         Write-Err2 "Non-interactive run; refusing to substitute. Set -AllowFallback to opt in."
         exit $EXIT_VERSION_MISSING
     }
@@ -192,13 +191,15 @@ function Resolve-RequestedVersion([string]$requested) {
     }
 
     Write-Host ""
+    Write-Host "  Requested: $requested (not found)" -ForegroundColor Yellow
     Write-Host "  Most recent published releases:" -ForegroundColor Yellow
     for ($i = 0; $i -lt $recent.Count; $i++) {
         Write-Host ("    [{0}] {1}" -f ($i + 1), $recent[$i])
     }
     Write-Host "    [N] Quit (default)"
-    $reply = Read-Host "  Pick a number to install instead, or N to quit"
-    if ([string]::IsNullOrWhiteSpace($reply) -or $reply -match '^[Nn]') {
+
+    $reply = Read-PromptSafe "  Pick a number to install instead, or N to quit"
+    if ($null -eq $reply -or [string]::IsNullOrWhiteSpace($reply) -or $reply -match '^[Nn]') {
         exit $EXIT_VERSION_MISSING
     }
     $idx = 0
@@ -209,6 +210,39 @@ function Resolve-RequestedVersion([string]$requested) {
     $chosen = $recent[$idx - 1]
     Write-Warn2 "User selected $chosen as substitute for $requested"
     return $chosen
+}
+
+# Test-Interactive returns $true only when we can safely show a prompt and
+# read from a real keyboard. The combination matters because each predicate
+# alone is wrong in at least one common shell:
+#   - `iwr ... | iex` runs with $Host.Name = 'ConsoleHost' but stdin is the
+#     piped scriptblock, so Read-Host hangs forever.
+#   - CI runners (GitHub Actions, etc.) report UserInteractive=$false but
+#     still have a console; honour the $env:CI hint as the override.
+function Test-Interactive() {
+    if ($Quiet) { return $false }
+    if ($env:CI -eq 'true' -or $env:CI -eq '1') { return $false }
+    if (-not [Environment]::UserInteractive) { return $false }
+    try {
+        if ([Console]::IsInputRedirected) { return $false }
+    } catch {
+        # Older PowerShell hosts lack IsInputRedirected — fall back to a
+        # cautious "no" so we never hang.
+        return $false
+    }
+    return $true
+}
+
+# Read-PromptSafe wraps Read-Host in a try/catch so a closed stdin (which
+# can happen when the script is piped from iwr | iex) returns $null instead
+# of throwing an unhelpful pipeline error.
+function Read-PromptSafe([string]$prompt) {
+    try {
+        return Read-Host $prompt
+    } catch {
+        Write-Err2 "Could not read from stdin: $($_.Exception.Message)"
+        return $null
+    }
 }
 
 # ---------------------------------------------------------------------------
