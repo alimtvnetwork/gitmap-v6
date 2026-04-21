@@ -539,14 +539,40 @@ install_docs_site() {
 
 # ── Add to PATH ────────────────────────────────────────────────────
 
-# add_path_to_profile writes an export line to a single profile file (idempotent).
-# Returns 0 if written, 1 if already present.
+# detect_active_pwsh reports whether the user is running this installer
+# from inside a PowerShell (pwsh) session. macOS / Linux pwsh always sets
+# PSModulePath, even when the script is invoked through a `bash -c` subshell.
+# Spec: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
+detect_active_pwsh() {
+    if [ -n "${PSModulePath:-}" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# pwsh_profile_path echoes the per-user pwsh profile path on Unix
+# (Linux / macOS), creating the parent directory if needed.
+pwsh_profile_path() {
+    local dir="${HOME}/.config/powershell"
+    mkdir -p "${dir}" 2>/dev/null || true
+    echo "${dir}/Microsoft.PowerShell_profile.ps1"
+}
+
 # add_path_to_profile writes a marker-block snippet (per
 # spec/04-generic-cli/21-post-install-shell-activation) to a single
 # profile file. Idempotent: rewrites the existing block if present.
+# Third arg is the snippet shell flavour: "bash" | "fish" | "pwsh".
+# (Legacy callers passed "false"/"true" — both are coerced to bash/fish.)
 # Returns 0 if written, 1 if no-op.
 add_path_to_profile() {
-    local dir="$1" profile_file="$2" is_fish="$3"
+    local dir="$1" profile_file="$2" shell_kind="$3"
+
+    # Back-compat coercion for old boolean callers.
+    case "${shell_kind}" in
+        true)  shell_kind="fish" ;;
+        false|"") shell_kind="bash" ;;
+    esac
 
     local marker_open="# gitmap shell wrapper v2 - managed by gitmap installer. Do not edit manually."
     local marker_close="# gitmap shell wrapper v2 end"
@@ -556,8 +582,6 @@ add_path_to_profile() {
     # if the binary isn't on PATH yet (called before install_binary
     # completed).
     local snippet=""
-    local snippet_shell="bash"
-    [ "${is_fish}" = true ] && snippet_shell="fish"
     local gitmap_bin=""
     if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
         gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
@@ -569,20 +593,10 @@ add_path_to_profile() {
     fi
     if [ -n "${gitmap_bin}" ]; then
         snippet="$("${gitmap_bin}" setup print-path-snippet \
-            --shell "${snippet_shell}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
+            --shell "${shell_kind}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
     fi
     if [ -z "${snippet}" ]; then
-        if [ "${is_fish}" = true ]; then
-            snippet="${marker_open}
-set -gx GITMAP_WRAPPER 1
-fish_add_path ${dir}
-${marker_close}"
-        else
-            snippet="${marker_open}
-export GITMAP_WRAPPER=1
-case \":\${PATH}:\" in *\":${dir}:\"*) ;; *) export PATH=\"\$PATH:${dir}\" ;; esac
-${marker_close}"
-        fi
+        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
     fi
 
     mkdir -p "$(dirname "${profile_file}")"
@@ -601,6 +615,24 @@ ${marker_close}"
 
     printf '\n%s\n' "${snippet}" >> "${profile_file}"
     return 0
+}
+
+# fallback_snippet renders the marker-block snippet body when the
+# freshly-installed gitmap binary is unavailable to do it for us.
+# Kept tiny and shell-specific so the per-shell flavour stays explicit.
+fallback_snippet() {
+    local kind="$1" dir="$2" open="$3" close="$4"
+    case "${kind}" in
+        fish)
+            printf '%s\nset -gx GITMAP_WRAPPER 1\nfish_add_path %s\n%s' "${open}" "${dir}" "${close}"
+            ;;
+        pwsh)
+            printf '%s\n$env:GITMAP_WRAPPER = "1"\nif (-not ($env:PATH -split '"'"':'"'"' | Where-Object { $_ -eq '"'"'%s'"'"' })) { $env:PATH = "$env:PATH:%s" }\n%s' "${open}" "${dir}" "${dir}" "${close}"
+            ;;
+        *)
+            printf '%s\nexport GITMAP_WRAPPER=1\ncase ":${PATH}:" in *":%s:"*) ;; *) export PATH="$PATH:%s" ;; esac\n%s' "${open}" "${dir}" "${dir}" "${close}"
+            ;;
+    esac
 }
 
 add_to_path() {
@@ -667,11 +699,36 @@ add_to_path() {
     # fish (only if fish is installed or is the default shell)
     if [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; then
         local fish_config="${HOME}/.config/fish/config.fish"
-        if add_path_to_profile "${dir}" "${fish_config}" true; then
+        if add_path_to_profile "${dir}" "${fish_config}" fish; then
             profiles_written="${profiles_written} ~/.config/fish/config.fish"
         else
             profiles_skipped="${profiles_skipped} ~/.config/fish/config.fish"
         fi
+    fi
+
+    # PowerShell on Unix — detected when the installer was launched from
+    # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
+    # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
+    local pwsh_active=false
+    if detect_active_pwsh; then
+        pwsh_active=true
+    fi
+    if [ "${pwsh_active}" = true ] || command -v pwsh >/dev/null 2>&1; then
+        local pwsh_profile
+        pwsh_profile="$(pwsh_profile_path)"
+        if add_path_to_profile "${dir}" "${pwsh_profile}" pwsh; then
+            profiles_written="${profiles_written} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
+        else
+            profiles_skipped="${profiles_skipped} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
+        fi
+    fi
+
+    # If the user is actively in pwsh, the pwsh profile becomes the primary
+    # reload target — overrides $SHELL-based detection (which on macOS still
+    # reports zsh even when pwsh is the active interpreter).
+    if [ "${pwsh_active}" = true ]; then
+        PATH_SHELL="pwsh"
+        shell_name="pwsh"
     fi
 
     # Determine primary profile for reload instruction
@@ -679,18 +736,26 @@ add_to_path() {
         zsh)    primary_profile="${HOME}/.zshrc" ;;
         bash)   primary_profile="${HOME}/.bashrc" ;;
         fish)   primary_profile="${HOME}/.config/fish/config.fish" ;;
+        pwsh)   primary_profile="$(pwsh_profile_path)" ;;
         *)      primary_profile="${HOME}/.profile" ;;
     esac
 
     PATH_TARGET="${primary_profile}"
 
-    if [ "${shell_name}" = "fish" ]; then
-        PATH_LINE="fish_add_path ${dir}"
-        PATH_RELOAD="source ${primary_profile}"
-    else
-        PATH_LINE="export PATH=\"\$PATH:${dir}\""
-        PATH_RELOAD=". ${primary_profile}"
-    fi
+    case "${shell_name}" in
+        fish)
+            PATH_LINE="fish_add_path ${dir}"
+            PATH_RELOAD="source ${primary_profile}"
+            ;;
+        pwsh)
+            PATH_LINE="\$env:PATH = \"\$env:PATH:${dir}\""
+            PATH_RELOAD=". \$PROFILE"
+            ;;
+        *)
+            PATH_LINE="export PATH=\"\$PATH:${dir}\""
+            PATH_RELOAD=". ${primary_profile}"
+            ;;
+    esac
 
     # Report what was written
     if [ -n "${profiles_written}" ]; then
