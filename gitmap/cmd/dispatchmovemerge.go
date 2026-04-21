@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/movemerge"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/movemerge"
 )
 
 // dispatchMoveMerge routes mv / move / merge-both / merge-left /

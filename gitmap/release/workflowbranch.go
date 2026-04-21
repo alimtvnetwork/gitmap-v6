@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // ExecuteFromBranch runs the release workflow from an existing release branch.

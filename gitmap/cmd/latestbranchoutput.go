@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/gitutil"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/gitutil"
 )
 
 // latestBranchJSON is the JSON output structure.

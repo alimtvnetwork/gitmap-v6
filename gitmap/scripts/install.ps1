@@ -19,13 +19,13 @@
     Force architecture (amd64, arm64). Default: auto-detect.
 
 .EXAMPLE
-    irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
+    irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/gitmap/scripts/install.ps1 | iex
 
 .EXAMPLE
     & ./install.ps1 -Version v2.48.0
 
 .NOTES
-    Repository: https://github.com/alimtvnetwork/gitmap-v5
+    Repository: https://github.com/alimtvnetwork/gitmap-v6
 #>
 
 param(
@@ -41,7 +41,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$Repo = "alimtvnetwork/gitmap-v5"
+$Repo = "alimtvnetwork/gitmap-v6"
 $BinaryName = "gitmap.exe"
 $InstallerVersion = "1.0.0"
 

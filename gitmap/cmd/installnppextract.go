@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // extractNppSettingsZip extracts the bundled settings zip to the target.

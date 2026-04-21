@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // TestPerformReleaseStepOrder captures stdout during a dry-run release

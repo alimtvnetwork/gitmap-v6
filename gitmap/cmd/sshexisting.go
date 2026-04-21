@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/store"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/store"
 )
 
 // keyExistsOnDisk reports whether the private key file at keyPath exists.

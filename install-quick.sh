@@ -10,7 +10,7 @@
 #   spec/01-app/95-installer-script-find-latest-repo.md
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/install-quick.sh | bash
 #   ./install-quick.sh
 #   ./install-quick.sh --dir /opt/gitmap
 #   ./install-quick.sh --no-discovery
@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO="alimtvnetwork/gitmap-v5"
+REPO="alimtvnetwork/gitmap-v6"
 INSTALLER_URL="https://raw.githubusercontent.com/${REPO}/main/gitmap/scripts/install.sh"
 DEFAULT_DIR="${HOME}/.local/bin"
 

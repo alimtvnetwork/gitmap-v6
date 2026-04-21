@@ -12,7 +12,7 @@
       spec/01-app/95-installer-script-find-latest-repo.md
 
     Run via one-liner:
-      irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/install-quick.ps1 | iex
+      irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/install-quick.ps1 | iex
 
     Or locally:
       ./install-quick.ps1
@@ -31,7 +31,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
 
-$Repo          = "alimtvnetwork/gitmap-v5"
+$Repo          = "alimtvnetwork/gitmap-v6"
 $InstallerUrl  = "https://raw.githubusercontent.com/$Repo/main/gitmap/scripts/install.ps1"
 $DefaultDir    = "D:\gitmap"
 

@@ -678,7 +678,7 @@ function Build-Binary {
     Push-Location $GitMapDir
     try {
         $absRepoRoot = (Resolve-Path $RepoRoot).Path
-        $ldflags = "-X 'github.com/alimtvnetwork/gitmap-v5/gitmap/constants.RepoPath=$absRepoRoot'"
+        $ldflags = "-X 'github.com/alimtvnetwork/gitmap-v6/gitmap/constants.RepoPath=$absRepoRoot'"
 
         $prevPref = $ErrorActionPreference
         $ErrorActionPreference = "Continue"

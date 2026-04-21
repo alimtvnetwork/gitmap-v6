@@ -18,7 +18,7 @@ fi
 # gitmap installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/gitmap/scripts/install.sh | bash
 #
 # Options:
 #   --version <tag>    Install a specific version (e.g. v2.55.0). Default: latest.
@@ -34,7 +34,7 @@ fi
 
 set -euo pipefail
 
-REPO="alimtvnetwork/gitmap-v5"
+REPO="alimtvnetwork/gitmap-v6"
 BINARY_NAME="gitmap"
 TMP_DIR=""
 APP_DIR=""

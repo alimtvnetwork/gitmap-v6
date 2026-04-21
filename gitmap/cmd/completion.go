@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/completion"
-	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/completion"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // runCompletion handles the "completion" subcommand.

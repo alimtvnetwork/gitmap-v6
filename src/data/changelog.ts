@@ -12,7 +12,7 @@ export const changelog: ChangelogEntry[] = [
       "Added pinned-version install snippet on the GitHub release page: `gitmap/release/installsnippet.go::AppendPinnedInstallSnippet`, wired into `workflowgithub.go::uploadToGitHub` between `DetectChangelog()` and `CreateGitHubRelease`, auto-appends a markdown block containing PowerShell + bash one-liners that hard-code the just-published tag. Idempotent via a hidden `<!-- gitmap-pinned-install-snippet:<tag> -->` HTML marker. Anyone copying the snippet from `…/releases/tag/v3.12.0` installs exactly v3.12.0 — never `latest`, never a `-v<N+1>` sibling repo. Template lives in `constants_release.go` as `ReleaseSnippetTemplate` / `ReleaseSnippetMarker`.",
       "Added pinned-version short-circuit in `install.ps1` and `install.sh`: when `-Version <tag>` (PowerShell) or `--version <tag>` (bash) is supplied, the installer skips both the `releases/latest` API call **and** the versioned-repo `-v<N>` discovery probe, downloading `…/releases/download/<tag>/…` directly. Closes the gap where a snippet copied from a v3.x release page could silently jump to the v4 repo's latest tag.",
       "Added spec doc `spec/07-generic-release/08-pinned-version-install-snippet.md` — full NEA/AI handoff contract: rendered snippets, installer-side flag matrix, release-cutting checklist, and a CI test contract for future work.",
-      "Renamed `gitmap-v3` → `gitmap-v5` across the entire codebase: every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.*`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries. Only `.gitmap/` artifacts retain v3 references (immutable per project policy).",
+      "Renamed `gitmap-v3` → `gitmap-v6` across the entire codebase: every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.*`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries. Only `.gitmap/` artifacts retain v3 references (immutable per project policy).",
     ],
   },
   {
@@ -28,7 +28,7 @@ export const changelog: ChangelogEntry[] = [
     items: [
       "Fixed v15 Phase 1.4 migration crash on databases first created at v3.5.0+: `GoProjectMetadata` and `PendingTask` rebuilds threw `no such column: Id` because both tables were already singular before v15, so the canonical `CREATE TABLE IF NOT EXISTS` pass had already produced the v15-shaped table (with `{Table}Id` PK). New `adaptOldColumnList()` in `gitmap/store/migrate_v15rebuild.go` detects the existing PK column via `columnExists()` and rewrites the leading `Id` token in `OldColumnList` to `{Table}Id` when needed — idempotent, no-op for genuine legacy paths.",
       "Fixed `go vet` `non-constant format string` warning in `gitmap/movemerge/finalize.go:50` by reshaping `logErr(prefix, msg string)` to accept a pre-formatted message and moving `fmt.Sprintf(constants.ErrMMPushFailFmt, sha)` to the call site.",
-      "Fixed `gitmap/store/migrations.go` build error caused by an orphan `\"github.com/alimtvnetwork/gitmap-v5/gitmap/constants\"` import.",
+      "Fixed `gitmap/store/migrations.go` build error caused by an orphan `\"github.com/alimtvnetwork/gitmap-v6/gitmap/constants\"` import.",
       "Fixed `CmdReleaseAlias` Go redeclaration — the same identifier was bound to `\"r\"` and `\"release-alias\"` in two files. Renamed the `constants_cli.go` constant to `CmdReleaseShort` so `CmdReleaseAlias` belongs exclusively to the `release-alias` family.",
       "Fixed `cd` / `go` constant collision — removed duplicate `CmdCDCmd` / `CmdCDCmdAlias` from `constants_cli.go` and repointed `gitmap/cmd/rootdata.go` dispatch at the canonical `CmdCD` / `CmdCDAlias` constants in `constants_cd.go`.",
       "Added `gitmap/cmd/cmdconstants_unique_test.go` (+ helpers): parses every `constants_*.go` using the same `gitmap:cmd top-level` / `gitmap:cmd skip` markers as the completion generator and fails the suite when two distinct `Cmd*` identifiers claim the same string value. Catches redeclarations and dispatch shadowing at CI time before the build phase.",
@@ -356,7 +356,7 @@ export const changelog: ChangelogEntry[] = [
       "Multi-package-manager support: Chocolatey, Winget, Apt, Snap, Brew, Dnf, Pacman.",
       "Version string compiled from parsed major/minor/patch/build parts during save for comparison support.",
       "Reorganized `gitmap help` with `--compact` flag and 17 categorized command groups.",
-      "Repository renamed from `git-repo-navigator` to `gitmap-v5`.",
+      "Repository renamed from `git-repo-navigator` to `gitmap-v6`.",
     ],
   },
   {
@@ -369,7 +369,7 @@ export const changelog: ChangelogEntry[] = [
       "Added Quick Start section with common command examples at the top of help output.",
       "Each group header includes a hint to run commands with `--help` or `-h` for detailed usage.",
       "Modularized help across `rootusage.go`, `rootusagecompact.go`, `rootusageflags.go`, and `constants_helpgroups.go`.",
-      "Repository renamed from `git-repo-navigator` to `gitmap-v5`; all URLs, scripts, and references updated.",
+      "Repository renamed from `git-repo-navigator` to `gitmap-v6`; all URLs, scripts, and references updated.",
     ],
   },
   {
