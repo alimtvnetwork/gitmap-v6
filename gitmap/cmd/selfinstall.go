@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v5/gitmap/lockfile"
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/scripts"
 )
 
@@ -23,14 +25,23 @@ type selfInstallOpts struct {
 	Version   string
 	DualShell bool // --dual-shell: force PATH writes to zsh + pwsh profiles
 	ShowPath  bool // --show-path: expand install summary with PATH audit trail
+	ForceLock bool // --force-lock: bypass the duplicate-install guard
 }
 
 // runSelfInstall is the entry point for `gitmap self-install`. It picks
 // the install directory (prompting with a default), then runs the
 // embedded install script, falling back to GitHub if missing.
+//
+// A process-wide lock (gitmap-selfinstall.lock in os.TempDir) prevents
+// two concurrent invocations from racing — otherwise the user sees the
+// install prompt twice and PATH/binary writes overlap. See
+// gitmap/lockfile and the discovery-delegation flow in scripts/install.sh.
 func runSelfInstall(args []string) {
 	checkHelp(constants.CmdSelfInstall, args)
 	opts := parseSelfInstallFlags(args)
+	release := acquireSelfInstallLock(opts)
+	defer release()
+
 	dir := resolveSelfInstallDir(opts)
 	fmt.Print(constants.MsgSelfInstallHeader)
 	fmt.Printf(constants.MsgSelfInstallUsing, dir)
@@ -42,7 +53,36 @@ func runSelfInstall(args []string) {
 	fmt.Print(constants.MsgSelfInstallReminder)
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell / --show-path.
+// acquireSelfInstallLock takes the duplicate-install guard. On conflict
+// the process exits 1 with a clear pointer to the holder's PID so the
+// user knows which terminal/script is already installing. --force-lock
+// skips the guard for stale-lock recovery.
+func acquireSelfInstallLock(opts selfInstallOpts) lockfile.Releaser {
+	if opts.ForceLock {
+		release, err := lockfile.ForceAcquire(constants.SelfInstallLockName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, constants.ErrSelfInstallLock, err)
+			os.Exit(1)
+		}
+
+		return release
+	}
+	release, err := lockfile.Acquire(constants.SelfInstallLockName)
+	if err == nil {
+		return release
+	}
+	if errors.Is(err, lockfile.ErrAlreadyHeld) {
+		holder := lockfile.HolderPID(constants.SelfInstallLockName)
+		fmt.Fprintf(os.Stderr, constants.ErrSelfInstallLockHeld, holder)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stderr, constants.ErrSelfInstallLock, err)
+	os.Exit(1)
+
+	return func() {} // unreachable; satisfies the compiler
+}
+
+// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell / --show-path / --force-lock.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
@@ -52,6 +92,7 @@ func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
 	fs.BoolVar(&opts.DualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
 	fs.BoolVar(&opts.ShowPath, "show-path", false, constants.FlagDescSelfShowPath)
+	fs.BoolVar(&opts.ForceLock, "force-lock", false, constants.FlagDescSelfForceLock)
 	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	return opts

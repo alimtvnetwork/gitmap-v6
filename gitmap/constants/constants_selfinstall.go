@@ -90,6 +90,7 @@ const (
 	FlagSelfFromVersion  = "--version"
 	FlagSelfDualShell    = "--dual-shell"
 	FlagSelfShowPath     = "--show-path"
+	FlagSelfForceLock    = "--force-lock"
 )
 
 // Flag descriptions.
@@ -102,4 +103,22 @@ const (
 	FlagDescSelfFromVersion = "Pin a specific gitmap version to install (e.g. v3.0.0)"
 	FlagDescSelfDualShell   = "Force write PATH to both zsh AND pwsh profiles (Unix; useful when launched from pwsh on macOS)"
 	FlagDescSelfShowPath    = "Print detected shell, chosen PATH target, and every profile file written"
+	FlagDescSelfForceLock   = "Bypass the duplicate-install guard (recover from a stale lock left by a crashed installer)"
+)
+
+// Self-install duplicate-install guard.
+const (
+	// SelfInstallLockName is the suffix passed to lockfile.Acquire. The
+	// resulting file is os.TempDir()/gitmap-selfinstall.lock and prevents
+	// two `gitmap self-install` processes from racing each other.
+	SelfInstallLockName = "selfinstall"
+
+	// ErrSelfInstallLockHeld is shown when another live gitmap self-install
+	// process holds the lock. Includes its PID so the user can investigate.
+	ErrSelfInstallLockHeld = "Error: another gitmap self-install is already running (pid=%d).\n" +
+		"       Wait for it to finish, or pass --force-lock if it crashed.\n"
+
+	// ErrSelfInstallLock is the catch-all for lock filesystem failures
+	// (permission denied, disk full, etc.).
+	ErrSelfInstallLock = "Error: could not acquire self-install lock: %v\n"
 )
