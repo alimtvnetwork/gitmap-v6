@@ -542,9 +542,25 @@ copy_docs_site() {
     local legacy_dist="$legacy_dir/dist"
     local root_dist="$REPO_ROOT/dist"
     local root_pkg="$REPO_ROOT/package.json"
+    local gitmap_main="$GITMAP_DIR/main.go"
+    local node_modules="$REPO_ROOT/node_modules"
+
+    # Repo-detect diagnostics (active under --debug-repo-detect or env var).
+    write_repo_detect "RepoRoot"          "$REPO_ROOT"
+    write_repo_detect "GitMapDir"         "$GITMAP_DIR"
+    write_repo_detect "gitmap/main.go"    "$([[ -f "$gitmap_main" ]] && echo present || echo missing)" "$gitmap_main"
+    write_repo_detect "package.json"      "$([[ -f "$root_pkg" ]]    && echo present || echo missing)" "$root_pkg"
+    write_repo_detect "node_modules/"     "$([[ -d "$node_modules" ]] && echo present || echo missing)"
+    write_repo_detect "docs-site/dist/"   "$([[ -d "$legacy_dist" ]]  && echo present || echo missing)"
+    write_repo_detect "dist/ (root)"      "$([[ -d "$root_dist" ]]    && echo present || echo missing)"
+    local npm_path
+    npm_path="$(command -v npm 2>/dev/null || true)"
+    write_repo_detect "npm on PATH"       "$([[ -n "$npm_path" ]] && echo yes || echo no)" "$npm_path"
+    write_repo_detect_snippet "package.json (first 6 lines)" "$root_pkg"
 
     # 1. Legacy <repo>/docs-site/dist/
     if [[ -d "$legacy_dist" ]]; then
+        write_repo_detect "decision" "use-prebuilt-legacy" "$legacy_dist"
         local dist_dest="$docs_dest/dist"
         rm -rf "$dist_dest"
         mkdir -p "$docs_dest"
@@ -555,6 +571,7 @@ copy_docs_site() {
 
     # 2. Current <repo>/dist/ (root-level Vite app)
     if [[ -d "$root_dist" ]]; then
+        write_repo_detect "decision" "use-prebuilt-root" "$root_dist"
         local dist_dest="$docs_dest/dist"
         rm -rf "$dist_dest"
         mkdir -p "$docs_dest"
@@ -564,43 +581,59 @@ copy_docs_site() {
     fi
 
     # 3. Auto-build the root Vite app if package.json + npm available
-    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg"; then
-        if [[ ! -d "$REPO_ROOT/node_modules" ]] || [[ ! -x "$REPO_ROOT/node_modules/.bin/vite" ]]; then
-            write_info "Installing docs dependencies (npm install) at repo root..."
-            local install_exit=0
-            (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1) || install_exit=$?
-            if [[ $install_exit -ne 0 ]]; then
-                write_warn "npm install failed - skipping docs build"
-                write_report_error "docs-npm-install" \
-                    "npm install --no-audit --no-fund --silent" \
-                    "$install_exit" \
-                    "npm install failed at repo root; docs build skipped" \
-                    "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
+    if [[ -f "$root_pkg" ]] && [[ -n "$npm_path" ]]; then
+        local has_build="missing" has_vite="missing"
+        grep -q '"build"' "$root_pkg" && has_build="found"
+        grep -q '"vite"'  "$root_pkg" && has_vite="found"
+        write_repo_detect "package.json:build" "$has_build"
+        write_repo_detect "package.json:vite"  "$has_vite"
+        if [[ "$has_build" == "found" ]]; then
+            write_repo_detect "decision" "auto-build" "npm run build at $REPO_ROOT"
+            if [[ ! -d "$node_modules" ]] || [[ ! -x "$node_modules/.bin/vite" ]]; then
+                write_info "Installing docs dependencies (npm install) at repo root..."
+                local install_exit=0
+                (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1) || install_exit=$?
+                if [[ $install_exit -ne 0 ]]; then
+                    write_warn "npm install failed - skipping docs build"
+                    write_report_error "docs-npm-install" \
+                        "npm install --no-audit --no-fund --silent" \
+                        "$install_exit" \
+                        "npm install failed at repo root; docs build skipped" \
+                        "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
+                    return
+                fi
+            fi
+            write_info "Auto-building docs (npm run build) at repo root..."
+            local build_exit=0
+            (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) || build_exit=$?
+            if [[ $build_exit -eq 0 ]] && [[ -d "$root_dist" ]]; then
+                local dist_dest="$docs_dest/dist"
+                rm -rf "$dist_dest"
+                mkdir -p "$docs_dest"
+                cp -r "$root_dist" "$dist_dest"
+                write_info "Built and copied docs to gitmap app docs-site/dist"
                 return
             fi
-        fi
-        write_info "Auto-building docs (npm run build) at repo root..."
-        local build_exit=0
-        (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) || build_exit=$?
-        if [[ $build_exit -eq 0 ]] && [[ -d "$root_dist" ]]; then
-            local dist_dest="$docs_dest/dist"
-            rm -rf "$dist_dest"
-            mkdir -p "$docs_dest"
-            cp -r "$root_dist" "$dist_dest"
-            write_info "Built and copied docs to gitmap app docs-site/dist"
+            write_warn "Auto-build failed - 'gitmap hd' will fail"
+            write_report_error "docs-npm-build" \
+                "npm run build" \
+                "$build_exit" \
+                "npm run build did not produce dist/ output" \
+                "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"expectedDist\":\"${root_dist//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
             return
+        else
+            write_repo_detect "decision" "skip-no-build-script" "package.json has no \"build\" entry"
         fi
-        write_warn "Auto-build failed - 'gitmap hd' will fail"
-        write_report_error "docs-npm-build" \
-            "npm run build" \
-            "$build_exit" \
-            "npm run build did not produce dist/ output" \
-            "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"expectedDist\":\"${root_dist//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
-        return
+    else
+        local skip_reason="unknown"
+        [[ ! -f "$root_pkg" ]] && skip_reason="no package.json"
+        [[ -z "$npm_path" ]]   && skip_reason="npm not on PATH"
+        write_repo_detect "decision" "skip-not-a-vite-repo" "$skip_reason"
     fi
 
     # 4. Legacy <repo>/docs-site/ source-only — npm-dev fallback
     if [[ -d "$legacy_dir" ]]; then
+        write_repo_detect "decision" "use-legacy-source" "$legacy_dir"
         rm -rf "$docs_dest"
         mkdir -p "$docs_dest"
         (cd "$legacy_dir" && find . -mindepth 1 -maxdepth 1 ! -name 'node_modules' -exec cp -r {} "$docs_dest/" \;)
@@ -609,6 +642,7 @@ copy_docs_site() {
     fi
 
     # 5. Nothing found
+    write_repo_detect "decision" "no-docs-source"
     write_warn "No docs found (checked docs-site/dist, docs-site/, dist/) - 'gitmap hd' will fail"
 }
 
