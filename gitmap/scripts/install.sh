@@ -43,6 +43,14 @@ PATH_TARGET=""
 PATH_LINE=""
 PATH_STATUS=""
 PATH_RELOAD=""
+# PATH_RELOAD_ALT holds a secondary reload command for the *other* shell
+# when both a POSIX profile and the pwsh profile were written (typical
+# under --dual-shell or when pwsh is detected alongside zsh/bash). The
+# post-install block renders it as an "or in <shell>:" hint so users in
+# either shell see the syntactically correct reload command — never a
+# `source ~/.zshrc` shown to someone sitting in pwsh, and vice versa.
+PATH_RELOAD_ALT=""
+PATH_RELOAD_ALT_SHELL=""
 # Per-profile audit trail used by --show-path. Populated by add_to_path
 # and consumed by print_install_summary; safe to read even when empty.
 PATH_PROFILES_WRITTEN=""
@@ -779,6 +787,10 @@ add_to_path() {
             PATH_RELOAD="source ${primary_profile}"
             ;;
         pwsh)
+            # Dot-source the pwsh profile — `. $PROFILE` is the canonical
+            # PowerShell idiom for re-loading the current user's profile
+            # in the active session. `source` is a bash builtin and would
+            # error inside pwsh (`source: The term 'source' is not recognized`).
             PATH_LINE="\$env:PATH = \"\$env:PATH:${dir}\""
             PATH_RELOAD=". \$PROFILE"
             ;;
@@ -787,6 +799,14 @@ add_to_path() {
             PATH_RELOAD=". ${primary_profile}"
             ;;
     esac
+
+    # Cross-shell reload hint: when the installer wrote BOTH the active
+    # shell's profile AND the other family's profile (typical under
+    # --dual-shell or when pwsh is detected alongside zsh on macOS),
+    # expose the *other* shell's reload command as PATH_RELOAD_ALT.
+    # Without this, a pwsh user could see `source ~/.zshrc` (which fails
+    # in pwsh) or a zsh user could see `. $PROFILE` (which fails in zsh).
+    resolve_alt_reload "${profiles_written}"
 
     # Report what was written
     if [ -n "${profiles_written}" ]; then
@@ -814,6 +834,55 @@ add_to_path() {
     export PATH="${PATH}:${dir}"
 }
 
+# resolve_alt_reload picks a secondary reload command for the *other*
+# shell family, so dual-shell installs never show a syntactically wrong
+# command (e.g. `source ~/.zshrc` while the user is sitting in pwsh).
+#
+# Selection rules (PATH_SHELL is the primary, already set above):
+#   - PATH_SHELL=pwsh: alt is the first POSIX profile we wrote
+#     (.zshrc preferred, then .bashrc, then .profile).
+#   - PATH_SHELL=zsh|bash|fish|other: alt is the pwsh dot-source command
+#     iff the pwsh profile was written (dual-shell or pwsh on PATH).
+#
+# Inputs:  $1 = profiles_written list (space-separated, e.g. " ~/.zshrc ~/.bashrc ~/.config/powershell/...")
+# Outputs: PATH_RELOAD_ALT, PATH_RELOAD_ALT_SHELL (label like "zsh" or "pwsh")
+resolve_alt_reload() {
+    local written=" $1 "
+    PATH_RELOAD_ALT=""
+    PATH_RELOAD_ALT_SHELL=""
+    if [ "${PATH_SHELL}" = "pwsh" ]; then
+        pick_posix_alt "${written}"
+        return
+    fi
+    case "${written}" in
+        *powershell*)
+            PATH_RELOAD_ALT=". \$PROFILE"
+            PATH_RELOAD_ALT_SHELL="pwsh"
+            ;;
+    esac
+}
+
+# pick_posix_alt scans the written-profiles list for the highest-priority
+# POSIX profile and sets PATH_RELOAD_ALT to its `source` command. Split
+# out so resolve_alt_reload stays a clear top-level dispatch.
+pick_posix_alt() {
+    local written="$1"
+    case "${written}" in
+        *.zshrc*)
+            PATH_RELOAD_ALT="source ~/.zshrc"
+            PATH_RELOAD_ALT_SHELL="zsh"
+            ;;
+        *.bashrc*)
+            PATH_RELOAD_ALT="source ~/.bashrc"
+            PATH_RELOAD_ALT_SHELL="bash"
+            ;;
+        *.profile*)
+            PATH_RELOAD_ALT=". ~/.profile"
+            PATH_RELOAD_ALT_SHELL="sh"
+            ;;
+    esac
+}
+
 print_install_summary() {
     local installed_version="$1" bin_path="$2"
 
@@ -830,6 +899,9 @@ print_install_summary() {
     printf '    Shell: %s\n' "${PATH_SHELL}" >&2
     printf '    PATH target: %s (%s)\n' "${PATH_TARGET}" "${PATH_STATUS}" >&2
     printf '    Reload: %s\n' "${PATH_RELOAD}" >&2
+    if [ -n "${PATH_RELOAD_ALT}" ]; then
+        printf '    Reload (%s): %s\n' "${PATH_RELOAD_ALT_SHELL}" "${PATH_RELOAD_ALT}" >&2
+    fi
 
     # --show-path expands the summary with the full audit trail so the
     # user can confirm every profile file we touched and why a particular
@@ -1025,7 +1097,18 @@ main() {
         echo ""
         printf '  \033[32mOK\033[0m  To start using gitmap \033[1mright now\033[0m, run:\n' >&2
         echo "" >&2
-        printf '      \033[36m%s\033[0m\n' "${PATH_RELOAD}" >&2
+        # Label the primary command with its shell so the user can see at
+        # a glance whether it matches the shell they're sitting in. The
+        # PATH_SHELL value is already pwsh-overridden when detect_active_pwsh
+        # fired, so this label is the source of truth for the active shell.
+        printf '      \033[36m%s\033[0m   \033[90m# in %s\033[0m\n' "${PATH_RELOAD}" "${PATH_SHELL}" >&2
+        # When dual-shell wrote both a POSIX profile AND the pwsh profile,
+        # show the alternate command so users in the *other* shell aren't
+        # left with a syntactically wrong hint (e.g. `source ~/.zshrc`
+        # pasted into a pwsh prompt).
+        if [ -n "${PATH_RELOAD_ALT}" ]; then
+            printf '      \033[36m%s\033[0m   \033[90m# in %s\033[0m\n' "${PATH_RELOAD_ALT}" "${PATH_RELOAD_ALT_SHELL}" >&2
+        fi
         echo "" >&2
         printf '     Or open a new terminal window.\n' >&2
         echo "" >&2
