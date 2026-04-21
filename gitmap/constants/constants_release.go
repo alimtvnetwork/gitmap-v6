@@ -24,7 +24,7 @@ const (
 	MsgReleaseChangelog     = "  ✓ Using CHANGELOG.md as release body\n"
 	MsgReleaseReadme        = "  ✓ Attached README.md\n"
 	MsgReleaseDryRun        = "  [dry-run] %s\n"
-	MsgReleaseComplete      = "\n  Release %s complete.\n"
+	MsgReleaseComplete      = "\n  ── Release %s complete ──\n"
 	MsgReleaseBranchStart   = "\n  Completing release from %s...\n"
 	MsgReleaseBranchPending = "\n  → On release branch %s with no tag — completing pending release...\n"
 	MsgReleaseVersionRead   = "  → Version from %s: %s\n"
@@ -98,14 +98,15 @@ const (
 	GitmapRepoOwner      = "github.com/alimtvnetwork/"
 	GitmapRepoNamePrefix = "gitmap-v"
 	MsgInstallHintHeader = `
-
   📦 Install gitmap %s
+  ─────────────────────
 `
-	MsgInstallHintWindows = `  🪟 Windows (PowerShell)
+	MsgInstallHintWindows = `
+  🪟  Windows · PowerShell
      irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 `
 	MsgInstallHintUnix = `
-  🐧 Linux / macOS
+  🐧  Linux / macOS
      curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 `
 )
