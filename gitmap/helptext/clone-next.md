@@ -14,6 +14,7 @@ cn
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| --force, -f | false | Force flatten when cwd IS the target folder (chdir to parent first; refuses versioned-folder fallback) |
 | --delete | false | Auto-remove current versioned folder after clone |
 | --keep | false | Keep current folder without prompting |
 | --no-desktop | false | Skip GitHub Desktop registration |
