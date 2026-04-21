@@ -14,15 +14,20 @@ import (
 // configured sink (default os.Stderr) but the write always proceeds.
 // See validate.go for the warn-and-write policy.
 func WriteCSV(w io.Writer, records []model.ScanRecord) error {
-	emitValidationWarnings(records)
+	issueCount := emitValidationWarnings(records)
 
 	cw := csv.NewWriter(w)
 	err := cw.Write(constants.ScanCSVHeaders)
 	if err != nil {
 		return err
 	}
+	err = writeCSVRows(cw, records)
+	if err != nil {
+		return err
+	}
+	emitWriteSummary("csv", len(records), issueCount)
 
-	return writeCSVRows(cw, records)
+	return nil
 }
 
 // writeCSVRows writes each record as a CSV row and flushes.
