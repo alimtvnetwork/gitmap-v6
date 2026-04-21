@@ -538,4 +538,45 @@ const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
   );
 };
 
+// CopyLinkButton — copies a deep-link to this specific issue card so it can
+// be shared and re-opened directly via the ?id= query parameter.
+const CopyLinkButton = ({ issueId }: { issueId: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", issueId);
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  }, [issueId]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? "Link copied" : "Copy link to this issue"}
+      title={copied ? "Link copied!" : "Copy link to this issue"}
+      className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+        copied
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
+      }`}
+    >
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5" />
+          Linked
+        </>
+      ) : (
+        <>
+          <Link2 className="h-3.5 w-3.5" />
+          Link
+        </>
+      )}
+    </button>
+  );
+};
+
 export default Troubleshooting;
