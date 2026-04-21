@@ -345,6 +345,8 @@ const Troubleshooting = () => {
         <code className="docs-inline-code">gitmap doctor</code>.
       </p>
 
+      <DiagnosticChecklist />
+
       <SearchBar value={search} onChange={setSearch} placeholder="Search by error, symptom, or fix..." />
 
       <div className="flex flex-wrap gap-2 mt-4 mb-8">
