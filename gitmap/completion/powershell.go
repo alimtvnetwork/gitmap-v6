@@ -133,7 +133,7 @@ func generatePowerShell() string {
     }
 
     if ($cmd -eq "clone-next" -or $cmd -eq "cn") {
-        $items = @("v++", "--delete", "--keep", "--no-desktop", "--ssh-key", "--verbose")
+        $items = @("v++", "--delete", "--keep", "--no-desktop", "--ssh-key", "--verbose", "--force", "-f")
         $items | Where-Object { $_ -like "$wordToComplete*" } |
             ForEach-Object { [System.Management.Automation.CompletionResult]::new($_) }
         return

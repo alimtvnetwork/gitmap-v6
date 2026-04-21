@@ -94,7 +94,7 @@ _gitmap() {
             fi
             ;;
         clone-next|cn)
-            local -a hints=("v++" "--delete" "--keep" "--no-desktop" "--ssh-key" "--verbose")
+            local -a hints=("v++" "--delete" "--keep" "--no-desktop" "--ssh-key" "--verbose" "--force" "-f")
             _describe 'arg' hints
             ;;
         version-history|vh)

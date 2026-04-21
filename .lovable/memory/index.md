@@ -14,9 +14,10 @@ SQLite connection pooling restricted to `SetMaxOpenConns(1)`.
 Database schema uses strict PascalCase, INTEGER PRIMARY KEY AUTOINCREMENT.
 Unified `.gitmap/` directory structure at repository root for all artifacts.
 Clone-next flattens by default (v2.75.0+): clones into base name folder, tracks versions in RepoVersionHistory.
+Clone-next `-f` / `--force` (v3.50.0+): chdir-to-parent before remove when cwd IS target folder; refuses versioned-folder fallback.
 Completion generator uses marker-comment opt-in (v3.0.0+): `// gitmap:cmd top-level` on const block, `// gitmap:cmd skip` per spec. CI `generate-check` enforces drift.
 VS Code Project Manager sync: resolve user-data root per OS first, then append `User/globalStorage/alefragnani.project-manager/projects.json` — never hardcode the full path.
-Current version: v3.37.0 (next bump v3.38.0 for vscode project manager sync).
+Current version: v3.50.0.
 
 ## Memories
 - [Code Constraints](mem://style/code-constraints) — Strict rules for code style, structure, and pull requests

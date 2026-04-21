@@ -19,6 +19,12 @@ type CloneNextFlags struct {
 	Verbose      bool
 	CSVPath      string
 	All          bool
+	// Force forces a flat clone even when the user's cwd IS the target
+	// folder. Triggers a chdir-to-parent before the existence check (to
+	// release Windows file locks) and DISABLES the versioned-folder
+	// fallback so the user gets either a flat layout or a clear error.
+	// See spec/01-app/87-clone-next-flatten.md.
+	Force bool
 }
 
 // parseCloneNextFlags parses flags for the clone-next command.
@@ -33,6 +39,11 @@ func parseCloneNextFlags(args []string) CloneNextFlags {
 	verboseFlag := fs.Bool("verbose", false, constants.FlagDescVerbose)
 	csvPath := fs.String("csv", "", constants.FlagDescCloneNextCSV)
 	allFlag := fs.Bool("all", false, constants.FlagDescCloneNextAll)
+	// Force-flatten: long --force and short -f both bind to the same
+	// bool var so either form is canonical (mirrors the --ssh-key/-K
+	// pairing convention used elsewhere in this flagset).
+	forceFlag := fs.Bool("force", false, constants.FlagDescCloneNextForce)
+	fs.BoolVar(forceFlag, "f", false, constants.FlagDescCloneNextForce)
 	fs.Parse(args)
 
 	out := CloneNextFlags{
@@ -44,6 +55,7 @@ func parseCloneNextFlags(args []string) CloneNextFlags {
 		Verbose:      *verboseFlag,
 		CSVPath:      *csvPath,
 		All:          *allFlag,
+		Force:        *forceFlag,
 	}
 	if fs.NArg() > 0 {
 		out.VersionArg = fs.Arg(0)

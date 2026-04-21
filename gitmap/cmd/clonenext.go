@@ -86,13 +86,38 @@ func runCloneNext(args []string) {
 	flattenedFolder := parsed.BaseName
 	targetPath := filepath.Join(parentDir, flattenedFolder)
 
+	// Force-flatten pre-step: if the user passed -f / --force AND their
+	// shell cwd is exactly the target folder (the "already flattened"
+	// case from a previous cn run), Windows holds an open handle on
+	// the cwd that prevents os.RemoveAll. Chdir-to-parent here releases
+	// that handle BEFORE the existence check below tries to remove it.
+	// Linux/macOS don't strictly need this, but doing it unconditionally
+	// keeps the code path simple and gives the same UX everywhere.
+	if cnFlags.Force && samePath(cwd, targetPath) {
+		fmt.Printf(constants.MsgForceReleasing, cwd)
+		if chErr := os.Chdir(parentDir); chErr != nil {
+			fmt.Fprintf(os.Stderr, constants.ErrCloneNextForceFailed,
+				flattenedFolder, chErr, flattenedFolder)
+			os.Exit(1)
+		}
+	}
+
 	// If the flattened folder already exists, try to remove it for a fresh clone.
 	// On Windows, the current shell's working directory is locked and cannot be
 	// removed by this process. In that case, fall back to a versioned folder name
-	// (e.g. scripts-fixer-v2) and warn — never abort the whole flow.
+	// (e.g. scripts-fixer-v2) and warn — UNLESS -f was passed, which refuses the
+	// fallback and aborts so the user gets either a flat layout or a clear error.
 	if _, statErr := os.Stat(targetPath); statErr == nil {
 		fmt.Printf(constants.MsgFlattenRemoving, flattenedFolder)
 		if removeErr := os.RemoveAll(targetPath); removeErr != nil {
+			if cnFlags.Force {
+				// Strict force contract: do NOT silently rename to
+				// macro-ahk-v22/. The whole point of -f is "I want flat
+				// or nothing" — degrading would be a footgun.
+				fmt.Fprintf(os.Stderr, constants.ErrCloneNextForceFailed,
+					flattenedFolder, removeErr, flattenedFolder)
+				os.Exit(1)
+			}
 			fmt.Fprintf(os.Stderr, constants.WarnCloneNextRemoveFailed, flattenedFolder, removeErr)
 			fallbackFolder := targetName
 			fallbackPath := filepath.Join(parentDir, fallbackFolder)
