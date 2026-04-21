@@ -25,6 +25,116 @@
 
 ---
 
+## v3.51.0 — (2026-04-21) — Fix `cn v+1 -f` flag parsing; cleaner release-trailer newlines
+
+### Fixed
+
+- **`gitmap cn v+1 -f` no longer drops `-f`.** When `-f` followed a positional version arg, Go's stock `flag` package stopped scanning at the first non-flag token. The fix routes `cn` args through `reorderFlagsBeforeArgs(args)` (`gitmap/cmd/clonenextflags.go`) and extends the value-flag map in `gitmap/cmd/releaseargs.go` to cover `--csv`, `--ssh-key`, `-K`, and `--target-dir` so the next token is never mis-consumed.
+- **Force implies Keep.** `Force` now sets `Keep = true` for the prior-folder cleanup path in `gitmap/cmd/clonenext.go`, suppressing the redundant "Remove current folder?" prompt and lock-detector loop.
+- **`MsgInstallHintUnix` trailing newline.** Added a final blank line so the post-release shell prompt no longer sits flush against the `curl … | sh` line. Verified via `tests/release_test/InstallHint`.
+
+### Changed
+
+- `MsgForceReleasing` rewording: "Stepping out of … to release the file lock" — describes the Windows file-lock workaround in plain terms.
+- Three-stage progress layout (Prepare → Clone → Finalize) shown only when `-f` is used; default `cn` output is byte-identical to v3.50.x.
+
+### Compatibility
+
+- Default `gitmap cn` output unchanged. New layout and prompt suppression are gated on `-f`.
+
+---
+
+## v3.50.0 — (2026-04-21) — `clone-next --force` (force-flatten)
+
+### Added
+
+- **`gitmap cn -f` / `--force`** — force a flat clone even when cwd IS the target folder. Chdirs to the parent before the remove (releases the Windows file lock), then re-clones into `<base>/`. Refuses the silent versioned-folder fallback under `-f` — flat layout or a clear error, never a surprise rename.
+- `--force` / `-f` added to zsh + PowerShell completions and the `clone-next` help text.
+
+### Fixed
+
+- `MsgFlattenLockedHint` now mentions `-f`, so users discover the escape hatch on the first lock warning instead of giving up.
+
+---
+
+## v3.49.0 — (2026-04-21) — Auto-commit + auto-register on every release
+
+### Added
+
+- After a successful `gitmap release`, the metadata write is auto-committed (`chore(release): vX.Y.Z metadata`) and pushed in the same step. Skip with `--no-commit`.
+- Cwd repo is auto-registered in the gitmap database if not yet tracked, eliminating the prior "repo not found" abort for first-time releases.
+
+### Changed
+
+- Trailer ordering finalized as: metadata write → auto-commit → auto-register → `── Release vX.Y.Z complete ──` → install hint (gitmap repo only).
+
+---
+
+## v3.48.0 — (2026-04-21) — `gitmap doctor` deploy-dir audit
+
+### Added
+
+- `gitmap doctor` now flags duplicate `gitmap` / `gitmap.exe` binaries on `$PATH`, reports the active deploy dir vs the running binary path, and recommends `gitmap self-install --dir <chosen>` to consolidate.
+
+### Fixed
+
+- Doctor no longer false-positives on `gitmap.exe.old` backup files — `isGitmapArtifact` now ignores `*.old` for the duplicate check.
+
+---
+
+## v3.47.0 — (2026-04-21) — `release-version` interactive fallback prompt
+
+### Added
+
+- When the requested version isn't a published release AND the script runs in an interactive terminal, the installer offers the 5 most recent releases to pick from instead of aborting. Non-interactive (piped) runs still exit 1 unless `--allow-fallback` is supplied.
+
+---
+
+## v3.46.0 — (2026-04-21) — Sticky lint-suggestion PR comments
+
+### Added
+
+- CI lint-baseline-diff job now posts a single sticky PR comment (sentinel `<!-- gitmap-lint-suggestions -->`) using `peter-evans/find-comment` + `create-or-update-comment`, replacing the previous comment-spam-on-every-push behavior. Push and `workflow_dispatch` runs mirror the same content into `GITHUB_STEP_SUMMARY`.
+
+---
+
+## v3.45.0 — (2026-04-21) — `golangci-lint` baseline cache (soft gate)
+
+### Added
+
+- New CI job **lint-baseline-diff**: restores the previous lint findings from cache (key `golangci-baseline-main-${cache_version}-${github.sha}`, restore-keys fallback to the most recent baseline on the same `cache_version`), runs the linter, and surfaces only NEW findings. Soft gate: warnings, never failures. Save step runs only on `push` to `main` (or `workflow_dispatch` from `main`).
+
+---
+
+## v3.44.0 — (2026-04-21) — `gitmap self-uninstall` Windows handoff
+
+### Added
+
+- On Windows, `self-uninstall` copies the running `gitmap.exe` to `%TEMP%\gitmap-handoff-<pid>.exe`, re-execs the hidden `self-uninstall-runner` verb, and the temp copy schedules its own deletion via `cmd.exe /C ping ... & del /F /Q <self>`. Releases the file lock that previously prevented self-deletion.
+
+### Changed
+
+- PATH snippet cleanup now strips the marker block `# gitmap shell wrapper v* …` … `# gitmap shell wrapper v* end` from the user's shell profile, idempotent across re-runs. Skip with `--keep-snippet`.
+
+---
+
+## v3.43.0 — (2026-04-21) — `gitmap self-install` / `self-uninstall`
+
+### Added
+
+- New top-level verbs `self-install` and `self-uninstall` manage the gitmap binary itself, separate from the existing third-party `install` / `uninstall` (npp, vscode, dev tools).
+- `self-install` defaults: `D:\gitmap` (Windows), `~/.local/bin/gitmap` (Unix). Override with `--dir`. Skip the prompt with `--yes`. Forwards `--version <tag>` to the installer.
+- Installer scripts (`install.ps1`, `install.sh`, `uninstall.ps1`) embedded into the binary via `go:embed` (`gitmap/scripts/embed.go`), with HTTP fallback to `raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.{ps1,sh}` if the embedded copy is missing.
+- `self-uninstall` removes: deploy-dir artefacts, `.gitmap/` data dir, PATH snippet, completion files. Confirm gates: typed `yes` (interactive) or `--confirm` (CI). Selective skip with `--keep-data` / `--keep-snippet`.
+
+### Implementation
+
+- `gitmap/constants/constants_selfinstall.go` — IDs, messages, defaults
+- `gitmap/cmd/selfinstall.go`, `gitmap/cmd/selfuninstall.go`, `gitmap/cmd/selfuninstallparts.go`, `gitmap/cmd/selfuninstallhandoff.go` — split to satisfy <200-line rule
+- PowerShell scripts written with UTF-8 BOM (per `mem://constraints/powershell-encoding`)
+
+---
+
 ## v3.32.1 — (2026-04-20) — Fix `gitmap status` looking at legacy bare `output/` path
 
 ### Fixed

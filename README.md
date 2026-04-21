@@ -631,6 +631,21 @@ gitmap r       [version] [flags]
 
 Concise, grouped per version. Each entry calls out **💥 Breaking**, **✨ Enhancements**, and **🐛 Fixes**. Versions with nothing in a category omit it. Full history lives in [`CHANGELOG.md`](CHANGELOG.md); query it from the CLI with `gitmap changelog vX.Y.Z` or `gitmap cl --limit 5`.
 
+#### v3.52.0 — 2026-04-21 — CI lint baseline cache controls (docs)
+
+- ✨ **Enhancements:** `spec/09-pipeline/01-ci-pipeline.md` now documents the two `workflow_dispatch` inputs (`lint_baseline_cache_version`, `lint_baseline_disable`) that let operators rotate or bypass the golangci-lint baseline cache without editing the workflow. Includes copy-paste `gh workflow run` examples and a new "Job: Lint Baseline Diff" section covering cache keys, seeding mode, and sticky PR comment behavior.
+- 🐛 **Fixes:** none — documentation-only sync; no CI behavior change.
+
+#### v3.51.0 — 2026-04-21 — `cn v+1 -f` flag parsing + cleaner release trailer
+
+- ✨ **Enhancements:**
+  - Three-stage progress layout (Prepare → Clone → Finalize) now shown when `gitmap cn -f` is used; default `cn` output is unchanged.
+  - `MsgForceReleasing` rewritten to plainly describe the Windows file-lock release ("Stepping out of … to release the file lock").
+- 🐛 **Fixes:**
+  - `gitmap cn v+1 -f` no longer silently dropped the `-f` flag when it followed a positional version arg. Fixed via `reorderFlagsBeforeArgs(args)` in `gitmap/cmd/clonenextflags.go` and an updated value-flag map in `gitmap/cmd/releaseargs.go` (covers `--csv`, `--ssh-key`, `-K`, `--target-dir`).
+  - `Force` now implies `Keep` for the prior-folder cleanup, suppressing the redundant "Remove current folder?" prompt.
+  - `MsgInstallHintUnix` gained a trailing blank line so the post-release shell prompt no longer sits flush against the `curl … | sh` line.
+
 #### v3.50.0 — 2026-04-21 — Force-flatten for `clone-next`
 
 - 💥 **Breaking:** none. New flag is opt-in and defaults to existing behavior.

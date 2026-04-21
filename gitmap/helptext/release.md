@@ -247,20 +247,26 @@ releases must still be created explicitly with a version argument). Add
     Creating tag v2.61.0... done
     Pushing branch and tag... done
     ✓ Metadata written to .gitmap/release/v2.61.0.json
+    ✓ Auto-committed release metadata
+    ✓ Auto-registered repo in gitmap database
 
-    Release v2.61.0 complete.
+      ── Release v2.61.0 complete ──
 
+      📦  Install gitmap v2.61.0
 
-      📦 Install gitmap v2.61.0
-
-      🪟 Windows (PowerShell)
+      🪟  Windows (PowerShell)
          irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 
-      🐧 Linux / macOS
+      🐧  Linux / macOS
          curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 
-Install hints only appear when the repo's remote origin matches the
-gitmap source repository. Non-gitmap repos are unaffected.
+    $
+
+Every trailer line (auto-commit, auto-register, install hint) ends on its
+own newline so the shell prompt always lands on a fresh line — no PS1
+flush against `curl … | sh`. Install hints only appear when the repo's
+remote origin matches the gitmap source repository; non-gitmap repos are
+unaffected.
 
 ## CI Release Pipeline
 
