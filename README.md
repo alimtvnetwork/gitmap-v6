@@ -141,6 +141,7 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap
 | `-InstallDir` | Custom install directory | `-InstallDir C:\tools\gitmap` |
 | `-Arch` | Force architecture (`amd64`, `arm64`) | `-Arch arm64` |
 | `-NoPath` | Skip adding to user PATH | `-NoPath` |
+| `-AllowFallback` | Use newest patch in same vMAJOR.MINOR if version missing | `-AllowFallback` |
 
 **Linux / macOS (Bash):**
 
@@ -150,8 +151,40 @@ curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap
 | `--dir` | Custom install directory | `--dir /opt/gitmap` |
 | `--arch` | Force architecture (`amd64`, `arm64`) | `--arch arm64` |
 | `--no-path` | Skip adding to PATH | `--no-path` |
+| `--allow-fallback` | Use newest patch in same vMAJOR.MINOR if version missing | `--allow-fallback` |
 
-**Specific version install (one-liner):**
+#### Non-Interactive / CI Installations
+
+When installing via pipe (`irm ... | iex` or `curl ... | bash`), the terminal
+is **non-interactive**. If the requested version is missing, the installer
+**exits with code 1** without prompting.
+
+To handle missing versions in automated environments:
+
+1. **Use `--allow-fallback`** — Automatically picks the newest patch in the same
+   minor series (e.g., `v3.38.0` requested but missing → uses `v3.38.5`):
+   ```powershell
+   irm https://github.com/alimtvnetwork/gitmap-v5/releases/download/v3.38.0/release-version-v3.38.0.ps1 | iex
+   # Or with generic script:
+   irm https://gitmap.dev/scripts/release-version.ps1 | iex; Install-Gitmap -Version "v3.38.0" -AllowFallback
+   ```
+
+2. **Pre-validate the version** — Use `gitmap list-versions` to confirm existence
+   before installing.
+
+#### Version-Specific Install Scripts
+
+For reproducible installs, use the **per-version snapshot scripts** that are
+ baked with the version at release time:
+
+| Script | URL Pattern |
+|--------|-------------|
+| Pinned PowerShell | `https://github.com/alimtvnetwork/gitmap-v5/releases/download/{version}/release-version-{version}.ps1` |
+| Pinned Bash | `https://github.com/alimtvnetwork/gitmap-v5/releases/download/{version}/release-version-{version}.sh` |
+| Generic PowerShell | `https://gitmap.dev/scripts/release-version.ps1` (requires `-Version` param) |
+| Generic Bash | `https://gitmap.dev/scripts/release-version.sh` (requires `--version` flag) |
+
+**Specific version install (one-liner with fallback):**
 
 ```powershell
 irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex; Install-Gitmap -Version "v2.51.0"
