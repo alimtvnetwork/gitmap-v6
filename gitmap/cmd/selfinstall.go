@@ -19,11 +19,16 @@ import (
 )
 
 // selfInstallOpts holds parsed flags for self-install.
+//
+// ShellMode is the canonical name (v3.48.0+); it carries either a
+// singleton (auto|both|zsh|bash|pwsh|fish) or a `+`-joined combo such
+// as `zsh+pwsh`. The legacy field name `Profile` is preserved as a
+// pointer-style accessor in code paths that haven't been migrated yet.
 type selfInstallOpts struct {
 	Dir       string
 	Yes       bool
 	Version   string
-	Profile   string // --profile: auto|both|zsh|bash|pwsh|fish (default auto)
+	ShellMode string // --shell-mode (canonical) / --profile (alias) / --dual-shell (alias)
 	ShowPath  bool   // --show-path: expand install summary with PATH audit trail
 	ForceLock bool   // --force-lock: bypass the duplicate-install guard
 }
