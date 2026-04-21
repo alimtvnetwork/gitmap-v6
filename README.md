@@ -533,6 +533,98 @@ windows/amd64  windows/arm64
   ── Release v3.51.0 complete ──
 ```
 
+### Configuration file
+
+| Property | Value |
+|----------|-------|
+| **Default path** | `./data/config.json` (resolved relative to the gitmap binary) |
+| **Override** | Edit the file directly — there is no `--config` flag; CLI flags always win over config values |
+| **Format** | JSON, loaded once per command via `config.LoadFromFile` |
+| **Missing file** | Silently falls back to built-in defaults (no error) |
+
+**Full schema** (every field is optional; omit a field to use its default):
+
+```json
+{
+  "defaultMode":      "https",
+  "defaultOutput":    "terminal",
+  "outputDir":        "./output",
+  "excludeDirs":      ["node_modules", ".git"],
+  "notes":            "",
+  "dashboardRefresh": 30,
+  "release": {
+    "targets": [
+      { "goos": "windows", "goarch": "amd64" },
+      { "goos": "linux",   "goarch": "amd64" },
+      { "goos": "darwin",  "goarch": "arm64" }
+    ],
+    "checksums": true,
+    "compress":  true
+  }
+}
+```
+
+**Field meanings (release-relevant only):**
+
+| Field | Type | Default | Effect |
+|-------|------|---------|--------|
+| `release.targets[]` | array of `{goos, goarch}` | built-in 6-target matrix | Cross-compile matrix used when `--bin` is set. `--targets` flag overrides this entirely. |
+| `release.targets[].goos` | string | — | Go `GOOS` value: `windows`, `linux`, `darwin`, `freebsd`, … |
+| `release.targets[].goarch` | string | — | Go `GOARCH` value: `amd64`, `arm64`, `386`, … |
+| `release.checksums` | bool | `false` | Always emit `SHA256SUMS.txt`. Equivalent to passing `--checksums` on every release. |
+| `release.compress` | bool | `false` | Always wrap assets in `.zip`/`.tar.gz`. Equivalent to passing `--compress` on every release. |
+| `outputDir` | string | `./output` | Where non-release CLI exports land (scan reports, etc). Not used by `release` directly. |
+| `excludeDirs` | array | `[]` | Folders to skip during scanning. Not used by `release` directly. |
+
+**Resolution order** (last writer wins):
+
+```
+built-in defaults  <  data/config.json  <  CLI flags
+```
+
+So `release.compress: false` in config + `--compress` on the CLI → compression ON for that one run.
+
+### CLI flag reference — `gitmap release` / `r`
+
+```
+gitmap release [version] [flags]
+gitmap r       [version] [flags]
+```
+
+`version` is positional and optional. Forms accepted:
+
+- `v3.51.0` — release exactly this tag
+- *(omitted)* — auto-bump **minor** from the last release in `.gitmap/release/latest.json`, with a `[y/N]` prompt (skip with `-y`)
+- combined with `--bump` is an error (mutually exclusive)
+
+| Flag | Type | Default | Meaning |
+|------|------|---------|---------|
+| `--bump <level>` | string | (none) | Auto-increment version segment. Accepts `major`, `minor`, or `patch`. Mutually exclusive with positional `version`. |
+| `-N`, `--notes <text>` | string | git commit subject | Release title / notes used as the GitHub Release body header. |
+| `--commit <sha>` | string | `HEAD` | Create the release from a specific commit instead of `HEAD`. Mutually exclusive with `--branch`. |
+| `--branch <name>` | string | current branch | Create the release from the latest commit of `<name>`. Mutually exclusive with `--commit`. |
+| `--assets <path>` | string | (none) | Single file or directory to attach as release assets (in addition to `--bin`, `-Z`, `--zip-group`). |
+| `-b`, `--bin` | bool | `false` | Cross-compile Go binaries for every target in the matrix and attach them as release assets. |
+| `--targets <list>` | string | from config / built-ins | Comma-separated `goos/goarch` pairs (e.g. `windows/amd64,linux/arm64`). Overrides `release.targets` in config. |
+| `--list-targets` | bool | `false` | Resolve the target matrix, print it, exit 0. No release is created. Useful for verifying config. |
+| `--compress` | bool | `false` (or config) | Wrap each binary in a per-target archive: `.zip` for Windows, `.tar.gz` for Linux/macOS. |
+| `--checksums` | bool | `false` (or config) | Emit `SHA256SUMS.txt` covering every uploaded asset and attach it to the release. |
+| `-Z <path>` | repeatable | (none) | Ad-hoc zip: include a single file or folder as a release asset. May be passed multiple times. |
+| `--zip-group <name>` | repeatable | (none) | Attach a persistent named **zip group** (defined via `gitmap zg add`) as a release asset. May be passed multiple times. |
+| `--bundle <name>` | string | (none) | Combine all `-Z` items into one archive named `<name>.zip` instead of one archive per item. |
+| `--draft` | bool | `false` | Create the GitHub Release as an unpublished draft. Branch/tag are still pushed. |
+| `--dry-run` | bool | `false` | Print every step that would run (branch, tag, push, upload) without touching git or GitHub. |
+| `--no-commit` | bool | `false` | Skip the post-release auto-commit + push of `.gitmap/release/latest.json`. |
+| `-y`, `--yes` | bool | `false` | Auto-confirm every prompt: bare-release auto-bump, multi-repo scan, orphaned-metadata cleanup. |
+| `--verbose` | bool | `false` | Write detailed stdout/stderr trace to a timestamped log file under `data/logs/`. |
+
+**Mutually exclusive combinations** (gitmap will exit with an error):
+
+| Combination | Why |
+|-------------|-----|
+| `<version>` **and** `--bump` | Either explicit or auto-bump — pick one. |
+| `--commit` **and** `--branch` | A release has exactly one source commit. |
+
 → Detailed help: [release](gitmap/helptext/release.md) · [release-alias](gitmap/helptext/release-alias.md) · [release-self](gitmap/helptext/release-self.md) · [release-pending](gitmap/helptext/release-pending.md) · [changelog](gitmap/helptext/changelog.md)
 
 ---
