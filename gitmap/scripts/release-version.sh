@@ -122,13 +122,14 @@ while [ $# -gt 0 ]; do
         --no-self-install)  NO_SELF_INSTALL=1; shift ;;
         --allow-fallback)   ALLOW_FALLBACK=1; shift ;;
         --quiet)            QUIET=1; shift ;;
+        --json-errors)      JSON_ERRORS=1; shift ;;
         -h|--help)
-            sed -n '2,22p' "$0"
+            sed -n '2,24p' "$0"
             exit 0
             ;;
         *)
-            err "Unknown argument: $1"
-            exit $EXIT_VERSION_MISSING
+            fatal_error "INVALID_ARGUMENT" "Unknown argument: $1" $EXIT_VERSION_MISSING \
+                "{\"argument\":\"$(json_escape "$1")\"}"
             ;;
     esac
 done
@@ -136,8 +137,10 @@ done
 # ── Version validation ─────────────────────────────────────────────
 validate_version() {
     if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]]; then
-        err "Invalid version tag: '$VERSION' (expected vMAJOR.MINOR.PATCH)"
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_INVALID_VERSION" \
+            "Invalid version tag: '$VERSION' (expected vMAJOR.MINOR.PATCH)" \
+            $EXIT_VERSION_MISSING \
+            "{\"provided\":\"$(json_escape "$VERSION")\",\"pattern\":\"^v[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"}"
     fi
 }
 
