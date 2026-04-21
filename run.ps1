@@ -822,7 +822,7 @@ function Copy-DocsSite {
                     }
                 }
                 Write-Info "Auto-building docs (npm run build) at repo root..."
-                $buildExit = Invoke-NpmQuiet -NpmArgs @('run','build')
+                $buildExit = [int](Invoke-NpmQuiet -NpmArgs @('run','build'))
                 if ($buildExit -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
                     if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
@@ -837,7 +837,7 @@ function Copy-DocsSite {
             Write-Warn "Auto-build failed - 'gitmap hd' will fail"
             Write-ReportError -Stage "docs-npm-build" `
                 -Command "npm run build" `
-                -ExitCode $buildExit `
+                -ExitCode ([int]$buildExit) `
                 -Message "npm run build did not produce dist/ output" `
                 -Paths @{ repoRoot = $RepoRoot; expectedDist = $rootDist; packageJson = $rootPkg }
             return
