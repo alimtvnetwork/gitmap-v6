@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import SearchBar from "@/components/docs/SearchBar";
-import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench } from "lucide-react";
+import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check } from "lucide-react";
 
 type Category = "paths" | "config" | "auth" | "network" | "locks" | "git" | "build";
 
@@ -343,6 +343,9 @@ const Troubleshooting = () => {
                     {categoryMeta[issue.category].label}
                   </p>
                 </div>
+                {issue.fixCommand && (
+                  <CopyFixButton command={issue.fixCommand} altCommand={issue.altCommand} />
+                )}
               </header>
 
               <div className="p-5 space-y-4">
