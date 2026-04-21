@@ -181,3 +181,11 @@ const (
 	DoctorWrapperNotLoaded = "Shell wrapper not loaded — gitmap cd prints path but cannot change directory"
 	DoctorWrapperFix       = "Run: gitmap setup, then restart terminal or reload profile (. $PROFILE / source ~/.bashrc / source ~/.zshrc)"
 )
+
+// Doctor VS Code Project Manager check messages (v3.41.0+).
+const (
+	DoctorVSCodePMOKFmt        = "VS Code Project Manager: %s"
+	DoctorVSCodePMNoVSCode     = "VS Code user-data dir not found — projects.json sync will be skipped (install VS Code or set APPDATA / HOME / XDG_CONFIG_HOME)"
+	DoctorVSCodePMNoExtension  = "alefragnani.project-manager extension not installed — projects.json sync will be skipped (install the extension and re-run)"
+	DoctorVSCodePMUnknownTitle = "VS Code Project Manager check failed"
+)
