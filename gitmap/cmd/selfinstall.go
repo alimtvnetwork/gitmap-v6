@@ -288,9 +288,9 @@ func buildSelfInstallCmd(name, path, dir string, opts selfInstallOpts) *exec.Cmd
 }
 
 // buildSelfInstallPwshCmd builds the Windows / pwsh invocation.
-// --dual-shell is currently a no-op on Windows (single-shell platform);
-// kept in the arg list for forward compatibility with future PSCore-on-
-// Linux / pwsh-side dual-write logic.
+// --profile is currently a no-op on Windows (single-shell platform —
+// pwsh is the only target); kept consistent with the Unix path for
+// forward compatibility with future PSCore-on-Linux dual-write logic.
 func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{"-ExecutionPolicy", "Bypass", "-NoProfile",
 		"-NoLogo", "-File", path, "-InstallDir", dir}
