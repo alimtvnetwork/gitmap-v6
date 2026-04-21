@@ -25,6 +25,22 @@ c
 - For file-based clone: run `gitmap scan` first to generate output files
 - For URL clone: just provide the HTTPS or SSH URL
 
+## Branch selection strategy
+
+`gitmap clone` decides whether to pass `-b <branch>` to `git clone` based on
+each record's `branchSource` (captured during scan):
+
+| branchSource     | Behavior                                                   |
+|------------------|------------------------------------------------------------|
+| `HEAD`           | Checkout the recorded branch (`-b <branch>`).              |
+| `remote-tracking`| Checkout the recorded tracking branch (`-b <branch>`).     |
+| `default`        | Checkout the recorded repo default (`-b <branch>`).        |
+| `detached`       | Omit `-b`; let the remote's default HEAD decide.           |
+| `unknown` / empty| Omit `-b`; let the remote's default HEAD decide.           |
+
+This prevents "Remote branch not found" errors when a scan captured a
+detached HEAD or a literal `HEAD` value that cannot be checked out.
+
 ## Idempotent clone cache
 
 Repeated `gitmap clone` runs are idempotent. After each successful clone or
