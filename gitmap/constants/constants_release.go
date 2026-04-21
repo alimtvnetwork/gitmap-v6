@@ -24,7 +24,7 @@ const (
 	MsgReleaseChangelog     = "  ✓ Using CHANGELOG.md as release body\n"
 	MsgReleaseReadme        = "  ✓ Attached README.md\n"
 	MsgReleaseDryRun        = "  [dry-run] %s\n"
-	MsgReleaseComplete      = "\n  Release %s complete.\n"
+	MsgReleaseComplete      = "\n  ── Release %s complete ──\n"
 	MsgReleaseBranchStart   = "\n  Completing release from %s...\n"
 	MsgReleaseBranchPending = "\n  → On release branch %s with no tag — completing pending release...\n"
 	MsgReleaseVersionRead   = "  → Version from %s: %s\n"
