@@ -23,6 +23,9 @@ func reorderFlagsBeforeArgs(args []string) []string {
 		// self-install / self-uninstall value-taking flags
 		"--dir": true, "--version": true,
 		"--profile": true, "--shell-mode": true,
+		// clone-next value-taking flags
+		"--csv": true, "--ssh-key": true, "-K": true,
+		"--target-dir": true,
 	}
 
 	for i := 0; i < len(args); i++ {
