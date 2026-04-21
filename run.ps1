@@ -168,6 +168,45 @@ function Write-RepoDetectSnippet {
     }
 }
 
+# -- npm wrapper ----------------------------------------------
+# Invoke-NpmQuiet runs an npm subcommand (e.g. install, run build) with
+# $ErrorActionPreference temporarily relaxed to 'Continue' so that npm's
+# stderr progress chatter is NOT promoted to a terminating
+# NativeCommandError under the script-wide 'Stop' preference. The previous
+# preference is ALWAYS restored via finally{}, even on exceptions.
+#
+# When $Quiet (or $env:GITMAP_QUIET=1) is active, all npm output is
+# discarded and only a single "[npm] <cmd> exit=<code>" line is logged.
+# Otherwise output streams to the terminal as usual. The function returns
+# the npm exit code so callers can branch on it.
+function Invoke-NpmQuiet {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string[]]$NpmArgs
+    )
+
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $exitCode = 0
+    try {
+        if ($script:Quiet) {
+            & npm @NpmArgs *>&1 | Out-Null
+        } else {
+            & npm @NpmArgs
+        }
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
+
+    if ($script:Quiet) {
+        Write-Host ("  [npm] {0} exit={1}" -f ($NpmArgs -join ' '), $exitCode) -ForegroundColor DarkGray
+    }
+
+    return $exitCode
+}
+
 # -- Banner ----------------------------------------------------
 function Show-Banner {
     Write-Host ""
