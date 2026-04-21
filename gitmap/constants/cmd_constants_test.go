@@ -76,6 +76,7 @@ func topLevelCmds() map[string]string {
 		"CmdSelfUninstall":         CmdSelfUninstall,
 		"CmdSf":                    CmdSf,
 		"CmdProbe":                 CmdProbe,
+		"CmdCode":                  CmdCode,
 	}
 }
 
