@@ -6,6 +6,7 @@ Remove gitmap from this machine.
 
 ```
 gitmap self-uninstall [--confirm] [--keep-data] [--keep-snippet]
+                      [--shell-mode <mode>]
 ```
 
 ## What it removes
@@ -14,11 +15,25 @@ gitmap self-uninstall [--confirm] [--keep-data] [--keep-snippet]
 |---------------------|-----------------------------------------------------|
 | Binary + deploy dir | Folder containing the running `gitmap` / `gitmap.exe` |
 | Data dir            | `<deploy>/.gitmap/` (skip with `--keep-data`)       |
-| PATH snippet        | `# gitmap shell wrapper v*` block in shell profile  |
+| PATH snippet        | `# gitmap shell wrapper v*` block in resolved profiles |
 | Completion files    | `gitmap-completion.{bash,zsh,fish}` in deploy dir   |
 
-The shell profile cleared is `Microsoft.PowerShell_profile.ps1` on
-Windows and `~/.bashrc` on Unix.
+The set of profiles touched depends on `--shell-mode` (default `auto`,
+which strips every known profile across zsh, bash, pwsh, and fish for
+the safest full removal). Mirrors the install-side flag — see
+`gitmap self-install --help` for the full singleton/combo table.
+
+| `--shell-mode`        | Profiles cleaned (Unix)                                                  |
+|-----------------------|--------------------------------------------------------------------------|
+| `auto` / `both`       | every known profile across all families                                  |
+| `zsh`                 | `~/.zshrc`, `~/.zprofile`                                                |
+| `bash`                | `~/.bashrc`, `~/.bash_profile`                                           |
+| `pwsh`                | `~/.config/powershell/{profile,Microsoft.PowerShell_profile}.ps1`        |
+| `fish`                | `~/.config/fish/config.fish`                                             |
+| `zsh+pwsh` (combo)    | strict union of zsh and pwsh files; bash + fish + `~/.profile` skipped   |
+
+On Windows only the pwsh profile family is meaningful; non-pwsh tokens
+in a combo resolve to no files (no error).
 
 ## Confirmation
 
@@ -53,6 +68,8 @@ gitmap self-uninstall
 gitmap self-uninstall --confirm
 gitmap self-uninstall --confirm --keep-data
 gitmap self-uninstall --confirm --keep-snippet --keep-data
+gitmap self-uninstall --confirm --shell-mode zsh+pwsh
+gitmap self-uninstall --confirm --shell-mode pwsh
 ```
 
 ## See also

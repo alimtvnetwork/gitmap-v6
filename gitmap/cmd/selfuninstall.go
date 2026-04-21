@@ -12,10 +12,17 @@ import (
 )
 
 // selfUninstallOpts holds parsed flags for self-uninstall.
+//
+// ShellMode mirrors the self-install flag (v3.49.0+): it selects which
+// shell-profile families to strip the PATH snippet from. Accepts the
+// same singletons (auto|both|zsh|bash|pwsh|fish) and `+`-joined combos
+// (e.g. zsh+pwsh) as `gitmap self-install`. Default `auto` strips every
+// known profile (safest for full removal).
 type selfUninstallOpts struct {
 	Confirm     bool
 	KeepData    bool
 	KeepSnippet bool
+	ShellMode   string
 }
 
 // runSelfUninstall is the entry point for `gitmap self-uninstall`.
@@ -24,7 +31,7 @@ type selfUninstallOpts struct {
 func runSelfUninstall(args []string) {
 	checkHelp(constants.CmdSelfUninstall, args)
 	opts := parseSelfUninstallFlags(args)
-	if !opts.Confirm && !confirmSelfUninstall() {
+	if !opts.Confirm && !confirmSelfUninstall(opts) {
 		fmt.Fprint(os.Stderr, constants.ErrSelfUninstallNoConfirm)
 		os.Exit(1)
 	}
@@ -35,21 +42,36 @@ func runSelfUninstall(args []string) {
 	executeSelfUninstall(opts)
 }
 
-// parseSelfUninstallFlags reads --confirm / --keep-data / --keep-snippet.
+// parseSelfUninstallFlags reads --confirm / --keep-data / --keep-snippet
+// / --shell-mode (canonical) / --profile + --dual-shell (hidden aliases).
+//
+// The shell-mode resolver/validator is shared with self-install so both
+// commands accept identical syntax — see resolveShellMode and
+// validateShellMode in selfinstall.go.
 func parseSelfUninstallFlags(args []string) selfUninstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfUninstall, flag.ExitOnError)
 	opts := selfUninstallOpts{}
+	var (
+		shellModeFlag string
+		profileFlag   string
+		dualShell     bool
+	)
 	fs.BoolVar(&opts.Confirm, "confirm", false, constants.FlagDescSelfConfirm)
 	fs.BoolVar(&opts.KeepData, "keep-data", false, constants.FlagDescSelfKeepData)
 	fs.BoolVar(&opts.KeepSnippet, "keep-snippet", false, constants.FlagDescSelfKeepSnippet)
+	fs.StringVar(&shellModeFlag, "shell-mode", "", constants.FlagDescSelfShellMode)
+	fs.StringVar(&profileFlag, "profile", "", constants.FlagDescSelfProfile)
+	fs.BoolVar(&dualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
 	fs.Parse(reorderFlagsBeforeArgs(args))
+	opts.ShellMode = resolveShellMode(shellModeFlag, profileFlag, dualShell)
+	validateShellMode(opts.ShellMode)
 
 	return opts
 }
 
 // confirmSelfUninstall prints the target list and prompts for "yes".
-func confirmSelfUninstall() bool {
-	printSelfUninstallTargets()
+func confirmSelfUninstall(opts selfUninstallOpts) bool {
+	printSelfUninstallTargets(opts)
 	fmt.Print(constants.MsgSelfUninstallConfirmPrompt)
 	var answer string
 	if _, err := fmt.Scanln(&answer); err != nil {
@@ -59,20 +81,28 @@ func confirmSelfUninstall() bool {
 	return answer == "yes"
 }
 
-// printSelfUninstallTargets prints what self-uninstall will remove.
-func printSelfUninstallTargets() {
+// printSelfUninstallTargets prints what self-uninstall will remove. The
+// snippet line expands to one entry per resolved profile so the user
+// sees exactly which files --shell-mode is about to touch.
+func printSelfUninstallTargets(opts selfUninstallOpts) {
 	fmt.Print(constants.MsgSelfUninstallHeader)
 	fmt.Print(constants.MsgSelfUninstallTargets)
 	fmt.Printf(constants.MsgSelfUninstallTargetBin, selfDeployDir())
 	fmt.Printf(constants.MsgSelfUninstallTargetData, selfDataDir())
-	fmt.Printf(constants.MsgSelfUninstallTargetSnippet, defaultProfileForOS())
+	for _, p := range resolveProfilesForShellMode(opts.ShellMode) {
+		fmt.Printf(constants.MsgSelfUninstallTargetSnippet, p)
+	}
 	fmt.Printf(constants.MsgSelfUninstallTargetCompl, selfDeployDir())
 }
 
 // executeSelfUninstall removes each target the user did not opt out of.
+// PATH snippets are stripped from every profile resolved by --shell-mode
+// (deterministic; mirrors how self-install picked its write targets).
 func executeSelfUninstall(opts selfUninstallOpts) {
 	if !opts.KeepSnippet {
-		removeProfileSnippet(defaultProfileForOS())
+		for _, p := range resolveProfilesForShellMode(opts.ShellMode) {
+			removeProfileSnippet(p)
+		}
 	}
 	removeCompletionSourceLines()
 	removeCompletionFiles(selfDeployDir())
