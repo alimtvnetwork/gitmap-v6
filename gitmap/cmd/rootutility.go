@@ -109,6 +109,11 @@ func dispatchUtility(command string) bool {
 
 		return true
 	}
+	if command == constants.CmdVSCodePMPath || command == constants.CmdVSCodePMPathAlias {
+		runVSCodePMPath(os.Args[2:])
+
+		return true
+	}
 
 	return false
 }

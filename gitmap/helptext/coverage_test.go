@@ -157,4 +157,10 @@ var helptextExemptConstants = []string{
 	"CmdPending",
 	// Internal source-repo override — set via env, not a help page.
 	"CmdSetSourceRepo",
+	// `help` is the help dispatcher itself — printed by the binary.
+	"CmdHelp",
+	// `r` is a release short-form alias of `release` — covered by release.md.
+	"CmdReleaseShort",
+	// `releases` is plural alias of `list-releases` — covered by list-releases.md.
+	"CmdReleases",
 }

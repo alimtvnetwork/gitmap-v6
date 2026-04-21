@@ -45,6 +45,7 @@ func runDoctorChecks() int {
 	issues += checkNetwork()
 	issues += checkLegacyDirs()
 	issues += checkSignature()
+	issues += checkVSCodeProjectManager()
 
 	return issues
 }

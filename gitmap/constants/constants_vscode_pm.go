@@ -66,4 +66,8 @@ const (
 	MsgVSCodePMSyncSkipped   = "  • VS Code Project Manager sync skipped (--no-vscode-sync)\n"
 	MsgVSCodePMRenamed       = "  ✓ projects.json: renamed %q -> %q\n"
 	MsgVSCodePMRenameNoMatch = "  • projects.json: no entry matched %q (skipped rename)\n"
+
+	// Diagnostic messages used by `gitmap vscode-pm-path` (v3.41.0+).
+	MsgVSCodePMPathRootMissing = "vscode: user-data directory not found (is VS Code installed? checked APPDATA / HOME / XDG_CONFIG_HOME)"
+	MsgVSCodePMPathExtMissing  = "vscode: project-manager extension storage dir not found near %s (open VS Code, install the alefragnani.project-manager extension, then retry)\n"
 )

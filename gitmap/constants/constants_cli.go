@@ -83,6 +83,8 @@ const (
 	CmdSf                    = "sf"
 	CmdProbe                 = "probe"
 	CmdCode                  = "code"
+	CmdVSCodePMPath          = "vscode-pm-path"
+	CmdVSCodePMPathAlias     = "vpath"
 )
 
 // Usage header.
