@@ -35,15 +35,26 @@ Finding = tuple[str, int, str, str]  # (file, line, linter, message)
 def main() -> int:
     args = parse_args()
     current = load_findings(args.current)
-    baseline = load_findings(args.baseline) if args.baseline else set()
+    baseline_present = bool(args.baseline) \
+        and os.path.exists(args.baseline) \
+        and os.path.getsize(args.baseline) > 0
+    baseline = load_findings(args.baseline) if baseline_present else set()
 
     added = sorted(current - baseline)
     fixed = sorted(baseline - current)
     unchanged = sorted(current & baseline)
 
-    print_summary(added, fixed, unchanged, baseline_present=bool(args.baseline)
-                  and os.path.exists(args.baseline)
-                  and os.path.getsize(args.baseline) > 0)
+    print_summary(added, fixed, unchanged, baseline_present=baseline_present)
+
+    # Seeding run (no baseline yet): never gate. Surface the findings as
+    # warnings so the next run has something to diff against, but exit 0
+    # so the very first push to main on a brand-new repo doesn't fail.
+    if not baseline_present:
+        for f in added:
+            file, line, linter, message = f
+            print(f"::warning file={file},line={line}::"
+                  f"[{linter}] {message} (seeding baseline)")
+        return 0
 
     if added:
         # GitHub Actions error annotations — surface in the PR check UI.
