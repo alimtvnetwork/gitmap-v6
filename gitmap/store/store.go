@@ -171,6 +171,7 @@ func (db *DB) Migrate() error {
 	db.migrateNotesColumn()
 	db.migrateRepoVersionColumns()
 	db.migrateRepoScanFolderID()
+	db.migrateVSCodeProjectPaths()
 
 	if err := db.SeedProjectTypes(); err != nil {
 		return err
@@ -239,6 +240,13 @@ func (db *DB) migrateRepoVersionColumns() {
 // `gitmap scan` re-discovers them.
 func (db *DB) migrateRepoScanFolderID() {
 	db.addColumnIfNotExists(constants.SQLAddRepoScanFolderId)
+}
+
+// migrateVSCodeProjectPaths adds the JSON-encoded Paths TEXT column to
+// existing VSCodeProject tables (schema v20+, v3.39.0). No-op on fresh
+// installs and on already-migrated databases (handled by addColumnIfNotExists).
+func (db *DB) migrateVSCodeProjectPaths() {
+	db.addColumnIfNotExists(constants.SQLAddVSCodeProjectPathsColumn)
 }
 
 // migrateZipGroupItemPaths adds RepoPath, RelativePath, FullPath columns
