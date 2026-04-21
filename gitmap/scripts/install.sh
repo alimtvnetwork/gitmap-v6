@@ -787,8 +787,9 @@ add_to_path() {
     fi
 
     # POSIX ~/.profile — catch-all for sh and other POSIX shells.
-    # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
-    # the "only this shell family" contract.
+    # Skipped under single-shell modes AND combo modes (zsh+pwsh, etc.)
+    # to honour the "only the listed families" strict contract. Only
+    # `auto` (detect everything) and `both` (write everything) include it.
     if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
         add_path_to_profile "${dir}" "${HOME}/.profile" false
         record_profile_outcome $? "~/.profile"
@@ -803,8 +804,8 @@ add_to_path() {
 
     # PowerShell on Unix — detected when the installer was launched from
     # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
-    # The --profile both / --dual-shell flag (DUAL_SHELL=true) forces
-    # this branch even when neither detection signal fires.
+    # The --shell-mode both / pwsh-containing combo (DUAL_SHELL=true)
+    # forces this branch even when neither detection signal fires.
     # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     local pwsh_active=false
     if detect_active_pwsh; then
@@ -814,7 +815,7 @@ add_to_path() {
     local pwsh_force=false
     if [ "${DUAL_SHELL:-false}" = true ]; then
         pwsh_force=true
-        PATH_PWSH_DETECTED="forced (--profile both)"
+        PATH_PWSH_DETECTED="forced (--shell-mode ${PROFILE_MODE})"
     fi
     if should_write_profile pwsh && { [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; }; then
         if [ "${pwsh_active}" = false ] && [ "${pwsh_force}" = false ]; then
