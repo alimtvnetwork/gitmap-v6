@@ -16,9 +16,15 @@
 //   - The first I/O error from any worker wins and is returned; remaining
 //     workers drain and exit. Partial results discovered before the error
 //     are still returned so callers can render what was found.
+//   - Cancellation: every public entry point accepts (or wraps) a
+//     context.Context. When the context is cancelled, in-flight workers
+//     stop dispatching new directories and drain quickly. The partial
+//     repo list collected so far is returned alongside ctx.Err() so
+//     callers can decide whether to surface results or discard them.
 package scanner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -47,8 +53,12 @@ type RepoInfo struct {
 // Subtrees are crawled by a bounded worker pool sized via
 // defaultWorkerCount(); result order is not guaranteed (callers that
 // depend on lexical order must sort).
+//
+// This is a convenience wrapper around ScanDirContext that uses a
+// background context — i.e. no cancellation. New code that wants
+// Ctrl+C support should call ScanDirContext directly.
 func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
-	return ScanDirWithWorkers(root, excludeDirs, 0)
+	return ScanDirContext(context.Background(), root, excludeDirs, 0)
 }
 
 // ScanDirWithWorkers walks root using exactly `workers` goroutines.
@@ -56,12 +66,22 @@ func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
 // from defaultWorkerCount(). Values larger than MaxScanWorkers are
 // clamped down to keep the pool under the per-process fd budget.
 func ScanDirWithWorkers(root string, excludeDirs []string, workers int) ([]RepoInfo, error) {
+	return ScanDirContext(context.Background(), root, excludeDirs, workers)
+}
+
+// ScanDirContext is the cancellable form of ScanDirWithWorkers. When ctx
+// is cancelled the walker stops dispatching new directories, drains its
+// in-flight workers, and returns (partialRepos, ctx.Err()). Callers that
+// want "best effort" output on Ctrl+C can still inspect the returned
+// slice; callers that want strict semantics should treat any non-nil
+// error as fatal and discard the partial results.
+func ScanDirContext(ctx context.Context, root string, excludeDirs []string, workers int) ([]RepoInfo, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return walkParallel(absRoot, buildExcludeSet(excludeDirs), resolveWorkerCount(workers))
+	return walkParallel(ctx, absRoot, buildExcludeSet(excludeDirs), resolveWorkerCount(workers))
 }
 
 // resolveWorkerCount normalizes a caller-supplied worker count: 0 / <0
@@ -104,23 +124,27 @@ func buildExcludeSet(dirs []string) map[string]bool {
 // keeps the worker function tiny (well under the per-func line limit) and
 // makes the synchronization rules obvious in one place.
 type scanState struct {
+	ctx     context.Context
 	root    string
 	exclude map[string]bool
 
-	queue chan string  // pending directories to walk
+	queue chan string    // pending directories to walk
 	wg    sync.WaitGroup // tracks outstanding queued items, NOT workers
 
-	mu     sync.Mutex
-	repos  []RepoInfo
+	mu       sync.Mutex
+	repos    []RepoInfo
 	firstErr error
 }
 
 // walkParallel runs a fixed-size worker pool that consumes directories
-// from an unbounded-capacity FIFO and enqueues child directories back.
-// The queue is closed when wg drops to zero — i.e. every dispatched
-// directory has been fully processed and produced no new work.
-func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo, error) {
+// from a buffered FIFO and enqueues child directories back. The queue is
+// closed when wg drops to zero — i.e. every dispatched directory has
+// been fully processed and produced no new work — OR when ctx is
+// cancelled and the drain helper has accounted for every outstanding
+// enqueue counter.
+func walkParallel(ctx context.Context, root string, exclude map[string]bool, workers int) ([]RepoInfo, error) {
 	st := &scanState{
+		ctx:     ctx,
 		root:    root,
 		exclude: exclude,
 		// Buffer sized generously so workers rarely block on enqueue.
@@ -159,14 +183,25 @@ func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo
 	st.mu.Lock()
 	defer st.mu.Unlock()
 
+	// Surface ctx.Err() as the dominant failure mode. If the walk was
+	// cancelled mid-flight, prefer that over any incidental I/O error
+	// the cancellation may have triggered (e.g. a closed handle).
+	if err := ctx.Err(); err != nil {
+		st.recordCancelErrLocked(err)
+	}
+
 	return st.repos, st.firstErr
 }
 
 // processDir reads one directory and dispatches its child directories
 // back onto the queue. Errors short-circuit further enqueues for THIS
 // dir but do not stop other workers — the first error is captured and
-// returned at the end.
+// returned at the end. If ctx has been cancelled, the dir is skipped
+// outright so the worker pool drains as fast as possible.
 func (st *scanState) processDir(dir string) {
+	if st.ctx.Err() != nil {
+		return
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		st.recordErr(err)
@@ -176,6 +211,9 @@ func (st *scanState) processDir(dir string) {
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
+		}
+		if st.ctx.Err() != nil {
+			return
 		}
 		st.handleSubdir(dir, entry)
 	}
@@ -197,8 +235,13 @@ func (st *scanState) handleSubdir(parent string, entry os.DirEntry) {
 	st.enqueue(filepath.Join(parent, name))
 }
 
-// enqueue dispatches a directory for processing.
+// enqueue dispatches a directory for processing. When the context has
+// been cancelled, we skip the send entirely — no wg.Add either — so
+// the closer goroutine can fire promptly and unblock workers.
 func (st *scanState) enqueue(path string) {
+	if st.ctx.Err() != nil {
+		return
+	}
 	st.wg.Add(1)
 	st.queue <- path
 }
@@ -228,4 +271,12 @@ func (st *scanState) recordErr(err error) {
 		st.firstErr = err
 	}
 	st.mu.Unlock()
+}
+
+// recordCancelErrLocked replaces firstErr with the cancellation cause.
+// Caller MUST hold st.mu. We intentionally overwrite any prior I/O
+// error because cancellation is the user-visible reason the scan
+// stopped — the I/O error is almost certainly a side effect.
+func (st *scanState) recordCancelErrLocked(err error) {
+	st.firstErr = err
 }
