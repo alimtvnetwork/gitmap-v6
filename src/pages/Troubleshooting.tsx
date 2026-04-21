@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import SearchBar from "@/components/docs/SearchBar";
-import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check } from "lucide-react";
+import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check, Link2 } from "lucide-react";
 
 type Category = "paths" | "config" | "auth" | "network" | "locks" | "git" | "build";
 
@@ -258,9 +259,35 @@ const issues: Issue[] = [
   },
 ];
 
+const isValidCategoryKey = (v: string): v is Category =>
+  (Object.keys(categoryMeta) as string[]).includes(v);
+
 const Troubleshooting = () => {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category | "all">("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") ?? searchParams.get("q") ?? "";
+  const initialCategoryRaw = searchParams.get("category") ?? "all";
+  const initialCategory: Category | "all" =
+    initialCategoryRaw === "all" || isValidCategoryKey(initialCategoryRaw)
+      ? (initialCategoryRaw as Category | "all")
+      : "all";
+
+  const [search, setSearch] = useState(initialSearch);
+  const [activeCategory, setActiveCategory] = useState<Category | "all">(initialCategory);
+  const scrolledIdRef = useRef<string | null>(null);
+
+  // Sync state -> URL (replace, no history entry per keystroke).
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (search) next.set("search", search);
+    else next.delete("search");
+    next.delete("q");
+    if (activeCategory !== "all") next.set("category", activeCategory);
+    else next.delete("category");
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, activeCategory]);
 
   const filtered = useMemo(() => {
     let rows = issues;
@@ -284,6 +311,30 @@ const Troubleshooting = () => {
     for (const i of issues) counts[i.category] = (counts[i.category] ?? 0) + 1;
     return counts;
   }, []);
+
+  // Deep-link: scroll to ?id=<issue-id> and relax filters that would hide it.
+  const targetId = searchParams.get("id");
+  useEffect(() => {
+    if (!targetId) return;
+    const issue = issues.find((i) => i.id === targetId);
+    if (!issue) return;
+    if (activeCategory !== "all" && activeCategory !== issue.category) {
+      setActiveCategory("all");
+      return;
+    }
+    if (filtered.findIndex((i) => i.id === targetId) === -1) {
+      if (search) setSearch("");
+      return;
+    }
+    if (scrolledIdRef.current === targetId) return;
+    const el = document.getElementById(targetId);
+    if (el) {
+      scrolledIdRef.current = targetId;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2", "ring-primary");
+      window.setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+    }
+  }, [targetId, filtered, activeCategory, search]);
 
   return (
     <DocsLayout>
@@ -343,6 +394,7 @@ const Troubleshooting = () => {
                     {categoryMeta[issue.category].label}
                   </p>
                 </div>
+                <CopyLinkButton issueId={issue.id} />
                 {issue.fixCommand && (
                   <CopyFixButton command={issue.fixCommand} altCommand={issue.altCommand} />
                 )}
@@ -480,6 +532,47 @@ const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
         <>
           <Copy className="h-3.5 w-3.5" />
           Copy fix
+        </>
+      )}
+    </button>
+  );
+};
+
+// CopyLinkButton — copies a deep-link to this specific issue card so it can
+// be shared and re-opened directly via the ?id= query parameter.
+const CopyLinkButton = ({ issueId }: { issueId: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", issueId);
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  }, [issueId]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? "Link copied" : "Copy link to this issue"}
+      title={copied ? "Link copied!" : "Copy link to this issue"}
+      className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+        copied
+          ? "border-primary bg-primary/15 text-primary"
+          : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
+      }`}
+    >
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5" />
+          Linked
+        </>
+      ) : (
+        <>
+          <Link2 className="h-3.5 w-3.5" />
+          Link
         </>
       )}
     </button>
