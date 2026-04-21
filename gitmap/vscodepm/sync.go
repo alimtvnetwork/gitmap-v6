@@ -90,7 +90,7 @@ func RenameByPath(rootPath, newName string) (bool, error) {
 
 // readEntries returns the parsed entries. Missing file -> empty slice.
 func readEntries(path string) ([]Entry, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // path is derived from trusted env discovery
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return []Entry{}, nil
@@ -188,7 +188,7 @@ func writeEntriesToFile(path string, entries []Entry) error {
 		return fmt.Errorf(constants.ErrVSCodePMWriteTempFailed, path, err)
 	}
 
-	file, err := os.Create(path) //nolint:gosec // path under user data dir
+	file, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf(constants.ErrVSCodePMWriteTempFailed, path, err)
 	}

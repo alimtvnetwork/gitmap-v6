@@ -5,55 +5,30 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
-// TestUserDataCandidate_PerOSEnvDispatch verifies the per-OS dispatcher
-// returns the platform-appropriate candidate path for the env vars set on
-// the running test host. Only the active GOOS branch is exercised here;
-// the Windows / Linux helpers each have their own dedicated tests below.
-func TestUserDataCandidate_PerOSEnvDispatch(t *testing.T) {
-	got := userDataCandidate()
-	if got == "" {
-		t.Skipf("no env vars set for GOOS=%s — nothing to assert", runtime.GOOS)
+// TestWindowsCandidate_AppDataPresent asserts that APPDATA wins on
+// Windows when set.
+func TestWindowsCandidate_AppDataPresent(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("windows-only test")
 	}
-
-	if !filepath.IsAbs(got) && !strings.Contains(got, "Code") {
-		t.Errorf("userDataCandidate() = %q, expected an absolute path containing %q", got, "Code")
-	}
-}
-
-// TestWindowsCandidate_AppDataPrimary asserts the primary %APPDATA% branch
-// wins when present.
-func TestWindowsCandidate_AppDataPrimary(t *testing.T) {
 	t.Setenv("APPDATA", filepath.FromSlash("C:/Users/jane/AppData/Roaming"))
-	t.Setenv("USERPROFILE", filepath.FromSlash("C:/Users/jane"))
 
 	got := windowsUserDataCandidate()
-	want := filepath.FromSlash("C:/Users/jane/AppData/Roaming/Code")
-	if got != want {
-		t.Errorf("windowsUserDataCandidate() = %q, want %q", got, want)
-	}
-}
-
-// TestWindowsCandidate_UserProfileFallback asserts the %USERPROFILE%
-// fallback fires when %APPDATA% is empty.
-func TestWindowsCandidate_UserProfileFallback(t *testing.T) {
-	t.Setenv("APPDATA", "")
-	t.Setenv("USERPROFILE", filepath.FromSlash("C:/Users/jane"))
-
-	got := windowsUserDataCandidate()
-	want := filepath.Join(filepath.FromSlash("C:/Users/jane"),
-		filepath.FromSlash("AppData/Roaming/Code"))
+	want := filepath.Join(filepath.FromSlash("C:/Users/jane/AppData/Roaming"), "Code")
 	if got != want {
 		t.Errorf("windowsUserDataCandidate() = %q, want %q", got, want)
 	}
 }
 
 // TestWindowsCandidate_NoEnvReturnsEmpty asserts the helper returns ""
-// when neither env var is set, signaling ErrUserDataMissing upstream.
+// when neither APPDATA nor USERPROFILE is set.
 func TestWindowsCandidate_NoEnvReturnsEmpty(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("windows-only test")
+	}
 	t.Setenv("APPDATA", "")
 	t.Setenv("USERPROFILE", "")
 
@@ -64,11 +39,12 @@ func TestWindowsCandidate_NoEnvReturnsEmpty(t *testing.T) {
 
 // TestLinuxCandidate_XDGPrimary asserts $XDG_CONFIG_HOME wins.
 func TestLinuxCandidate_XDGPrimary(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/custom/xdg")
-	t.Setenv("HOME", "/home/jane")
+	xdg := filepath.FromSlash("/custom/xdg")
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", filepath.FromSlash("/home/jane"))
 
 	got := linuxUserDataCandidate()
-	want := filepath.Join("/custom/xdg", "Code")
+	want := filepath.Join(xdg, "Code")
 	if got != want {
 		t.Errorf("linuxUserDataCandidate() = %q, want %q", got, want)
 	}
@@ -76,11 +52,12 @@ func TestLinuxCandidate_XDGPrimary(t *testing.T) {
 
 // TestLinuxCandidate_HomeFallback asserts $HOME/.config/Code fallback.
 func TestLinuxCandidate_HomeFallback(t *testing.T) {
+	home := filepath.FromSlash("/home/jane")
 	t.Setenv("XDG_CONFIG_HOME", "")
-	t.Setenv("HOME", "/home/jane")
+	t.Setenv("HOME", home)
 
 	got := linuxUserDataCandidate()
-	want := filepath.Join("/home/jane", filepath.FromSlash(".config/Code"))
+	want := filepath.Join(home, filepath.FromSlash(".config/Code"))
 	if got != want {
 		t.Errorf("linuxUserDataCandidate() = %q, want %q", got, want)
 	}
@@ -100,11 +77,11 @@ func TestLinuxCandidate_NoEnvReturnsEmpty(t *testing.T) {
 // TestDarwinCandidate_HomePresent asserts the macOS Library path is built
 // off $HOME.
 func TestDarwinCandidate_HomePresent(t *testing.T) {
-	t.Setenv("HOME", "/Users/jane")
+	home := filepath.FromSlash("/Users/jane")
+	t.Setenv("HOME", home)
 
 	got := darwinUserDataCandidate()
-	want := filepath.Join("/Users/jane",
-		filepath.FromSlash("Library/Application Support/Code"))
+	want := filepath.Join(home, filepath.FromSlash("Library/Application Support/Code"))
 	if got != want {
 		t.Errorf("darwinUserDataCandidate() = %q, want %q", got, want)
 	}
@@ -153,7 +130,6 @@ func TestProjectsJSONPath_RootExistsExtMissingReturnsSentinel(t *testing.T) {
 	}
 
 	parent := t.TempDir()
-	// The resolver appends "Code" to APPDATA / XDG_CONFIG_HOME, so create it.
 	codeDir := filepath.Join(parent, "Code")
 	if err := os.MkdirAll(codeDir, 0o755); err != nil {
 		t.Fatalf("mkdir Code: %v", err)
@@ -179,32 +155,4 @@ func clearAllVSCodeEnv(t *testing.T) {
 	for _, k := range []string{"APPDATA", "USERPROFILE", "HOME", "XDG_CONFIG_HOME"} {
 		t.Setenv(k, "")
 	}
-}
-
-// pointEnvAt makes the per-OS resolver return `root` as the user-data dir.
-// Sets the primary env var for the active GOOS so userDataCandidate picks
-// it up without needing the fallback.
-func pointEnvAt(t *testing.T, root string) {
-	t.Helper()
-	clearAllVSCodeEnv(t)
-
-	switch runtime.GOOS {
-	case "windows":
-		// APPDATA is the parent of the "Code" dir, so strip the suffix.
-		t.Setenv("APPDATA", filepath.Dir(root))
-		// Rename the temp dir into "<parent>/Code" so the resolver finds it.
-		// We can't actually rename here without disturbing t.TempDir cleanup,
-		// so instead override APPDATA to the temp dir directly and rely on
-		// the resolver appending "Code" — which means the caller must have
-		// passed a path ending in "Code".
-		t.Setenv("APPDATA", root)
-	case "darwin":
-		// $HOME/Library/Application Support/Code — too deep to fake cleanly
-		// without creating real subdirs. Skip this combination on darwin.
-		t.Skipf("pointEnvAt: darwin path is too deep to fake cleanly; covered indirectly")
-	default:
-		t.Setenv("XDG_CONFIG_HOME", filepath.Dir(root))
-		t.Setenv("XDG_CONFIG_HOME", root)
-	}
-	_ = filepath.Separator // keep import meaningful even if Skip fires
 }

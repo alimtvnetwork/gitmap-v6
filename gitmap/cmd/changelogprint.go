@@ -103,7 +103,7 @@ func changelogMarker(bullet release.ChangelogBullet) string {
 	return constants.ChangelogPrettyMarkerLN
 }
 
-// changelogMarkerColor selects a colour based on bullet depth.
+// changelogMarkerColor selects a color based on bullet depth.
 func changelogMarkerColor(depth int) string {
 	if depth == 0 {
 		return constants.ColorGreen

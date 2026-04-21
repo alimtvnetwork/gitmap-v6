@@ -82,8 +82,8 @@ const (
 	ChangelogNoteFmt    = "  - %s"
 )
 
-// Changelog pretty-print constants. Centralised here so future tweaks to
-// colours, indent widths, or rule glyphs don't require code changes in
+// Changelog pretty-print constants. Centralized here so future tweaks to
+// colors, indent widths, or rule glyphs don't require code changes in
 // the cmd package.
 const (
 	ChangelogPrettyRule        = "──────────────────────────────────────────────────────────────────────"

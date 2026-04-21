@@ -10,7 +10,7 @@ import (
 )
 
 // changelogWrapWidth resolves the terminal column width used for wrapping
-// changelog bullets. Honours $COLUMNS, then falls back to the constant
+// changelog bullets. Honors $COLUMNS, then falls back to the constant
 // default. Always clamped to [WrapMin, WrapMax] so a tiny terminal still
 // renders readably and a giant terminal doesn't produce ridiculous lines.
 func changelogWrapWidth() int {
@@ -132,7 +132,7 @@ func joinWrappedLines(lines []string, prefix, hanging string) string {
 }
 
 // visibleLen returns the rune count of s, ignoring ANSI escape sequences
-// so wrapping math doesn't count colour codes as printable characters.
+// so wrapping math doesn't count color codes as printable characters.
 func visibleLen(s string) int {
 	count := 0
 	i := 0
