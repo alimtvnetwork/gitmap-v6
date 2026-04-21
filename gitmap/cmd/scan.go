@@ -54,7 +54,12 @@ func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFo
 		defer taskDB.Close()
 	}
 
-	repos, err := scanner.ScanDirWithWorkers(absDir, cfg.ExcludeDirs, workers)
+	progress := newScanProgressRenderer(quiet)
+	repos, err := scanner.ScanDirWithOptions(absDir, scanner.ScanOptions{
+		ExcludeDirs: cfg.ExcludeDirs,
+		Workers:     workers,
+		Progress:    progress.Callback(),
+	})
 	if err != nil {
 		failPendingTask(taskDB, taskID, fmt.Sprintf(constants.ErrScanFailed, absDir, err))
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, absDir, err)
