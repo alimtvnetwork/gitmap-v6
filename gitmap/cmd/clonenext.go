@@ -111,7 +111,7 @@ func runCloneNext(args []string) {
 	}
 
 	// Optionally check and create the target GitHub repo when --create-remote is set.
-	if createRemote {
+	if cnFlags.CreateRemote {
 		owner, _, parseErr := clonenext.ParseOwnerRepo(remoteURL)
 		if parseErr != nil {
 			fmt.Fprintf(os.Stderr, constants.ErrCloneNextRemoteParse, parseErr)
@@ -146,13 +146,13 @@ func runCloneNext(args []string) {
 	// Record version history in DB.
 	recordVersionHistory(targetPath, parsed.CurrentVersion, targetVersion, flattenedFolder)
 
-	if !noDesktop {
+	if !cnFlags.NoDesktop {
 		registerCloneNextDesktop(targetName, targetPath)
 	}
 
 	// Handle removal of the old versioned folder (only if different from flattened path).
 	if currentFolder != flattenedFolder {
-		handleCloneNextRemoval(currentFolder, cwd, targetPath, deleteFlag, keepFlag)
+		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, cnFlags.Keep)
 	}
 
 	// Set GITMAP_SHELL_HANDOFF for the shell wrapper to cd into the new folder.
