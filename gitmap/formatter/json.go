@@ -14,12 +14,17 @@ import (
 // configured sink (default os.Stderr) but the write always proceeds.
 // See validate.go for the warn-and-write policy.
 func WriteJSON(w io.Writer, records []model.ScanRecord) error {
-	emitValidationWarnings(records)
+	issueCount := emitValidationWarnings(records)
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", constants.JSONIndent)
+	err := enc.Encode(records)
+	if err != nil {
+		return err
+	}
+	emitWriteSummary("json", len(records), issueCount)
 
-	return enc.Encode(records)
+	return nil
 }
 
 // ParseJSON reads records from a JSON reader.

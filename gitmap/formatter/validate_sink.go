@@ -32,19 +32,41 @@ func SetValidationSink(w io.Writer) io.Writer {
 }
 
 // emitValidationWarnings runs the validator over records and writes one
-// `gitmap: validation: <issue>` line per finding to the active sink. It
-// never returns an error — by policy the write proceeds regardless.
-func emitValidationWarnings(records []model.ScanRecord) {
+// `gitmap: validation: <issue>` line per finding to the active sink.
+// Returns the number of issues found so the caller can include the
+// count in a post-write summary line. Never returns an error — by
+// policy the write proceeds regardless.
+func emitValidationWarnings(records []model.ScanRecord) int {
 	issues := ValidateRecords(records)
 	if len(issues) == 0 {
-		return
+		return 0
 	}
 
-	sinkMu.RLock()
-	w := validationSink
-	sinkMu.RUnlock()
-
+	w := activeSink()
 	for _, issue := range issues {
 		fmt.Fprintf(w, "gitmap: validation: %s\n", issue.String())
 	}
+
+	return len(issues)
+}
+
+// emitWriteSummary prints a one-line tally after a successful write so
+// users see the outcome without having to count stderr lines. Format:
+//
+//	gitmap: <format>: wrote N record(s), M validation issue(s)
+//
+// Always goes to the same sink as the per-issue warnings so test capture
+// stays consistent.
+func emitWriteSummary(format string, recordCount, issueCount int) {
+	fmt.Fprintf(activeSink(), "gitmap: %s: wrote %d record(s), %d validation issue(s)\n",
+		format, recordCount, issueCount)
+}
+
+// activeSink returns the current validation sink under a read lock.
+// Extracted so both emitters share the same lookup path.
+func activeSink() io.Writer {
+	sinkMu.RLock()
+	defer sinkMu.RUnlock()
+
+	return validationSink
 }
