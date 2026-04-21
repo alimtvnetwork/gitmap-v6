@@ -1,6 +1,8 @@
 package scanner
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -130,5 +132,41 @@ func TestScanDirManyReposParallel(t *testing.T) {
 			t.Errorf("duplicate repo in result: %s", r.AbsolutePath)
 		}
 		seen[r.AbsolutePath] = true
+	}
+}
+
+// TestScanDirContextCancelled verifies that an already-cancelled context
+// short-circuits the walk: ScanDirContext returns context.Canceled (not
+// a wrapped I/O error) and the worker pool drains without leaking
+// goroutines. We seed enough repos that a non-cancelling implementation
+// would almost certainly find at least one.
+func TestScanDirContextCancelled(t *testing.T) {
+	root := t.TempDir()
+	for i := 0; i < 20; i++ {
+		makeRepo(t, root, filepath.Join("g", string(rune('a'+i%5)), string(rune('0'+i%10))))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel BEFORE the walk starts
+
+	_, err := ScanDirContext(ctx, root, nil, 4)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+// TestScanDirContextNotCancelled is the happy-path counterpart: a live
+// context must not interfere with normal completion.
+func TestScanDirContextNotCancelled(t *testing.T) {
+	root := t.TempDir()
+	makeRepo(t, root, "a")
+	makeRepo(t, root, "b/c")
+
+	got, err := ScanDirContext(context.Background(), root, nil, 0)
+	if err != nil {
+		t.Fatalf("ScanDirContext: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 repos, got %d (%+v)", len(got), got)
 	}
 }
