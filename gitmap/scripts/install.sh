@@ -539,8 +539,26 @@ install_docs_site() {
 
 # ── Add to PATH ────────────────────────────────────────────────────
 
-# add_path_to_profile writes an export line to a single profile file (idempotent).
-# Returns 0 if written, 1 if already present.
+# detect_active_pwsh reports whether the user is running this installer
+# from inside a PowerShell (pwsh) session. macOS / Linux pwsh always sets
+# PSModulePath, even when the script is invoked through a `bash -c` subshell.
+# Spec: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
+detect_active_pwsh() {
+    if [ -n "${PSModulePath:-}" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# pwsh_profile_path echoes the per-user pwsh profile path on Unix
+# (Linux / macOS), creating the parent directory if needed.
+pwsh_profile_path() {
+    local dir="${HOME}/.config/powershell"
+    mkdir -p "${dir}" 2>/dev/null || true
+    echo "${dir}/Microsoft.PowerShell_profile.ps1"
+}
+
 # add_path_to_profile writes a marker-block snippet (per
 # spec/04-generic-cli/21-post-install-shell-activation) to a single
 # profile file. Idempotent: rewrites the existing block if present.
