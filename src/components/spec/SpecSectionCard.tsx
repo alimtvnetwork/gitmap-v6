@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, AlertTriangle, Compass, Terminal, ShieldCheck, Palette, ChevronDown, Link as LinkIcon } from "lucide-react";
 import type { SpecSection } from "./specData";
 import SpecEntryRow from "./SpecEntryRow";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const iconMap = {
   "file-text": <FileText className="h-5 w-5" />,
