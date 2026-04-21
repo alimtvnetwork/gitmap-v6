@@ -62,12 +62,14 @@ export const commands: CommandDef[] = [
       { flag: "--github-desktop", description: "Register repos in GitHub Desktop" },
       { flag: "--open", description: "Open output folder after scan" },
       { flag: "--quiet", description: "Suppress clone help section" },
+      { flag: "--no-vscode-sync", description: "Skip syncing scanned repos into VS Code Project Manager projects.json (default: sync ON)" },
     ],
     examples: [
-      { command: "gitmap scan ~/projects", description: "Scan all repos under ~/projects" },
+      { command: "gitmap scan ~/projects", description: "Scan all repos under ~/projects (auto-syncs into VS Code Project Manager)" },
       { command: "gitmap s --output json --mode ssh", description: "JSON output with SSH clone URLs" },
       { command: "gitmap scan C:\\dev --github-desktop --open", description: "Scan, register in GitHub Desktop, open folder" },
       { command: "gitmap s --output csv --output-path ./backup", description: "CSV output to custom directory" },
+      { command: "gitmap scan ~/projects --no-vscode-sync", description: "Scan without touching VS Code Project Manager" },
     ],
     seeAlso: [
       { name: "rescan", description: "Re-scan using cached parameters" },
@@ -784,20 +786,36 @@ export const commands: CommandDef[] = [
   },
   {
     category: "navigation",
-    name: "as", alias: "s-alias", description: "Register the current Git repo in SQLite + map a short name to it (run from inside the repo)",
+    name: "as", alias: "s-alias", description: "Register the current Git repo in SQLite + map a short name to it (run from inside the repo). Mirrors the alias to VS Code Project Manager projects.json when present.",
     usage: "gitmap as [alias-name] [--force]",
     flags: [
       { flag: "--force, -f", description: "Overwrite an existing alias that points to a different repo" },
     ],
     examples: [
       { command: "gitmap as", description: "Use the repo folder basename as the alias" },
-      { command: "gitmap as backend", description: "Register as 'backend'" },
+      { command: "gitmap as backend", description: "Register as 'backend' (also renames the matching projects.json entry)" },
       { command: "gitmap as backend -f", description: "Overwrite an existing 'backend' alias" },
     ],
     seeAlso: [
       { name: "alias list", description: "Show every registered alias" },
       { name: "release-alias", description: "Release this repo by alias from anywhere" },
       { name: "scan", description: "Bulk-discover and register repos under a directory" },
+      { name: "code", description: "Register a path with VS Code Project Manager and open it" },
+    ],
+  },
+  {
+    category: "navigation",
+    name: "code", description: "Register the current repo (or any path) with the alefragnani.project-manager VS Code extension and open VS Code on it. Path resolution: explicit arg > git repo root > CWD.",
+    usage: "gitmap code [alias] [path]",
+    examples: [
+      { command: "gitmap code", description: "Register the git repo root (or CWD) — alias defaults to folder basename" },
+      { command: "gitmap code backend", description: "Override the alias to 'backend' for the resolved path" },
+      { command: "gitmap code docs ~/Documents/spec", description: "Register any path (no git requirement) with alias 'docs'" },
+    ],
+    seeAlso: [
+      { name: "as", description: "Register an alias for the current repo (mirrors to projects.json too)" },
+      { name: "scan", description: "Bulk-syncs every discovered repo into projects.json" },
+      { name: "cd", description: "Jump to a tracked repo directory in your shell" },
     ],
   },
 
