@@ -208,34 +208,47 @@ function Resolve-FallbackPatch([string]$requested) {
 
 function Resolve-RequestedVersion([string]$requested) {
     if (-not (Test-VersionTag $requested)) {
-        Write-Err2 "Invalid version tag: '$requested' (expected vMAJOR.MINOR.PATCH)"
-        exit $EXIT_VERSION_MISSING
+        Write-StructuredError -Code $ERR_INVALID_VERSION `
+            -Message "Invalid version tag: '$requested' (expected vMAJOR.MINOR.PATCH)" `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{ provided = $requested; pattern = "^v\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$" }
     }
 
     $rel = Invoke-GitHubAPI "/releases/tags/$requested"
     if ($null -ne $rel) { return $requested }
 
-    Write-Err2 "Requested version $requested is not a published release."
-
     if ($AllowFallback) {
         $fb = Resolve-FallbackPatch $requested
         if ($fb) {
-            Write-Warn2 "Falling back to newest patch in series: $fb"
+            Write-Warn2 "Requested $requested missing; falling back to newest patch in series: $fb"
             return $fb
         }
-        Write-Err2 "No same-minor-series patch available for $requested"
-        exit $EXIT_VERSION_MISSING
+        Write-StructuredError -Code $ERR_NO_FALLBACK `
+            -Message "Requested version $requested is not published and no same-minor-series patch is available." `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{ requested = $requested; fallbackAttempted = $true }
     }
 
     if (-not (Test-Interactive)) {
-        Write-Err2 "Non-interactive run; refusing to substitute. Set -AllowFallback to opt in."
-        exit $EXIT_VERSION_MISSING
+        $recentForHint = @()
+        try { $recentForHint = Get-RecentReleases 5 } catch {}
+        Write-StructuredError -Code $ERR_NON_INTERACTIVE `
+            -Message "Requested version $requested is not published. Non-interactive session cannot prompt for substitution. Re-run with -AllowFallback to opt into same-minor patch substitution, or pin to one of the recent releases." `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{
+                requested         = $requested
+                interactive       = $false
+                allowFallbackHint = "-AllowFallback"
+                recentReleases    = $recentForHint
+            }
     }
 
     $recent = Get-RecentReleases 5
     if ($recent.Count -eq 0) {
-        Write-Err2 "Could not list recent releases."
-        exit $EXIT_VERSION_MISSING
+        Write-StructuredError -Code $ERR_RECENT_LIST_FAILED `
+            -Message "Requested version $requested is not published and the recent-releases list could not be fetched." `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{ requested = $requested }
     }
 
     Write-Host ""
@@ -248,12 +261,17 @@ function Resolve-RequestedVersion([string]$requested) {
 
     $reply = Read-PromptSafe "  Pick a number to install instead, or N to quit"
     if ($null -eq $reply -or [string]::IsNullOrWhiteSpace($reply) -or $reply -match '^[Nn]') {
-        exit $EXIT_VERSION_MISSING
+        Write-StructuredError -Code $ERR_USER_DECLINED `
+            -Message "User declined to substitute for missing version $requested." `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{ requested = $requested; recentReleases = $recent }
     }
     $idx = 0
     if (-not [int]::TryParse($reply, [ref]$idx) -or $idx -lt 1 -or $idx -gt $recent.Count) {
-        Write-Err2 "Invalid choice."
-        exit $EXIT_VERSION_MISSING
+        Write-StructuredError -Code $ERR_INVALID_CHOICE `
+            -Message "Invalid choice '$reply'; expected 1..$($recent.Count) or N." `
+            -ExitCode $EXIT_VERSION_MISSING `
+            -Details @{ reply = $reply; choices = $recent }
     }
     $chosen = $recent[$idx - 1]
     Write-Warn2 "User selected $chosen as substitute for $requested"
