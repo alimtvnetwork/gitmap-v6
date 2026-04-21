@@ -834,6 +834,55 @@ add_to_path() {
     export PATH="${PATH}:${dir}"
 }
 
+# resolve_alt_reload picks a secondary reload command for the *other*
+# shell family, so dual-shell installs never show a syntactically wrong
+# command (e.g. `source ~/.zshrc` while the user is sitting in pwsh).
+#
+# Selection rules (PATH_SHELL is the primary, already set above):
+#   - PATH_SHELL=pwsh: alt is the first POSIX profile we wrote
+#     (.zshrc preferred, then .bashrc, then .profile).
+#   - PATH_SHELL=zsh|bash|fish|other: alt is the pwsh dot-source command
+#     iff the pwsh profile was written (dual-shell or pwsh on PATH).
+#
+# Inputs:  $1 = profiles_written list (space-separated, e.g. " ~/.zshrc ~/.bashrc ~/.config/powershell/...")
+# Outputs: PATH_RELOAD_ALT, PATH_RELOAD_ALT_SHELL (label like "zsh" or "pwsh")
+resolve_alt_reload() {
+    local written=" $1 "
+    PATH_RELOAD_ALT=""
+    PATH_RELOAD_ALT_SHELL=""
+    if [ "${PATH_SHELL}" = "pwsh" ]; then
+        pick_posix_alt "${written}"
+        return
+    fi
+    case "${written}" in
+        *powershell*)
+            PATH_RELOAD_ALT=". \$PROFILE"
+            PATH_RELOAD_ALT_SHELL="pwsh"
+            ;;
+    esac
+}
+
+# pick_posix_alt scans the written-profiles list for the highest-priority
+# POSIX profile and sets PATH_RELOAD_ALT to its `source` command. Split
+# out so resolve_alt_reload stays a clear top-level dispatch.
+pick_posix_alt() {
+    local written="$1"
+    case "${written}" in
+        *.zshrc*)
+            PATH_RELOAD_ALT="source ~/.zshrc"
+            PATH_RELOAD_ALT_SHELL="zsh"
+            ;;
+        *.bashrc*)
+            PATH_RELOAD_ALT="source ~/.bashrc"
+            PATH_RELOAD_ALT_SHELL="bash"
+            ;;
+        *.profile*)
+            PATH_RELOAD_ALT=". ~/.profile"
+            PATH_RELOAD_ALT_SHELL="sh"
+            ;;
+    esac
+}
+
 print_install_summary() {
     local installed_version="$1" bin_path="$2"
 
@@ -850,6 +899,9 @@ print_install_summary() {
     printf '    Shell: %s\n' "${PATH_SHELL}" >&2
     printf '    PATH target: %s (%s)\n' "${PATH_TARGET}" "${PATH_STATUS}" >&2
     printf '    Reload: %s\n' "${PATH_RELOAD}" >&2
+    if [ -n "${PATH_RELOAD_ALT}" ]; then
+        printf '    Reload (%s): %s\n' "${PATH_RELOAD_ALT_SHELL}" "${PATH_RELOAD_ALT}" >&2
+    fi
 
     # --show-path expands the summary with the full audit trail so the
     # user can confirm every profile file we touched and why a particular
