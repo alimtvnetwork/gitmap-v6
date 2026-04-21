@@ -79,6 +79,41 @@ function Write-Fail {
     Write-Host $Message -ForegroundColor Red
 }
 
+# -- Error reporting (JSONL) -----------------------------------
+# When run from `gitmap update --report-errors json`, env vars
+# GITMAP_REPORT_ERRORS=json and GITMAP_REPORT_ERRORS_FILE=<path>
+# are set. Each non-fatal failure appends one JSON object per line.
+function Write-ReportError {
+    param(
+        [string]$Stage,
+        [string]$Command,
+        [int]$ExitCode,
+        [string]$Message,
+        [hashtable]$Paths = @{}
+    )
+    $fmt = $env:GITMAP_REPORT_ERRORS
+    $file = $env:GITMAP_REPORT_ERRORS_FILE
+    if (($fmt -ne "json") -or [string]::IsNullOrWhiteSpace($file)) {
+        return
+    }
+    try {
+        $entry = [ordered]@{
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+            stage     = $Stage
+            command   = $Command
+            exitCode  = $ExitCode
+            cwd       = (Get-Location).Path
+            message   = $Message
+            paths     = $Paths
+            os        = "windows"
+        }
+        $line = ($entry | ConvertTo-Json -Compress -Depth 5)
+        Add-Content -Path $file -Value $line -Encoding UTF8 -ErrorAction Stop
+    } catch {
+        Write-Host "  [WARN] Could not write report-errors entry: $_" -ForegroundColor Yellow
+    }
+}
+
 # -- Banner ----------------------------------------------------
 function Show-Banner {
     Write-Host ""
@@ -640,44 +675,33 @@ function Copy-DocsSite {
         return
     }
 
-    # 4. Auto-build the root Vite app — ONLY when this repo really is the
-    # gitmap docs site. We require BOTH a package.json with a "build" script
-    # AND a marker that this is the gitmap repo (gitmap/ subdir with main.go,
-    # OR vite is in package.json's deps). Otherwise we silently skip — the
-    # user is running gitmap update from an unrelated project and we must
-    # NOT try to build their docs.
-    $isGitmapRepo = (Test-Path (Join-Path $GitMapDir "main.go"))
-    $hasViteDep   = $false
-    if (Test-Path $rootPkg) {
-        $pkgRaw = Get-Content $rootPkg -Raw
-        if ($pkgRaw -match '"vite"\s*:') { $hasViteDep = $true }
-    }
-
-    if ((Test-Path $rootPkg) -and (Get-Command npm -ErrorAction SilentlyContinue) -and $isGitmapRepo -and $hasViteDep) {
+    # 4. Auto-build the root Vite app if package.json + npm available
+    if ((Test-Path $rootPkg) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
         $pkgRaw = Get-Content $rootPkg -Raw
         if ($pkgRaw -match '"build"\s*:') {
             Push-Location $RepoRoot
-            # Native commands (npm, node) write progress to stderr. With
-            # $ErrorActionPreference='Stop' (set globally at the top of this
-            # script) that stderr becomes a terminating NativeCommandError
-            # and aborts the entire `gitmap update`. Relax locally and rely
-            # on $LASTEXITCODE — the only reliable signal for native tools.
-            $prevEAP = $ErrorActionPreference
-            $ErrorActionPreference = 'Continue'
             try {
                 $nodeModules = Join-Path $RepoRoot "node_modules"
                 $viteBin = Join-Path $nodeModules ".bin\vite.cmd"
                 if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
                     Write-Info "Installing docs dependencies (npm install) at repo root..."
-                    & npm install --no-audit --no-fund --silent *>&1 | Out-Null
-                    if ($LASTEXITCODE -ne 0) {
-                        Write-Warn "npm install failed (exit $LASTEXITCODE) - skipping docs build (gitmap update will continue)"
+                    npm install --no-audit --no-fund --silent 2>&1 | Out-Null
+                    $installExit = $LASTEXITCODE
+                    if ($installExit -ne 0) {
+                        Write-Warn "npm install failed - skipping docs build"
+                        Write-ReportError -Stage "docs-npm-install" `
+                            -Command "npm install --no-audit --no-fund --silent" `
+                            -ExitCode $installExit `
+                            -Message "npm install failed at repo root; docs build skipped" `
+                            -Paths @{ repoRoot = $RepoRoot; packageJson = $rootPkg }
+                        Pop-Location
                         return
                     }
                 }
                 Write-Info "Auto-building docs (npm run build) at repo root..."
-                & npm run build *>&1 | Out-Null
-                if ($LASTEXITCODE -eq 0 -and (Test-Path $rootDist)) {
+                npm run build 2>&1 | Out-Null
+                $buildExit = $LASTEXITCODE
+                if ($buildExit -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
                     if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
                     New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
@@ -685,11 +709,15 @@ function Copy-DocsSite {
                     Write-Info "Built and copied docs to gitmap app docs-site/dist"
                     return
                 }
-                Write-Warn "Auto-build failed (exit $LASTEXITCODE) - 'gitmap hd' will fail (gitmap update will continue)"
             } finally {
-                $ErrorActionPreference = $prevEAP
                 Pop-Location
             }
+            Write-Warn "Auto-build failed - 'gitmap hd' will fail"
+            Write-ReportError -Stage "docs-npm-build" `
+                -Command "npm run build" `
+                -ExitCode $buildExit `
+                -Message "npm run build did not produce dist/ output" `
+                -Paths @{ repoRoot = $RepoRoot; expectedDist = $rootDist; packageJson = $rootPkg }
             return
         }
     }

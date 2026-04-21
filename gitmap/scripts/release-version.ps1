@@ -50,8 +50,7 @@ param(
     [switch]$NoPath,
     [switch]$NoSelfInstall,
     [switch]$AllowFallback,
-    [switch]$Quiet,
-    [switch]$JsonErrors
+    [switch]$Quiet
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,58 +70,11 @@ $EXIT_PATH_FAIL       = 5
 $EXIT_SELF_INSTALL    = 6
 $EXIT_VERIFY          = 7
 
-# --- Error code symbols (stable contract for JSON consumers) ---
-$ERR_INVALID_VERSION    = "INVALID_VERSION"
-$ERR_VERSION_NOT_FOUND  = "VERSION_NOT_FOUND"
-$ERR_NO_FALLBACK        = "NO_FALLBACK_AVAILABLE"
-$ERR_NON_INTERACTIVE    = "NON_INTERACTIVE_NO_SUBSTITUTE"
-$ERR_RECENT_LIST_FAILED = "RECENT_LIST_FAILED"
-$ERR_USER_DECLINED      = "USER_DECLINED"
-$ERR_INVALID_CHOICE     = "INVALID_CHOICE"
-$ERR_NETWORK            = "NETWORK_ERROR"
-$ERR_CHECKSUM_MISMATCH  = "CHECKSUM_MISMATCH"
-$ERR_UNSUPPORTED_OS     = "UNSUPPORTED_OS"
-$ERR_UNSUPPORTED_ARCH   = "UNSUPPORTED_ARCH"
-$ERR_NO_ASSET           = "NO_MATCHING_ASSET"
-$ERR_EXTRACT_FAILED     = "EXTRACT_FAILED"
-$ERR_VERSION_MISMATCH   = "VERSION_MISMATCH"
-$ERR_SELF_INSTALL       = "SELF_INSTALL_FAILED"
-
 # --- Logging helpers (ASCII only — no Unicode glyphs) ---
-# All progress output suppressed when -JsonErrors is set so consumers get a
-# clean JSON payload on stderr without log noise interleaved.
-function Write-Step([string]$msg) { if (-not $Quiet -and -not $JsonErrors) { Write-Host "  -> $msg" -ForegroundColor Cyan } }
-function Write-OK([string]$msg)   { if (-not $Quiet -and -not $JsonErrors) { Write-Host "  OK $msg"  -ForegroundColor Green } }
-function Write-Warn2([string]$m)  { if (-not $Quiet -and -not $JsonErrors) { Write-Host "  !  $m"    -ForegroundColor Yellow } }
-function Write-Err2([string]$m)   { if (-not $JsonErrors) { Write-Host "  X  $m" -ForegroundColor Red } }
-
-# Write-StructuredError emits a single fatal error and exits. JSON shape:
-#   {"error":{"code":"...","message":"...","exitCode":N,"requestedVersion":"...","details":{...}}}
-function Write-StructuredError {
-    param(
-        [Parameter(Mandatory)][string]$Code,
-        [Parameter(Mandatory)][string]$Message,
-        [Parameter(Mandatory)][int]$ExitCode,
-        [hashtable]$Details = @{}
-    )
-    if ($JsonErrors) {
-        $payload = @{
-            error = @{
-                code             = $Code
-                message          = $Message
-                exitCode         = $ExitCode
-                requestedVersion = $Version
-                script           = "release-version.ps1"
-                details          = $Details
-            }
-        }
-        $json = $payload | ConvertTo-Json -Depth 6 -Compress
-        [Console]::Error.WriteLine($json)
-    } else {
-        Write-Err2 "$Message [code=$Code]"
-    }
-    exit $ExitCode
-}
+function Write-Step([string]$msg) { if (-not $Quiet) { Write-Host "  -> $msg" -ForegroundColor Cyan } }
+function Write-OK([string]$msg)   { if (-not $Quiet) { Write-Host "  OK $msg"  -ForegroundColor Green } }
+function Write-Warn2([string]$m)  { if (-not $Quiet) { Write-Host "  !  $m"    -ForegroundColor Yellow } }
+function Write-Err2([string]$m)   { Write-Host "  X  $m" -ForegroundColor Red }
 
 # ---------------------------------------------------------------------------
 # Version validation
@@ -208,47 +160,34 @@ function Resolve-FallbackPatch([string]$requested) {
 
 function Resolve-RequestedVersion([string]$requested) {
     if (-not (Test-VersionTag $requested)) {
-        Write-StructuredError -Code $ERR_INVALID_VERSION `
-            -Message "Invalid version tag: '$requested' (expected vMAJOR.MINOR.PATCH)" `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{ provided = $requested; pattern = "^v\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$" }
+        Write-Err2 "Invalid version tag: '$requested' (expected vMAJOR.MINOR.PATCH)"
+        exit $EXIT_VERSION_MISSING
     }
 
     $rel = Invoke-GitHubAPI "/releases/tags/$requested"
     if ($null -ne $rel) { return $requested }
 
+    Write-Err2 "Requested version $requested is not a published release."
+
     if ($AllowFallback) {
         $fb = Resolve-FallbackPatch $requested
         if ($fb) {
-            Write-Warn2 "Requested $requested missing; falling back to newest patch in series: $fb"
+            Write-Warn2 "Falling back to newest patch in series: $fb"
             return $fb
         }
-        Write-StructuredError -Code $ERR_NO_FALLBACK `
-            -Message "Requested version $requested is not published and no same-minor-series patch is available." `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{ requested = $requested; fallbackAttempted = $true }
+        Write-Err2 "No same-minor-series patch available for $requested"
+        exit $EXIT_VERSION_MISSING
     }
 
     if (-not (Test-Interactive)) {
-        $recentForHint = @()
-        try { $recentForHint = Get-RecentReleases 5 } catch {}
-        Write-StructuredError -Code $ERR_NON_INTERACTIVE `
-            -Message "Requested version $requested is not published. Non-interactive session cannot prompt for substitution. Re-run with -AllowFallback to opt into same-minor patch substitution, or pin to one of the recent releases." `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{
-                requested         = $requested
-                interactive       = $false
-                allowFallbackHint = "-AllowFallback"
-                recentReleases    = $recentForHint
-            }
+        Write-Err2 "Non-interactive run; refusing to substitute. Set -AllowFallback to opt in."
+        exit $EXIT_VERSION_MISSING
     }
 
     $recent = Get-RecentReleases 5
     if ($recent.Count -eq 0) {
-        Write-StructuredError -Code $ERR_RECENT_LIST_FAILED `
-            -Message "Requested version $requested is not published and the recent-releases list could not be fetched." `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{ requested = $requested }
+        Write-Err2 "Could not list recent releases."
+        exit $EXIT_VERSION_MISSING
     }
 
     Write-Host ""
@@ -261,17 +200,12 @@ function Resolve-RequestedVersion([string]$requested) {
 
     $reply = Read-PromptSafe "  Pick a number to install instead, or N to quit"
     if ($null -eq $reply -or [string]::IsNullOrWhiteSpace($reply) -or $reply -match '^[Nn]') {
-        Write-StructuredError -Code $ERR_USER_DECLINED `
-            -Message "User declined to substitute for missing version $requested." `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{ requested = $requested; recentReleases = $recent }
+        exit $EXIT_VERSION_MISSING
     }
     $idx = 0
     if (-not [int]::TryParse($reply, [ref]$idx) -or $idx -lt 1 -or $idx -gt $recent.Count) {
-        Write-StructuredError -Code $ERR_INVALID_CHOICE `
-            -Message "Invalid choice '$reply'; expected 1..$($recent.Count) or N." `
-            -ExitCode $EXIT_VERSION_MISSING `
-            -Details @{ reply = $reply; choices = $recent }
+        Write-Err2 "Invalid choice."
+        exit $EXIT_VERSION_MISSING
     }
     $chosen = $recent[$idx - 1]
     Write-Warn2 "User selected $chosen as substitute for $requested"

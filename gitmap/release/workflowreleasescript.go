@@ -27,7 +27,7 @@ type releaseScriptSnapshot struct {
 // release-version installer scripts and writes them into stagingDir.
 // Returns the list of created file paths so the caller can append them
 // to the asset list (which makes them participate in checksums + upload).
-func buildReleaseVersionSnapshots(version, stagingDir string) []string {
+func buildReleaseVersionSnapshots(version string, stagingDir string) []string {
 	if len(version) == 0 || len(stagingDir) == 0 {
 		return nil
 	}
@@ -41,7 +41,7 @@ func buildReleaseVersionSnapshots(version, stagingDir string) []string {
 		{
 			embeddedName: constants.ScriptReleaseVersionSh,
 			outputName:   fmt.Sprintf(constants.ReleaseVersionSnapshotShFmt, version),
-			bakeLine:     fmt.Sprintf("VERSION=%q", version),
+			bakeLine:     fmt.Sprintf(`VERSION="%s"`, version),
 		},
 	}
 

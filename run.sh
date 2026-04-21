@@ -73,6 +73,35 @@ write_info()    { echo -e "  ${CYAN}->${NC} ${GRAY}$1${NC}"; }
 write_warn()    { echo -e "  ${YELLOW}!!${NC} ${YELLOW}$1${NC}"; }
 write_fail()    { echo -e "  ${RED}XX${NC} ${RED}$1${NC}"; }
 
+# -- Error reporting (JSONL) -----------------------------------
+# When run from `gitmap update --report-errors json`, env vars
+# GITMAP_REPORT_ERRORS=json and GITMAP_REPORT_ERRORS_FILE=<path>
+# are set. Each non-fatal failure appends one JSON object per line.
+# Args: stage command exit_code message [extra_json_object]
+write_report_error() {
+    local stage="$1"
+    local command="$2"
+    local exit_code="$3"
+    local message="$4"
+    local extra="${5:-{\}}"
+    if [[ "${GITMAP_REPORT_ERRORS:-}" != "json" ]] || [[ -z "${GITMAP_REPORT_ERRORS_FILE:-}" ]]; then
+        return 0
+    fi
+    local ts
+    ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    local cwd
+    cwd="$(pwd)"
+    # Escape backslashes and double quotes for JSON safety.
+    local esc_msg="${message//\\/\\\\}"; esc_msg="${esc_msg//\"/\\\"}"
+    local esc_cmd="${command//\\/\\\\}"; esc_cmd="${esc_cmd//\"/\\\"}"
+    local esc_cwd="${cwd//\\/\\\\}"; esc_cwd="${esc_cwd//\"/\\\"}"
+    local line
+    line="{\"timestamp\":\"${ts}\",\"stage\":\"${stage}\",\"command\":\"${esc_cmd}\",\"exitCode\":${exit_code},\"cwd\":\"${esc_cwd}\",\"message\":\"${esc_msg}\",\"paths\":${extra},\"os\":\"unix\"}"
+    if ! printf '%s\n' "$line" >> "${GITMAP_REPORT_ERRORS_FILE}" 2>/dev/null; then
+        write_warn "Could not append to report-errors file: ${GITMAP_REPORT_ERRORS_FILE}"
+    fi
+}
+
 # -- Banner ----------------------------------------------------
 show_banner() {
     echo ""
@@ -485,25 +514,26 @@ copy_docs_site() {
         return
     fi
 
-    # 3. Auto-build the root Vite app — ONLY when this repo really is the
-    # gitmap docs site. Marker: gitmap/main.go must exist AND package.json
-    # must list vite. Otherwise we silently skip — the user is running
-    # `gitmap update` from an unrelated project and we must NOT build it.
-    local is_gitmap_repo=0 has_vite_dep=0
-    [[ -f "$REPO_ROOT/gitmap/main.go" ]] && is_gitmap_repo=1
-    [[ -f "$root_pkg" ]] && grep -q '"vite"' "$root_pkg" && has_vite_dep=1
-
-    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg" \
-       && [[ $is_gitmap_repo -eq 1 ]] && [[ $has_vite_dep -eq 1 ]]; then
+    # 3. Auto-build the root Vite app if package.json + npm available
+    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg"; then
         if [[ ! -d "$REPO_ROOT/node_modules" ]] || [[ ! -x "$REPO_ROOT/node_modules/.bin/vite" ]]; then
             write_info "Installing docs dependencies (npm install) at repo root..."
-            if ! (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1); then
-                write_warn "npm install failed - skipping docs build (gitmap update will continue)"
+            local install_exit=0
+            (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1) || install_exit=$?
+            if [[ $install_exit -ne 0 ]]; then
+                write_warn "npm install failed - skipping docs build"
+                write_report_error "docs-npm-install" \
+                    "npm install --no-audit --no-fund --silent" \
+                    "$install_exit" \
+                    "npm install failed at repo root; docs build skipped" \
+                    "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
                 return
             fi
         fi
         write_info "Auto-building docs (npm run build) at repo root..."
-        if (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) && [[ -d "$root_dist" ]]; then
+        local build_exit=0
+        (cd "$REPO_ROOT" && npm run build >/dev/null 2>&1) || build_exit=$?
+        if [[ $build_exit -eq 0 ]] && [[ -d "$root_dist" ]]; then
             local dist_dest="$docs_dest/dist"
             rm -rf "$dist_dest"
             mkdir -p "$docs_dest"
@@ -511,7 +541,12 @@ copy_docs_site() {
             write_info "Built and copied docs to gitmap app docs-site/dist"
             return
         fi
-        write_warn "Auto-build failed - 'gitmap hd' will fail (gitmap update will continue)"
+        write_warn "Auto-build failed - 'gitmap hd' will fail"
+        write_report_error "docs-npm-build" \
+            "npm run build" \
+            "$build_exit" \
+            "npm run build did not produce dist/ output" \
+            "{\"repoRoot\":\"${REPO_ROOT//\"/\\\"}\",\"expectedDist\":\"${root_dist//\"/\\\"}\",\"packageJson\":\"${root_pkg//\"/\\\"}\"}"
         return
     fi
 

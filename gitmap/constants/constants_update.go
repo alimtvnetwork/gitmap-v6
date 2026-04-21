@@ -11,6 +11,25 @@ const (
 // Update flags.
 const FlagVerbose = "--verbose"
 const FlagRepoPath = "--repo-path"
+const FlagReportErrors = "--report-errors"
+const FlagReportErrorsFile = "--report-errors-file"
+
+// Report-errors values and env-var bridge to run.ps1 / run.sh.
+const (
+	ReportErrorsJSON      = "json"
+	EnvReportErrorsFormat = "GITMAP_REPORT_ERRORS"
+	EnvReportErrorsFile   = "GITMAP_REPORT_ERRORS_FILE"
+	ReportErrorsFilePrefix = "gitmap-update-report-"
+	ReportErrorsFileSuffix = ".jsonl"
+)
+
+// Report-errors UI messages.
+const (
+	MsgReportErrorsEnabled = "  → Error report (json): %s\n"
+	MsgReportErrorsSummary = "  → Wrote %d non-fatal failure entr%s to %s\n"
+	WarnReportErrorsCreate = "  ⚠ Could not create report-errors file at %s: %v\n"
+	ErrReportErrorsValue   = "  ✗ Unsupported --report-errors value: %q (supported: json)\n"
+)
 
 // Updater fallback.
 const (
