@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.52.0 — (2026-04-21) — Document `workflow_dispatch` lint baseline cache controls
+
+### Changed
+
+- **`spec/09-pipeline/01-ci-pipeline.md`** now documents the two `workflow_dispatch` inputs that govern the golangci-lint baseline cache:
+  - `lint_baseline_cache_version` *(string, default `"v1"`)* — bumps the cache key suffix to abandon a stale baseline. Free-form (`"v2"`, `"2026-04-21"`, …); old caches are evicted by GitHub after 7 days of inactivity. The `restore-keys` fallback also carries this version, so a pre-bump baseline is never accidentally restored.
+  - `lint_baseline_disable` *(boolean, default `false`)* — skips both the cache restore and save steps for one run, forcing the diff job into seeding mode (exits 0, surfaces all current findings as warnings) without touching the cached baseline. Use to diagnose suspected stale-cache issues without losing history.
+- New **"Job: Lint Baseline Diff"** section explains the soft-gate cache strategy in a single table:
+  - Cache key: `golangci-baseline-main-${cache_version}-${github.sha}` (rolling, single slot via the restore-keys fallback).
+  - Save: only on `push` to `main` (or `workflow_dispatch` from `main`) after a green diff. PRs are restore-only — never advance the baseline.
+  - Miss = seeding mode: the next run becomes the baseline; the build does not fail.
+- Added three copy-paste `gh workflow run` examples covering the common operator scenarios: bumping the version, disabling the cache for one diagnostic run, and combining both for a "bump + dry-run" workflow before committing to a reseed.
+- Documented the sticky PR comment behavior (sentinel `<!-- gitmap-lint-suggestions -->`, `peter-evans/find-comment` + `create-or-update-comment` for in-place edits, `GITHUB_STEP_SUMMARY` mirror on push/dispatch).
+
+### Implementation
+
+- `spec/09-pipeline/01-ci-pipeline.md` — extended `### Trigger` block to surface the two `workflow_dispatch` inputs alongside `push` / `pull_request`. Added the full **Job: Lint Baseline Diff** section between **Job: Lint** and **Job: Vulnerability Scan (In-CI)** — placement matches the actual job order in `.github/workflows/ci.yml`.
+- `gitmap/constants/constants.go` — `Version = "3.52.0"`.
+
+### Compatibility
+
+- Documentation-only change. CI behavior, cache keys, and default flag values are unchanged — this turn merely brings the spec doc into sync with the workflow that already shipped.
+
+---
+
 ## v3.32.1 — (2026-04-20) — Fix `gitmap status` looking at legacy bare `output/` path
 
 ### Fixed
