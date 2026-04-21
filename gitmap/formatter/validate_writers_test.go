@@ -65,8 +65,37 @@ func TestWriteJSON_NoWarningsOnCleanInput(t *testing.T) {
 	if err := WriteJSON(&out, records); err != nil {
 		t.Fatalf("WriteJSON: %v", err)
 	}
-	if sink.Len() != 0 {
-		t.Errorf("expected silent sink, got: %q", sink.String())
+	// Validation warnings must be absent, but the post-write summary
+	// is always emitted (issue count = 0 here).
+	sinkStr := sink.String()
+	if strings.Contains(sinkStr, "gitmap: validation:") {
+		t.Errorf("expected no validation warnings, got: %q", sinkStr)
+	}
+	wantSummary := "gitmap: json: wrote 1 record(s), 0 validation issue(s)"
+	if !strings.Contains(sinkStr, wantSummary) {
+		t.Errorf("sink missing summary line %q, got: %q", wantSummary, sinkStr)
+	}
+}
+
+// TestWriteCSV_SummaryReportsCounts verifies the post-write tally
+// includes both the records-written and issues-found numbers.
+func TestWriteCSV_SummaryReportsCounts(t *testing.T) {
+	var sink bytes.Buffer
+	prev := SetValidationSink(&sink)
+	defer SetValidationSink(prev)
+
+	records := []model.ScanRecord{
+		{Slug: "ok", RepoName: "ok", HTTPSUrl: "https://x/ok.git", RelativePath: "ok"},
+		{RepoName: "bad"}, // missing URL + RelativePath → 2 issues
+	}
+
+	var out bytes.Buffer
+	if err := WriteCSV(&out, records); err != nil {
+		t.Fatalf("WriteCSV: %v", err)
+	}
+	want := "gitmap: csv: wrote 2 record(s), 2 validation issue(s)"
+	if !strings.Contains(sink.String(), want) {
+		t.Errorf("sink missing summary %q, got: %q", want, sink.String())
 	}
 }
 
