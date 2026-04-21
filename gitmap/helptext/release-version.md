@@ -43,9 +43,54 @@ prompting. Use `--allow-fallback` for automated environments.
 | `-Version` / `--version` | **(Required)** The version tag to install (e.g., `v3.38.0`) |
 | `-AllowFallback` / `--allow-fallback` | If version missing, use newest patch in same `vMAJOR.MINOR` series without prompting |
 | `-Quiet` / `--quiet` | Suppress all prompts and progress output |
+| `-JsonErrors` / `--json-errors` | Emit fatal errors as a single-line JSON object on stderr (CI-friendly machine-readable contract). Implies non-interactive. |
 | `-NoPath` / `--no-path` | Skip PATH modification |
 | `-NoSelfInstall` / `--no-self-install` | Download and extract only; skip `gitmap self-install` chain |
 | `-InstallDir` / `--dir` | Custom install directory override |
+
+## JSON error format
+
+When `--json-errors` / `-JsonErrors` is set, every fatal failure produces a
+single-line JSON object on stderr (stdout stays empty, no progress logs).
+
+**Schema:**
+
+```json
+{
+  "error": {
+    "code": "NON_INTERACTIVE_NO_SUBSTITUTE",
+    "message": "Requested version v3.99.0 is not published. Non-interactive session cannot prompt for substitution. ...",
+    "exitCode": 1,
+    "requestedVersion": "v3.99.0",
+    "script": "release-version.sh",
+    "details": {
+      "requested": "v3.99.0",
+      "interactive": false,
+      "allowFallbackHint": "--allow-fallback",
+      "recentReleases": ["v3.38.0", "v3.37.5", "v3.37.0", "v3.36.5", "v3.36.0"]
+    }
+  }
+}
+```
+
+### Stable error codes
+
+| Code | Meaning |
+|------|---------|
+| `INVALID_VERSION` | Version tag failed regex validation |
+| `VERSION_NOT_FOUND` | Tag is not a published GitHub release |
+| `NO_FALLBACK_AVAILABLE` | `--allow-fallback` set but no same-minor patch exists |
+| `NON_INTERACTIVE_NO_SUBSTITUTE` | Missing version + no TTY + no `--allow-fallback` |
+| `RECENT_LIST_FAILED` | Could not fetch the list of recent releases |
+| `USER_DECLINED` | User chose `N` at the substitution prompt |
+| `INVALID_CHOICE` | User entered a value outside the offered range |
+| `NETWORK_ERROR` | Asset download failed |
+| `CHECKSUM_MISMATCH` | SHA256 mismatch against `checksums.txt` |
+| `UNSUPPORTED_OS` / `UNSUPPORTED_ARCH` | Platform not supported by this release |
+| `NO_MATCHING_ASSET` | Release has no asset for this OS/arch combination |
+| `EXTRACT_FAILED` | Archive could not be unpacked |
+| `VERSION_MISMATCH` | Installed binary reports a different version than requested |
+| `SELF_INSTALL_FAILED` | Chained `gitmap self-install` exited non-zero |
 
 ## Exit codes
 

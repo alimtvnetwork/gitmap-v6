@@ -19,6 +19,8 @@
 #   --no-self-install     Skip the chained `gitmap self-install` step.
 #   --allow-fallback      Use newest patch in same vMAJOR.MINOR if missing.
 #   --quiet               Suppress prompts and progress output.
+#   --json-errors         Emit fatal errors as a single-line JSON object on
+#                         stderr (machine-readable contract for CI).
 # ─────────────────────────────────────────────────────────────────────
 
 # Re-exec under bash if invoked under sh/dash.
@@ -43,6 +45,7 @@ NO_PATH=0
 NO_SELF_INSTALL=0
 ALLOW_FALLBACK=0
 QUIET=0
+JSON_ERRORS=0
 TMP_DIR=""
 
 # Exit codes (spec 105)
@@ -55,14 +58,59 @@ EXIT_PATH_FAIL=5
 EXIT_SELF_INSTALL=6
 EXIT_VERIFY=7
 
+# Stable error code symbols (contract for JSON consumers).
+ERR_INVALID_VERSION="INVALID_VERSION"
+ERR_VERSION_NOT_FOUND="VERSION_NOT_FOUND"
+ERR_NO_FALLBACK="NO_FALLBACK_AVAILABLE"
+ERR_NON_INTERACTIVE="NON_INTERACTIVE_NO_SUBSTITUTE"
+ERR_RECENT_LIST_FAILED="RECENT_LIST_FAILED"
+ERR_USER_DECLINED="USER_DECLINED"
+ERR_INVALID_CHOICE="INVALID_CHOICE"
+ERR_NETWORK="NETWORK_ERROR"
+ERR_CHECKSUM_MISMATCH="CHECKSUM_MISMATCH"
+ERR_UNSUPPORTED_OS="UNSUPPORTED_OS"
+ERR_UNSUPPORTED_ARCH="UNSUPPORTED_ARCH"
+ERR_NO_ASSET="NO_MATCHING_ASSET"
+ERR_EXTRACT_FAILED="EXTRACT_FAILED"
+ERR_VERSION_MISMATCH="VERSION_MISMATCH"
+ERR_SELF_INSTALL="SELF_INSTALL_FAILED"
+
 cleanup() { [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ] && rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
 # ── Logging (ASCII only) ───────────────────────────────────────────
-step() { [ "$QUIET" -eq 1 ] || printf '  -> %s\n' "$*" >&2; }
-ok()   { [ "$QUIET" -eq 1 ] || printf '  OK %s\n' "$*" >&2; }
-warn() { [ "$QUIET" -eq 1 ] || printf '  !  %s\n' "$*" >&2; }
-err()  { printf '  X  %s\n' "$*" >&2; }
+# Suppress all human-readable output when --json-errors is active so the
+# JSON payload on stderr is the only thing consumers parse.
+step() { [ "$QUIET" -eq 1 ] || [ "$JSON_ERRORS" -eq 1 ] || printf '  -> %s\n' "$*" >&2; }
+ok()   { [ "$QUIET" -eq 1 ] || [ "$JSON_ERRORS" -eq 1 ] || printf '  OK %s\n' "$*" >&2; }
+warn() { [ "$QUIET" -eq 1 ] || [ "$JSON_ERRORS" -eq 1 ] || printf '  !  %s\n' "$*" >&2; }
+err()  { [ "$JSON_ERRORS" -eq 1 ] || printf '  X  %s\n' "$*" >&2; }
+
+# json_escape escapes a value for safe inclusion in a JSON string literal.
+# Handles backslash, double-quote, newline, tab — sufficient for our payloads.
+json_escape() {
+    printf '%s' "$1" \
+        | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+        | awk 'BEGIN{ORS="\\n"} {print}' \
+        | sed 's/\\n$//'
+}
+
+# fatal_error <code> <message> <exit_code> [details_json]
+# Emits either a structured JSON error or a human-readable one, then exits.
+fatal_error() {
+    local code="$1" message="$2" exit_code="$3" details="${4:-{\}}"
+    if [ "$JSON_ERRORS" -eq 1 ]; then
+        local esc_msg esc_code esc_ver
+        esc_msg="$(json_escape "$message")"
+        esc_code="$(json_escape "$code")"
+        esc_ver="$(json_escape "$VERSION")"
+        printf '{"error":{"code":"%s","message":"%s","exitCode":%d,"requestedVersion":"%s","script":"release-version.sh","details":%s}}\n' \
+            "$esc_code" "$esc_msg" "$exit_code" "$esc_ver" "$details" >&2
+    else
+        err "$message [code=$code]"
+    fi
+    exit "$exit_code"
+}
 
 # ── Arg parsing ─────────────────────────────────────────────────────
 while [ $# -gt 0 ]; do
@@ -74,13 +122,14 @@ while [ $# -gt 0 ]; do
         --no-self-install)  NO_SELF_INSTALL=1; shift ;;
         --allow-fallback)   ALLOW_FALLBACK=1; shift ;;
         --quiet)            QUIET=1; shift ;;
+        --json-errors)      JSON_ERRORS=1; shift ;;
         -h|--help)
-            sed -n '2,22p' "$0"
+            sed -n '2,24p' "$0"
             exit 0
             ;;
         *)
-            err "Unknown argument: $1"
-            exit $EXIT_VERSION_MISSING
+            fatal_error "INVALID_ARGUMENT" "Unknown argument: $1" $EXIT_VERSION_MISSING \
+                "{\"argument\":\"$(json_escape "$1")\"}"
             ;;
     esac
 done
@@ -88,8 +137,10 @@ done
 # ── Version validation ─────────────────────────────────────────────
 validate_version() {
     if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]]; then
-        err "Invalid version tag: '$VERSION' (expected vMAJOR.MINOR.PATCH)"
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_INVALID_VERSION" \
+            "Invalid version tag: '$VERSION' (expected vMAJOR.MINOR.PATCH)" \
+            $EXIT_VERSION_MISSING \
+            "{\"provided\":\"$(json_escape "$VERSION")\",\"pattern\":\"^v[0-9]+\\\\.[0-9]+\\\\.[0-9]+\"}"
     fi
 }
 
@@ -167,35 +218,38 @@ resolve_requested_version() {
         return
     fi
 
-    err "Requested version $VERSION is not a published release."
-
     if [ "$ALLOW_FALLBACK" -eq 1 ]; then
         local fb
         fb="$(resolve_fallback_patch)"
         if [ -n "$fb" ]; then
-            warn "Falling back to newest patch in series: $fb"
+            warn "Requested $VERSION missing; falling back to newest patch in series: $fb"
             echo "$fb"
             return
         fi
-        err "No same-minor-series patch available for $VERSION"
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_NO_FALLBACK" \
+            "Requested version $VERSION is not published and no same-minor-series patch is available." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"fallbackAttempted\":true}"
     fi
 
     if ! is_interactive; then
-        err "Non-interactive run; refusing to substitute. Use --allow-fallback to opt in."
-        exit $EXIT_VERSION_MISSING
+        local recent_json
+        recent_json="$(recent_releases_json)"
+        fatal_error "$ERR_NON_INTERACTIVE" \
+            "Requested version $VERSION is not published. Non-interactive session cannot prompt for substitution. Re-run with --allow-fallback to opt into same-minor patch substitution, or pin to one of the recent releases." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"interactive\":false,\"allowFallbackHint\":\"--allow-fallback\",\"recentReleases\":$recent_json}"
     fi
 
     interactive_pick
 }
 
 # is_interactive returns 0 only when we can safely prompt for input.
-# We require: not --quiet, not running under CI, AND a real /dev/tty.
-# Checking only `[ -t 0 ]` is wrong for `curl ... | bash` because bash's
-# stdin is the pipe — but /dev/tty still points at the user's keyboard
-# in that case, so the prompt is still possible.
+# We require: not --quiet, not --json-errors, not running under CI, AND a
+# real /dev/tty.
 is_interactive() {
     [ "$QUIET" -eq 1 ] && return 1
+    [ "$JSON_ERRORS" -eq 1 ] && return 1
     [ "${CI:-}" = "true" ] || [ "${CI:-}" = "1" ] && return 1
     [ -r /dev/tty ] || return 1
     [ -w /dev/tty ] || return 1
@@ -213,6 +267,24 @@ resolve_fallback_patch() {
         | head -n1
 }
 
+# recent_releases_json returns a JSON array of the 5 most recent release tags.
+recent_releases_json() {
+    local tags
+    tags="$(github_api "/releases?per_page=5" 2>/dev/null \
+        | grep -oE '"tag_name":[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+"' \
+        | sed -E 's/.*"(v[0-9.]+)".*/\1/' \
+        | head -n5)"
+    if [ -z "$tags" ]; then printf '[]'; return; fi
+    local first=1 out="["
+    while IFS= read -r tag; do
+        [ -z "$tag" ] && continue
+        if [ $first -eq 1 ]; then first=0; else out="$out,"; fi
+        out="$out\"$tag\""
+    done <<< "$tags"
+    out="$out]"
+    printf '%s' "$out"
+}
+
 interactive_pick() {
     local recent
     recent="$(github_api "/releases?per_page=5" \
@@ -220,8 +292,10 @@ interactive_pick() {
         | sed -E 's/.*"(v[0-9.]+)".*/\1/' \
         | head -n5)"
     if [ -z "$recent" ]; then
-        err "Could not list recent releases."
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_RECENT_LIST_FAILED" \
+            "Requested version $VERSION is not published and the recent-releases list could not be fetched." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\"}"
     fi
     local i=1
     local -a choices=()
@@ -239,16 +313,25 @@ interactive_pick() {
     local reply=""
     if ! read -r reply </dev/tty; then
         echo "" >&2
-        err "Could not read from /dev/tty; aborting."
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_NON_INTERACTIVE" \
+            "Could not read from /dev/tty; aborting." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\"}"
     fi
 
     if [ -z "$reply" ] || [[ "$reply" =~ ^[Nn] ]]; then
-        exit $EXIT_VERSION_MISSING
+        local recent_json
+        recent_json="$(recent_releases_json)"
+        fatal_error "$ERR_USER_DECLINED" \
+            "User declined to substitute for missing version $VERSION." \
+            $EXIT_VERSION_MISSING \
+            "{\"requested\":\"$(json_escape "$VERSION")\",\"recentReleases\":$recent_json}"
     fi
     if ! [[ "$reply" =~ ^[0-9]+$ ]] || [ "$reply" -lt 1 ] || [ "$reply" -gt "${#choices[@]}" ]; then
-        err "Invalid choice."
-        exit $EXIT_VERSION_MISSING
+        fatal_error "$ERR_INVALID_CHOICE" \
+            "Invalid choice '$reply'; expected 1..${#choices[@]} or N." \
+            $EXIT_VERSION_MISSING \
+            "{\"reply\":\"$(json_escape "$reply")\",\"max\":${#choices[@]}}"
     fi
     local chosen="${choices[$((reply-1))]}"
     warn "User selected $chosen as substitute for $VERSION"
