@@ -39,6 +39,15 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Default permissions for all jobs. The lint-baseline-diff job needs
+# `pull-requests: write` so peter-evans/create-or-update-comment can
+# post the actionable suggestions sticky comment. `contents: read` is
+# the standard checkout grant. Keep this minimal — any job that needs
+# more (e.g. release publishing) should override at the job level.
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   sha-check:
     name: Check if already built
@@ -213,6 +222,68 @@ jobs:
           name: golangci-lint-report
           path: /tmp/lint-current/report.json
           retention-days: 14
+
+      - name: Generate actionable lint suggestions
+        # Runs whether the diff passed or failed: a passing diff still
+        # yields useful "no new findings" confirmation in the comment,
+        # and a failing diff is exactly when contributors most want
+        # the per-rule fix templates. Writing to GITHUB_STEP_SUMMARY
+        # also surfaces the suggestions in the Actions run UI.
+        if: always() && needs.sha-check.outputs.already-built != 'true'
+        shell: bash
+        run: |
+          BASELINE=/tmp/lint-baseline/report.json
+          if [ "${{ inputs.lint_baseline_disable }}" = "true" ]; then
+            BASELINE=""
+          fi
+          mkdir -p /tmp/lint-suggestions
+          python3 .github/scripts/lint-suggest.py \
+            --current /tmp/lint-current/report.json \
+            --baseline "$BASELINE" \
+            --repo "${{ github.repository }}" \
+            --sha "${{ github.sha }}" \
+            --out /tmp/lint-suggestions/comment.md
+          # Mirror to the run summary so the suggestions are visible
+          # even on push events (no PR to comment on).
+          cat /tmp/lint-suggestions/comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload suggestions artifact
+        if: always() && needs.sha-check.outputs.already-built != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-suggestions
+          path: /tmp/lint-suggestions/comment.md
+          retention-days: 14
+
+      - name: Find existing PR comment
+        # Sticky comment: peter-evans/find-comment locates the previous
+        # comment by the COMMENT_MARKER sentinel that lint-suggest.py
+        # embeds, and create-or-update-comment edits it in place. This
+        # avoids spamming the PR with a fresh comment on every push.
+        # Skipped on push/dispatch (no PR context) and on the
+        # already-built fast-path.
+        if: |
+          always() &&
+          needs.sha-check.outputs.already-built != 'true' &&
+          github.event_name == 'pull_request'
+        uses: peter-evans/find-comment@v3
+        id: find-lint-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- gitmap-lint-suggestions -->'
+
+      - name: Create or update sticky comment
+        if: |
+          always() &&
+          needs.sha-check.outputs.already-built != 'true' &&
+          github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-lint-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: /tmp/lint-suggestions/comment.md
+          edit-mode: replace
 
   cmd-naming-check:
     # Guards against collision-prone helper names in the single-namespace
