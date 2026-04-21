@@ -15,10 +15,13 @@ func reorderFlagsBeforeArgs(args []string) []string {
 
 	// Known flags that consume the next argument as a value.
 	valueFlags := map[string]bool{
+		// release / commit-flow flags
 		"--assets": true, "--commit": true, "--branch": true,
 		"--bump": true, "--notes": true, "--targets": true,
 		"--bundle": true, "--zip-group": true,
 		"-N": true, "-Z": true,
+		// self-install / self-uninstall value-taking flags
+		"--dir": true, "--version": true, "--profile": true,
 	}
 
 	for i := 0; i < len(args); i++ {
