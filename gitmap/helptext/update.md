@@ -8,7 +8,7 @@ None
 
 ## Usage
 
-    gitmap update [--repo-path <path>] [--verbose]
+    gitmap update [--repo-path <path>] [--verbose] [--report-errors json [--report-errors-file <path>]]
 
 ## Flags
 
@@ -16,6 +16,8 @@ None
 |------|-------------|
 | `--repo-path <path>` | Override the source repository path for this run |
 | `--verbose` | Enable verbose logging to file |
+| `--report-errors json` | Append a JSON-Lines entry for every non-fatal failure during the build/deploy phase (e.g. `npm install` or `npm run build` failing) so CI can branch on them without parsing prose. |
+| `--report-errors-file <path>` | Write the JSONL report to this path. When omitted, the file is auto-created at `<TMP>/gitmap-update-report-YYYYMMDD-HHMMSS.jsonl`. |
 
 ## Prerequisites
 
