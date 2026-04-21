@@ -44,7 +44,11 @@ func parseCloneNextFlags(args []string) CloneNextFlags {
 	// pairing convention used elsewhere in this flagset).
 	forceFlag := fs.Bool("force", false, constants.FlagDescCloneNextForce)
 	fs.BoolVar(forceFlag, "f", false, constants.FlagDescCloneNextForce)
-	fs.Parse(args)
+	// Reorder so flags placed AFTER the positional version (e.g.
+	// `gitmap cn v+1 -f`) are still recognized. Go's stdlib flag
+	// parser stops at the first non-flag arg, so without this the
+	// `-f` in the screenshot above was silently dropped.
+	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	out := CloneNextFlags{
 		Delete:       *delFlag,
