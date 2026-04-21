@@ -85,7 +85,31 @@ For example, running `gitmap cn v++` inside `macro-ahk-v11` will:
     Retrying folder removal...
     ✓ Removed macro-ahk-v11
 
-## See Also
+### Example 4: Force-flatten from inside the already-flat folder
+
+You're working in `D:\repos\macro-ahk\` (flattened from v21) and want
+to bump to v22 without ending up in `macro-ahk-v22/`.
+
+    gitmap cn v++ -f
+
+**Output:**
+
+    → Force-flatten: leaving D:\repos\macro-ahk to release lock...
+    Removing existing macro-ahk for fresh clone...
+    Cloning macro-ahk-v22 into macro-ahk (flattened)...
+    ✓ Cloned macro-ahk-v22 into macro-ahk
+    ✓ Recorded version transition v21 -> v22
+    ✓ Registered macro-ahk-v22 with GitHub Desktop
+    → Now in macro-ahk
+
+If `-f` is omitted in this scenario, gitmap falls back to creating
+`macro-ahk-v22/` (because the shell holds a file lock on the cwd) and
+prints a hint to use `-f` next time.
+
+If even `-f` cannot remove the folder (some other process holds a
+handle), gitmap aborts with a clear error rather than silently
+falling back to a versioned folder name.
+
 
 - [clone](clone.md) — Clone repos from output files
 - [desktop-sync](desktop-sync.md) — Sync repos to GitHub Desktop
