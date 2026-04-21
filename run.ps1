@@ -704,9 +704,24 @@ function Copy-DocsSite {
     $legacyDist  = Join-Path $legacyDir "dist"
     $rootDist    = Join-Path $RepoRoot "dist"
     $rootPkg     = Join-Path $RepoRoot "package.json"
+    $gitmapMain  = Join-Path $GitMapDir "main.go"
+    $nodeModules = Join-Path $RepoRoot "node_modules"
+
+    # Repo-detect diagnostics (active under -DebugRepoDetect or env var).
+    Write-RepoDetect -Check "RepoRoot"          -Result $RepoRoot
+    Write-RepoDetect -Check "GitMapDir"         -Result $GitMapDir
+    Write-RepoDetect -Check "gitmap/main.go"    -Result $(if (Test-Path $gitmapMain) { "present" } else { "missing" }) -Detail $gitmapMain
+    Write-RepoDetect -Check "package.json"      -Result $(if (Test-Path $rootPkg) { "present" } else { "missing" })   -Detail $rootPkg
+    Write-RepoDetect -Check "node_modules/"     -Result $(if (Test-Path $nodeModules) { "present" } else { "missing" })
+    Write-RepoDetect -Check "docs-site/dist/"   -Result $(if (Test-Path $legacyDist) { "present" } else { "missing" })
+    Write-RepoDetect -Check "dist/ (root)"      -Result $(if (Test-Path $rootDist)  { "present" } else { "missing" })
+    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    Write-RepoDetect -Check "npm on PATH"       -Result $(if ($npmCmd) { "yes" } else { "no" }) -Detail $(if ($npmCmd) { $npmCmd.Source } else { "" })
+    Write-RepoDetectSnippet -Title "package.json (first 6 lines)" -Path $rootPkg
 
     # 1. Legacy <repo>/docs-site/dist/
     if (Test-Path $legacyDist) {
+        Write-RepoDetect -Check "decision" -Result "use-prebuilt-legacy" -Detail $legacyDist
         $distDest = Join-Path $docsDest "dist"
         if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
         New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
@@ -717,6 +732,7 @@ function Copy-DocsSite {
 
     # 3. Current <repo>/dist/ (root-level Vite app)
     if (Test-Path $rootDist) {
+        Write-RepoDetect -Check "decision" -Result "use-prebuilt-root" -Detail $rootDist
         $distDest = Join-Path $docsDest "dist"
         if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
         New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
@@ -726,9 +742,14 @@ function Copy-DocsSite {
     }
 
     # 4. Auto-build the root Vite app if package.json + npm available
-    if ((Test-Path $rootPkg) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+    if ((Test-Path $rootPkg) -and $npmCmd) {
         $pkgRaw = Get-Content $rootPkg -Raw
-        if ($pkgRaw -match '"build"\s*:') {
+        $hasBuild = ($pkgRaw -match '"build"\s*:')
+        $hasVite  = ($pkgRaw -match '"vite"\s*:')
+        Write-RepoDetect -Check "package.json:build" -Result $(if ($hasBuild) { "found" } else { "missing" })
+        Write-RepoDetect -Check "package.json:vite"  -Result $(if ($hasVite)  { "found" } else { "missing" })
+        if ($hasBuild) {
+            Write-RepoDetect -Check "decision" -Result "auto-build" -Detail "npm run build at $RepoRoot"
             Push-Location $RepoRoot
             try {
                 $nodeModules = Join-Path $RepoRoot "node_modules"
