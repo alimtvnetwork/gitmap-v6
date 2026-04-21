@@ -25,6 +25,18 @@ c
 - For file-based clone: run `gitmap scan` first to generate output files
 - For URL clone: just provide the HTTPS or SSH URL
 
+## Idempotent clone cache
+
+Repeated `gitmap clone` runs are idempotent. After each successful clone or
+pull, gitmap writes a fingerprint (URL, branch, local HEAD SHA, remote HEAD
+SHA) to `<target-dir>/.gitmap/clone-cache.json`. On the next run, repos
+whose local HEAD still matches the cached SHA — and whose remote tip has
+not advanced — are reported as `skipped (cached)` instead of being
+re-cloned or re-pulled. If the remote is unreachable (offline), gitmap
+trusts the cache as long as the local HEAD still matches.
+
+Delete the cache file to force a full reclone of every entry.
+
 ## Examples
 
 ### Example 1: Clone from a direct URL (versioned — auto-flattened)

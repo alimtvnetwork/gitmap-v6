@@ -95,15 +95,32 @@ func cloneAll(records []model.ScanRecord, targetDir string, safePull, quiet bool
 		fmt.Print(constants.MsgAutoSafePull)
 	}
 
+	cache := LoadCloneCache(targetDir)
 	progress := NewProgress(len(records), quiet)
 	summary := model.CloneSummary{}
 
 	for _, rec := range records {
 		progress.Begin(repoDisplayName(rec))
+
+		dest := filepath.Join(targetDir, rec.RelativePath)
+		if cache.IsUpToDate(rec, dest) {
+			result := model.CloneResult{Record: rec, Success: true}
+			progress.Skip(result)
+			summary = updateSummarySkipped(summary, result)
+			continue
+		}
+
 		result := cloneOrPullOne(rec, targetDir, safePull)
 		trackResult(progress, result, rec, targetDir, safePull)
 		summary = updateSummary(summary, result)
+
+		if result.Success {
+			cache.Record(rec, dest)
+		}
 	}
+
+	// Best-effort cache persistence — never fail the run on write errors.
+	_ = cache.Save()
 
 	progress.PrintSummary()
 
@@ -188,6 +205,18 @@ func updateSummary(s model.CloneSummary, r model.CloneResult) model.CloneSummary
 	}
 	s.Failed++
 	s.Errors = append(s.Errors, r)
+
+	return s
+}
+
+// updateSummarySkipped records a cache-skipped repo: it counts toward
+// Succeeded (the desired state is achieved) and is also tracked in
+// Cloned + Skipped so downstream consumers (GitHub Desktop registration,
+// reporting) treat it the same as a fresh clone.
+func updateSummarySkipped(s model.CloneSummary, r model.CloneResult) model.CloneSummary {
+	s.Succeeded++
+	s.Cloned = append(s.Cloned, r)
+	s.Skipped = append(s.Skipped, r)
 
 	return s
 }
