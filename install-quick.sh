@@ -135,8 +135,15 @@ elif [ "$NO_DISCOVERY" = "1" ]; then
 else
     EFFECTIVE_REPO="$(resolve_effective_repo "$REPO" "$PROBE_CEILING")"
     if [ "$EFFECTIVE_REPO" != "$REPO" ]; then
-        invoke_delegated_installer "$EFFECTIVE_REPO" || true
-        # If delegation failed we fall through and install baseline.
+        # invoke_delegated_installer ends with `exit $?` on success. If it
+        # returns control here at all, the curl-and-bash pipeline failed
+        # and we must fall through to baseline. The previous `|| true`
+        # masked successful delegations as failures and caused the
+        # installer prompt to fire 2-3 times (issue 29).
+        if invoke_delegated_installer "$EFFECTIVE_REPO"; then
+            exit 0
+        fi
+        printf '  [discovery] [WARN] delegation failed; falling back to baseline\n' >&2
     fi
 fi
 
