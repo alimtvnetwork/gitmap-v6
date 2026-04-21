@@ -46,7 +46,7 @@ func writeCSVRows(cw *csv.Writer, records []model.ScanRecord) error {
 // writeCSVRow converts a single record to a CSV row.
 func writeCSVRow(cw *csv.Writer, r model.ScanRecord) error {
 	row := []string{
-		r.RepoName, r.HTTPSUrl, r.SSHUrl, r.Branch,
+		r.RepoName, r.HTTPSUrl, r.SSHUrl, r.Branch, r.BranchSource,
 		r.RelativePath, r.AbsolutePath, r.CloneInstruction, r.Notes,
 	}
 
@@ -65,6 +65,8 @@ func ParseCSV(reader io.Reader) ([]model.ScanRecord, error) {
 }
 
 // parseCSVRows converts raw CSV rows (skipping header) into records.
+// Supports both the legacy 8-column layout and the current 9-column layout
+// (which adds branchSource after branch).
 func parseCSVRows(rows [][]string) []model.ScanRecord {
 	records := make([]model.ScanRecord, 0, len(rows))
 	for i, row := range rows {
@@ -79,8 +81,23 @@ func parseCSVRows(rows [][]string) []model.ScanRecord {
 	return records
 }
 
-// rowToRecord maps a CSV row to a ScanRecord.
+// rowToRecord maps a CSV row to a ScanRecord. Accepts both legacy (8 cols)
+// and current (9 cols including branchSource) layouts.
 func rowToRecord(row []string) model.ScanRecord {
+	if len(row) >= 9 {
+		notes := ""
+		if len(row) > 8 {
+			notes = row[8]
+		}
+
+		return model.ScanRecord{
+			RepoName: row[0], HTTPSUrl: row[1], SSHUrl: row[2],
+			Branch: row[3], BranchSource: row[4],
+			RelativePath: row[5], AbsolutePath: row[6],
+			CloneInstruction: row[7], Notes: notes,
+		}
+	}
+
 	notes := ""
 	if len(row) > 7 {
 		notes = row[7]

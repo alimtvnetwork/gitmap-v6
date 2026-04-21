@@ -176,7 +176,7 @@ const (
 
 // CSV headers.
 var ScanCSVHeaders = []string{
-	"repoName", "httpsUrl", "sshUrl", "branch",
+	"repoName", "httpsUrl", "sshUrl", "branch", "branchSource",
 	"relativePath", "absolutePath", "cloneInstruction", "notes",
 }
 

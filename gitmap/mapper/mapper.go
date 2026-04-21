@@ -26,7 +26,7 @@ func BuildRecords(repos []scanner.RepoInfo, mode, defaultNote string) []model.Sc
 // buildOneRecord creates a single ScanRecord from a RepoInfo.
 func buildOneRecord(repo scanner.RepoInfo, mode, note string) model.ScanRecord {
 	remoteURL, _ := gitutil.RemoteURL(repo.AbsolutePath)
-	branch, _ := gitutil.CurrentBranch(repo.AbsolutePath)
+	branch, branchSource := gitutil.DetectBranch(repo.AbsolutePath)
 	httpsURL := toHTTPS(remoteURL)
 	sshURL := toSSH(remoteURL)
 	cloneURL := selectCloneURL(httpsURL, sshURL, mode)
@@ -36,7 +36,8 @@ func buildOneRecord(repo scanner.RepoInfo, mode, note string) model.ScanRecord {
 
 	return model.ScanRecord{
 		Slug: buildSlug(httpsURL, repoName),
-		RepoName: repoName, HTTPSUrl: httpsURL, SSHUrl: sshURL, Branch: branch,
+		RepoName: repoName, HTTPSUrl: httpsURL, SSHUrl: sshURL,
+		Branch: branch, BranchSource: branchSource,
 		RelativePath: repo.RelativePath, AbsolutePath: repo.AbsolutePath,
 		CloneInstruction: instruction, Notes: noteText,
 	}
