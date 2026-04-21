@@ -21,7 +21,8 @@ func reorderFlagsBeforeArgs(args []string) []string {
 		"--bundle": true, "--zip-group": true,
 		"-N": true, "-Z": true,
 		// self-install / self-uninstall value-taking flags
-		"--dir": true, "--version": true, "--profile": true,
+		"--dir": true, "--version": true,
+		"--profile": true, "--shell-mode": true,
 	}
 
 	for i := 0; i < len(args); i++ {
