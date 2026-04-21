@@ -98,14 +98,15 @@ const (
 	GitmapRepoOwner      = "github.com/alimtvnetwork/"
 	GitmapRepoNamePrefix = "gitmap-v"
 	MsgInstallHintHeader = `
-
   📦 Install gitmap %s
+  ─────────────────────
 `
-	MsgInstallHintWindows = `  🪟 Windows (PowerShell)
+	MsgInstallHintWindows = `
+  🪟  Windows · PowerShell
      irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
 `
 	MsgInstallHintUnix = `
-  🐧 Linux / macOS
+  🐧  Linux / macOS
      curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
 `
 )
