@@ -193,18 +193,28 @@ function Invoke-NpmQuiet {
         if ($script:Quiet) {
             & npm @NpmArgs *>&1 | Out-Null
         } else {
-            & npm @NpmArgs
+            # Stream npm output to the host without letting it enter this
+            # function's output pipeline. Without Out-Host, every stdout line
+            # from npm becomes part of the function's return value, so callers
+            # using `return $exitCode` would get an Object[] (npm lines + the
+            # int) instead of a single Int32 — which then breaks any param
+            # typed as [int]ExitCode downstream.
+            & npm @NpmArgs 2>&1 | Out-Host
         }
         $exitCode = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $prevEAP
     }
 
+    if ($null -eq $exitCode) { $exitCode = 0 }
+
     if ($script:Quiet) {
         Write-Host ("  [npm] {0} exit={1}" -f ($NpmArgs -join ' '), $exitCode) -ForegroundColor DarkGray
     }
 
-    return $exitCode
+    # Force scalar [int] return so the caller never receives an array even
+    # if some upstream change reintroduces stray pipeline output.
+    return [int]$exitCode
 }
 
 # -- Banner ----------------------------------------------------
