@@ -22,6 +22,7 @@ type selfInstallOpts struct {
 	Yes       bool
 	Version   string
 	DualShell bool // --dual-shell: force PATH writes to zsh + pwsh profiles
+	ShowPath  bool // --show-path: expand install summary with PATH audit trail
 }
 
 // runSelfInstall is the entry point for `gitmap self-install`. It picks
@@ -41,7 +42,7 @@ func runSelfInstall(args []string) {
 	fmt.Print(constants.MsgSelfInstallReminder)
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell.
+// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell / --show-path.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
@@ -50,6 +51,7 @@ func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs.BoolVar(&opts.Yes, "y", false, constants.FlagDescSelfYes)
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
 	fs.BoolVar(&opts.DualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
+	fs.BoolVar(&opts.ShowPath, "show-path", false, constants.FlagDescSelfShowPath)
 	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	return opts

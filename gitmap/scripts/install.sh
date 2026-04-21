@@ -886,6 +886,7 @@ parse_args() {
     NO_DISCOVERY=false
     PROBE_CEILING=30
     DUAL_SHELL=false
+    SHOW_PATH=false
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -922,8 +923,15 @@ parse_args() {
                 export GITMAP_DUAL_SHELL=1
                 shift
                 ;;
+            --show-path)
+                # Expand the install summary with the per-profile audit
+                # trail (detected shell, pwsh signal, every profile file
+                # touched). Diagnostic flag; no behavior change otherwise.
+                SHOW_PATH=true
+                shift
+                ;;
             --help|-h)
-                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell]"
+                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell] [--show-path]"
                 echo ""
                 echo "Options:"
                 echo "  --version <tag>        Install a specific version (e.g. v2.55.0)"
@@ -933,6 +941,7 @@ parse_args() {
                 echo "  --no-discovery         Skip versioned-repo discovery (install baseline)"
                 echo "  --probe-ceiling <N>    Highest -v<N> to probe (default: 30)"
                 echo "  --dual-shell           Force write PATH to both zsh AND pwsh profiles"
+                echo "  --show-path            Print detected shell + every profile file written"
                 exit 0
                 ;;
             *)
