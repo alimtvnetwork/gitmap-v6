@@ -18,9 +18,10 @@ import (
 
 // selfInstallOpts holds parsed flags for self-install.
 type selfInstallOpts struct {
-	Dir     string
-	Yes     bool
-	Version string
+	Dir       string
+	Yes       bool
+	Version   string
+	DualShell bool // --dual-shell: force PATH writes to zsh + pwsh profiles
 }
 
 // runSelfInstall is the entry point for `gitmap self-install`. It picks
@@ -35,12 +36,12 @@ func runSelfInstall(args []string) {
 	scriptName, scriptBody := loadInstallScript()
 	tmpPath := writeInstallScriptTemp(scriptName, scriptBody)
 	defer os.Remove(tmpPath)
-	executeInstallScript(scriptName, tmpPath, dir, opts.Version)
+	executeInstallScript(scriptName, tmpPath, dir, opts)
 	fmt.Print(constants.MsgSelfInstallDone)
 	fmt.Print(constants.MsgSelfInstallReminder)
 }
 
-// parseSelfInstallFlags reads --dir / --yes / --version.
+// parseSelfInstallFlags reads --dir / --yes / --version / --dual-shell.
 func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs := flag.NewFlagSet(constants.CmdSelfInstall, flag.ExitOnError)
 	opts := selfInstallOpts{}
@@ -48,6 +49,7 @@ func parseSelfInstallFlags(args []string) selfInstallOpts {
 	fs.BoolVar(&opts.Yes, "yes", false, constants.FlagDescSelfYes)
 	fs.BoolVar(&opts.Yes, "y", false, constants.FlagDescSelfYes)
 	fs.StringVar(&opts.Version, "version", "", constants.FlagDescSelfFromVersion)
+	fs.BoolVar(&opts.DualShell, "dual-shell", false, constants.FlagDescSelfDualShell)
 	fs.Parse(reorderFlagsBeforeArgs(args))
 
 	return opts
@@ -186,9 +188,9 @@ func writeInstallScriptTemp(name string, body []byte) string {
 }
 
 // executeInstallScript invokes PowerShell or bash on the script with the
-// resolved install directory and optional version.
-func executeInstallScript(name, path, dir, version string) {
-	cmd := buildSelfInstallCmd(name, path, dir, version)
+// resolved install directory and optional version / dual-shell mode.
+func executeInstallScript(name, path, dir string, opts selfInstallOpts) {
+	cmd := buildSelfInstallCmd(name, path, dir, opts)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -198,21 +200,46 @@ func executeInstallScript(name, path, dir, version string) {
 	}
 }
 
-// buildSelfInstallCmd assembles the platform-specific exec.Cmd.
-func buildSelfInstallCmd(name, path, dir, version string) *exec.Cmd {
+// buildSelfInstallCmd assembles the platform-specific exec.Cmd. On Unix,
+// when --dual-shell is set, GITMAP_DUAL_SHELL=1 is exported into the
+// child's env so detect_active_pwsh fires even without other signals.
+func buildSelfInstallCmd(name, path, dir string, opts selfInstallOpts) *exec.Cmd {
 	if strings.HasSuffix(name, ".ps1") {
-		args := []string{"-ExecutionPolicy", "Bypass", "-NoProfile",
-			"-NoLogo", "-File", path, "-InstallDir", dir}
-		if len(version) > 0 {
-			args = append(args, "-Version", version)
-		}
-
-		return exec.Command("pwsh", args...)
+		return buildSelfInstallPwshCmd(path, dir, opts)
 	}
+
+	return buildSelfInstallBashCmd(path, dir, opts)
+}
+
+// buildSelfInstallPwshCmd builds the Windows / pwsh invocation.
+// --dual-shell is currently a no-op on Windows (single-shell platform);
+// kept in the arg list for forward compatibility with future PSCore-on-
+// Linux / pwsh-side dual-write logic.
+func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
+	args := []string{"-ExecutionPolicy", "Bypass", "-NoProfile",
+		"-NoLogo", "-File", path, "-InstallDir", dir}
+	if len(opts.Version) > 0 {
+		args = append(args, "-Version", opts.Version)
+	}
+
+	return exec.Command("pwsh", args...)
+}
+
+// buildSelfInstallBashCmd builds the Unix invocation and propagates
+// --dual-shell both as a CLI flag and as an env var (belt-and-suspenders
+// so detect_active_pwsh can fire from either signal).
+func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
-	if len(version) > 0 {
-		args = append(args, "--version", version)
+	if len(opts.Version) > 0 {
+		args = append(args, "--version", opts.Version)
+	}
+	if opts.DualShell {
+		args = append(args, constants.FlagSelfDualShell)
+	}
+	cmd := exec.Command("bash", args...)
+	if opts.DualShell {
+		cmd.Env = append(os.Environ(), "GITMAP_DUAL_SHELL=1")
 	}
 
-	return exec.Command("bash", args...)
+	return cmd
 }

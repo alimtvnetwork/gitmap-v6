@@ -88,6 +88,7 @@ const (
 	FlagSelfKeepData     = "--keep-data"
 	FlagSelfKeepSnippet  = "--keep-snippet"
 	FlagSelfFromVersion  = "--version"
+	FlagSelfDualShell    = "--dual-shell"
 )
 
 // Flag descriptions.
@@ -98,4 +99,5 @@ const (
 	FlagDescSelfKeepData    = "Preserve the .gitmap data dir during self-uninstall"
 	FlagDescSelfKeepSnippet = "Leave the PATH snippet in shell profile during self-uninstall"
 	FlagDescSelfFromVersion = "Pin a specific gitmap version to install (e.g. v3.0.0)"
+	FlagDescSelfDualShell   = "Force write PATH to both zsh AND pwsh profiles (Unix; useful when launched from pwsh on macOS)"
 )

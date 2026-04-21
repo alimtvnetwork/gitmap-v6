@@ -540,11 +540,25 @@ install_docs_site() {
 # ── Add to PATH ────────────────────────────────────────────────────
 
 # detect_active_pwsh reports whether the user is running this installer
-# from inside a PowerShell (pwsh) session. macOS / Linux pwsh always sets
-# PSModulePath, even when the script is invoked through a `bash -c` subshell.
+# from inside a PowerShell (pwsh) session. Checks multiple env signals
+# because some shells / sudo wrappers strip PSModulePath but leave
+# other pwsh-specific variables intact.
 # Spec: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
 detect_active_pwsh() {
+    # PSModulePath: classic pwsh marker, always set in interactive sessions.
     if [ -n "${PSModulePath:-}" ]; then
+        return 0
+    fi
+    # POWERSHELL_DISTRIBUTION_CHANNEL: set by the official pwsh package.
+    if [ -n "${POWERSHELL_DISTRIBUTION_CHANNEL:-}" ]; then
+        return 0
+    fi
+    # PSExecutionPolicyPreference: set when pwsh exports its policy.
+    if [ -n "${PSExecutionPolicyPreference:-}" ]; then
+        return 0
+    fi
+    # GITMAP_DUAL_SHELL: explicit override from `gitmap self-install --dual-shell`.
+    if [ "${GITMAP_DUAL_SHELL:-}" = "1" ]; then
         return 0
     fi
 
@@ -708,12 +722,19 @@ add_to_path() {
 
     # PowerShell on Unix — detected when the installer was launched from
     # inside a pwsh session (PSModulePath is set), or when pwsh is on PATH.
+    # The --dual-shell flag (DUAL_SHELL=true) forces this branch even
+    # when neither detection signal fires, so users who explicitly want
+    # both shells wired up can opt in deterministically.
     # Issue: spec/02-app-issues/29-macos-pwsh-shell-not-activated-after-install.md
     local pwsh_active=false
     if detect_active_pwsh; then
         pwsh_active=true
     fi
-    if [ "${pwsh_active}" = true ] || command -v pwsh >/dev/null 2>&1; then
+    local pwsh_force=false
+    if [ "${DUAL_SHELL:-false}" = true ]; then
+        pwsh_force=true
+    fi
+    if [ "${pwsh_active}" = true ] || [ "${pwsh_force}" = true ] || command -v pwsh >/dev/null 2>&1; then
         local pwsh_profile
         pwsh_profile="$(pwsh_profile_path)"
         if add_path_to_profile "${dir}" "${pwsh_profile}" pwsh; then
@@ -824,6 +845,7 @@ parse_args() {
     NO_PATH=false
     NO_DISCOVERY=false
     PROBE_CEILING=30
+    DUAL_SHELL=false
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -851,8 +873,17 @@ parse_args() {
                 PROBE_CEILING="$2"
                 shift 2
                 ;;
+            --dual-shell)
+                # Force PATH writes to BOTH POSIX (zsh/bash/profile) AND
+                # the pwsh profile, regardless of detect_active_pwsh.
+                # Useful when launched from pwsh on macOS where the bash
+                # subshell may not inherit pwsh env signals.
+                DUAL_SHELL=true
+                export GITMAP_DUAL_SHELL=1
+                shift
+                ;;
             --help|-h)
-                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>]"
+                echo "Usage: install.sh [--version <tag>] [--dir <path>] [--arch <arch>] [--no-path] [--no-discovery] [--probe-ceiling <N>] [--dual-shell]"
                 echo ""
                 echo "Options:"
                 echo "  --version <tag>        Install a specific version (e.g. v2.55.0)"
@@ -861,6 +892,7 @@ parse_args() {
                 echo "  --no-path              Skip adding install directory to PATH"
                 echo "  --no-discovery         Skip versioned-repo discovery (install baseline)"
                 echo "  --probe-ceiling <N>    Highest -v<N> to probe (default: 30)"
+                echo "  --dual-shell           Force write PATH to both zsh AND pwsh profiles"
                 exit 0
                 ;;
             *)
