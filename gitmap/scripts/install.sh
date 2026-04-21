@@ -820,31 +820,39 @@ add_to_path() {
             ;;
     esac
 
-    # Cross-shell reload hint: when the installer wrote BOTH the active
+    # Cross-shell reload hint: when the installer touched BOTH the active
     # shell's profile AND the other family's profile (typical under
-    # --dual-shell or when pwsh is detected alongside zsh on macOS),
-    # expose the *other* shell's reload command as PATH_RELOAD_ALT.
-    # Without this, a pwsh user could see `source ~/.zshrc` (which fails
-    # in pwsh) or a zsh user could see `. $PROFILE` (which fails in zsh).
-    resolve_alt_reload "${profiles_written}"
+    # --profile both / --dual-shell, or when pwsh is detected alongside
+    # zsh on macOS), expose the *other* shell's reload command as
+    # PATH_RELOAD_ALT. Pass the UNION of all three lists — the alt is
+    # about which profile *contains* the snippet, not whether we
+    # rewrote it on this run.
+    resolve_alt_reload "${profiles_added} ${profiles_updated} ${profiles_unchanged}"
 
-    # Report what was written
-    if [ -n "${profiles_written}" ]; then
-        ok "Added to PATH in:${profiles_written}"
+    # Per-file change report: one line per profile with its idempotency
+    # outcome so the user can audit exactly what changed and what was
+    # already in place. Always printed (not gated behind --show-path)
+    # because this is the answer to "did the installer touch my dotfiles?"
+    print_profile_change_table
+
+    # Persist the per-profile lists so print_install_summary + the audit
+    # block can echo them. PATH_PROFILES_WRITTEN is the union of added +
+    # updated for backward-compat with --show-path output; the new
+    # PATH_PROFILES_UNCHANGED list exposes the no-op count separately.
+    PATH_PROFILES_WRITTEN="${profiles_added# }${profiles_updated:+ }${profiles_updated# }"
+    PATH_PROFILES_SKIPPED="${profiles_unchanged# }"
+    PATH_PROFILES_ADDED="${profiles_added# }"
+    PATH_PROFILES_UPDATED="${profiles_updated# }"
+    PATH_PROFILES_UNCHANGED="${profiles_unchanged# }"
+
+    # PATH_STATUS feeds the one-line summary in print_install_summary.
+    if [ -n "${profiles_added}" ]; then
         PATH_STATUS="added"
+    elif [ -n "${profiles_updated}" ]; then
+        PATH_STATUS="updated"
     else
-        step "PATH already configured in all profiles"
         PATH_STATUS="already present"
     fi
-
-    if [ -n "${profiles_skipped}" ]; then
-        step "Already present in:${profiles_skipped}"
-    fi
-
-    # Persist the per-profile lists so print_install_summary can echo
-    # them when --show-path is set. Trailing-trimmed for clean display.
-    PATH_PROFILES_WRITTEN="${profiles_written# }"
-    PATH_PROFILES_SKIPPED="${profiles_skipped# }"
 
     if [ "${has_session_path}" = true ]; then
         return
@@ -852,6 +860,62 @@ add_to_path() {
 
     # Update current session (only effective when script is sourced, not piped)
     export PATH="${PATH}:${dir}"
+}
+
+# record_profile_outcome appends $2 to the appropriate per-status list
+# based on the exit code from add_path_to_profile (passed as $1).
+#   0 = added → profiles_added
+#   1 = unchanged → profiles_unchanged
+#   2 = updated → profiles_updated
+# Uses the caller's locals via dynamic scope (bash function-local vars
+# from add_to_path are visible here). Kept tiny so the call sites in
+# add_to_path stay one line each.
+record_profile_outcome() {
+    local code="$1" path="$2"
+    case "${code}" in
+        0) profiles_added="${profiles_added} ${path}" ;;
+        2) profiles_updated="${profiles_updated} ${path}" ;;
+        *) profiles_unchanged="${profiles_unchanged} ${path}" ;;
+    esac
+}
+
+# print_profile_change_table renders a per-file status line for every
+# profile we touched. Symbols mirror common diff conventions so the
+# output reads at a glance:
+#   [+] added     — new gitmap block appended to a previously-untouched file
+#   [~] updated   — block was present but body changed (e.g. install dir moved)
+#   [=] unchanged — block already present and identical (true no-op)
+print_profile_change_table() {
+    local total
+    total=$(count_words "${profiles_added}")
+    total=$((total + $(count_words "${profiles_updated}")))
+    total=$((total + $(count_words "${profiles_unchanged}")))
+    if [ "${total}" -eq 0 ]; then
+        warn "No shell profiles were eligible for the PATH snippet."
+        return
+    fi
+    step "PATH snippet status (${total} profile$( [ ${total} -ne 1 ] && echo s)):"
+    print_status_lines "+" 32 "${profiles_added}"
+    print_status_lines "~" 33 "${profiles_updated}"
+    print_status_lines "=" 90 "${profiles_unchanged}"
+}
+
+# print_status_lines emits one indented coloured line per path in $3,
+# tagged with the symbol $1 (e.g. +/~/=) and ANSI colour code $2.
+# Empty lists are silently skipped so a no-op category produces no row.
+print_status_lines() {
+    local symbol="$1" color="$2" list="$3" path
+    for path in ${list}; do
+        printf '    \033[%sm[%s]\033[0m %s\n' "${color}" "${symbol}" "${path}" >&2
+    done
+}
+
+# count_words returns the number of whitespace-separated tokens in $1.
+# Wrapper around `set --` so callers don't pollute their argv.
+count_words() {
+    # shellcheck disable=SC2086
+    set -- ${1}
+    echo $#
 }
 
 # resolve_alt_reload picks a secondary reload command for the *other*
