@@ -485,12 +485,20 @@ copy_docs_site() {
         return
     fi
 
-    # 3. Auto-build the root Vite app if package.json + npm available
-    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg"; then
+    # 3. Auto-build the root Vite app — ONLY when this repo really is the
+    # gitmap docs site. Marker: gitmap/main.go must exist AND package.json
+    # must list vite. Otherwise we silently skip — the user is running
+    # `gitmap update` from an unrelated project and we must NOT build it.
+    local is_gitmap_repo=0 has_vite_dep=0
+    [[ -f "$REPO_ROOT/gitmap/main.go" ]] && is_gitmap_repo=1
+    [[ -f "$root_pkg" ]] && grep -q '"vite"' "$root_pkg" && has_vite_dep=1
+
+    if [[ -f "$root_pkg" ]] && command -v npm &>/dev/null && grep -q '"build"' "$root_pkg" \
+       && [[ $is_gitmap_repo -eq 1 ]] && [[ $has_vite_dep -eq 1 ]]; then
         if [[ ! -d "$REPO_ROOT/node_modules" ]] || [[ ! -x "$REPO_ROOT/node_modules/.bin/vite" ]]; then
             write_info "Installing docs dependencies (npm install) at repo root..."
             if ! (cd "$REPO_ROOT" && npm install --no-audit --no-fund --silent >/dev/null 2>&1); then
-                write_warn "npm install failed - skipping docs build"
+                write_warn "npm install failed - skipping docs build (gitmap update will continue)"
                 return
             fi
         fi
@@ -503,7 +511,7 @@ copy_docs_site() {
             write_info "Built and copied docs to gitmap app docs-site/dist"
             return
         fi
-        write_warn "Auto-build failed - 'gitmap hd' will fail"
+        write_warn "Auto-build failed - 'gitmap hd' will fail (gitmap update will continue)"
         return
     fi
 
