@@ -53,14 +53,19 @@ const (
 
 // Clone-next batch mode messages and statuses (v3.42.0+).
 const (
-	MsgCloneNextBatchStart   = "→ Batch cn over %d repo(s)\n"
-	MsgCloneNextBatchRepo    = "  • %s: %s -> %s\n"
-	MsgCloneNextBatchSummary = "✓ Batch complete: %d ok, %d failed, %d skipped\n"
-	MsgCloneNextBatchReport  = "  Report: %s\n"
-	WarnCloneNextBatchReport = "Warning: could not write batch report: %v\n"
-	ErrCloneNextBatchLoad    = "Error: could not load batch input: %v\n"
+	MsgCloneNextBatchStart    = "→ Batch cn over %d repo(s)\n"
+	MsgCloneNextBatchRepo     = "  • %s: %s -> %s\n"
+	MsgCloneNextBatchUpToDate = "  • %s: %s (no update needed)\n"
+	MsgCloneNextBatchSummary  = "✓ Batch complete: %d ok, %d failed, %d skipped\n"
+	MsgCloneNextBatchReport   = "  Report: %s\n"
+	WarnCloneNextBatchReport  = "Warning: could not write batch report: %v\n"
+	ErrCloneNextBatchLoad     = "Error: could not load batch input: %v\n"
 
 	BatchStatusOK      = "ok"
 	BatchStatusFailed  = "failed"
 	BatchStatusSkipped = "skipped"
+
+	// BatchDetailUpToDate is the row's `detail` field when the local
+	// repo's version equals the highest existing remote sibling.
+	BatchDetailUpToDate = "no update needed"
 )

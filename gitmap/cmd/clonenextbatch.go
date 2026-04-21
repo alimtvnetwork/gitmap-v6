@@ -70,27 +70,39 @@ func processBatchRepos(repos []string) []batchRowResult {
 	return out
 }
 
-// processOneBatchRepo computes the next version for a single repo and
-// invokes the existing single-repo cn flow via a chdir + delegate pattern.
-// Failures here are captured as row-level "failed" results, never panics.
+// processOneBatchRepo computes the next version for a single repo,
+// checks GitHub for a higher -v<M> sibling, and either delegates to the
+// existing single-repo cn flow OR records a no-op when the local copy
+// is already at the highest published version.
+//
+// Failures here are captured as row-level "failed" results — never panics.
 func processOneBatchRepo(repoPath string) batchRowResult {
 	row := batchRowResult{RepoPath: repoPath}
 
 	parsed, fromStr, err := readRepoVersion(repoPath)
 	if err != nil {
-		row.Status = constants.BatchStatusFailed
-		row.Detail = err.Error()
-
-		return row
+		return failRow(row, err)
 	}
 	row.FromVersion = fromStr
 
-	target, err := clonenext.ResolveTarget(parsed, "v++")
+	updateCheck, err := evaluateRemoteUpdate(repoPath, parsed)
 	if err != nil {
-		row.Status = constants.BatchStatusFailed
-		row.Detail = err.Error()
+		// Network / state-read failure is non-fatal: fall through to the
+		// optimistic v++ path so the user still gets a row, with the
+		// probe error captured in detail.
+		row.Detail = fmt.Sprintf("update-check skipped: %v", err)
+	} else if !updateCheck.UpdateNeeded && parsed.HasVersion {
+		row.Status = constants.BatchStatusOK
+		row.ToVersion = fromStr
+		row.Detail = constants.BatchDetailUpToDate
+		fmt.Printf(constants.MsgCloneNextBatchUpToDate, filepath.Base(repoPath), fromStr)
 
 		return row
+	}
+
+	target, err := clonenext.ResolveTarget(parsed, "v++")
+	if err != nil {
+		return failRow(row, err)
 	}
 	row.ToVersion = fmt.Sprintf("v%d", target)
 
@@ -100,6 +112,38 @@ func processOneBatchRepo(repoPath string) batchRowResult {
 	fmt.Printf(constants.MsgCloneNextBatchRepo, filepath.Base(repoPath), row.FromVersion, row.ToVersion)
 
 	return row
+}
+
+// failRow stamps a result row as failed with the error message and
+// returns it. Centralizes the two duplicated bail-out branches.
+func failRow(row batchRowResult, err error) batchRowResult {
+	row.Status = constants.BatchStatusFailed
+	row.Detail = err.Error()
+
+	return row
+}
+
+// evaluateRemoteUpdate reads the local repo state to learn its origin
+// owner, then probes GitHub for higher -v<M> siblings. Returns the
+// check result; errors here are non-fatal at the call site.
+func evaluateRemoteUpdate(repoPath string, parsed clonenext.ParsedRepo) (clonenext.RemoteUpdateCheck, error) {
+	if !parsed.HasVersion {
+		return clonenext.RemoteUpdateCheck{LocalVersion: parsed.CurrentVersion}, nil
+	}
+
+	state, err := clonenext.ReadLocalRepoState(repoPath)
+	if err != nil {
+		return clonenext.RemoteUpdateCheck{}, err
+	}
+	if len(state.OriginURL) == 0 {
+		return clonenext.RemoteUpdateCheck{}, fmt.Errorf("no origin remote configured")
+	}
+	owner, _, err := clonenext.ParseOwnerRepo(state.OriginURL)
+	if err != nil {
+		return clonenext.RemoteUpdateCheck{}, err
+	}
+
+	return clonenext.CheckRemoteForUpdate(owner, parsed, clonenext.DefaultRemoteProbeCeiling)
 }
 
 // readRepoVersion parses the repo's folder name to extract base + version.
