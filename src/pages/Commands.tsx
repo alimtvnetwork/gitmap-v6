@@ -5,6 +5,7 @@ import CommandCard from "@/components/docs/CommandCard";
 import CommandCategoryGroup from "@/components/docs/CommandCategoryGroup";
 import SearchBar from "@/components/docs/SearchBar";
 import { commands, Categories } from "@/data/commands";
+import { copyToClipboard } from "@/lib/clipboard";
 
 const CommandsPage = () => {
   const [search, setSearch] = useState("");
