@@ -74,10 +74,34 @@ const (
 	SetupErrorEntryFmt = "- %s"
 )
 
-// Changelog entry format strings.
+// Changelog entry format strings (legacy — used by tests and any caller
+// that still wants the bare layout). The pretty console renderer in
+// gitmap/cmd/changelogprint.go ignores these.
 const (
 	ChangelogVersionFmt = "\n%s"
 	ChangelogNoteFmt    = "  - %s"
+)
+
+// Changelog pretty-print constants. Centralised here so future tweaks to
+// colours, indent widths, or rule glyphs don't require code changes in
+// the cmd package.
+const (
+	ChangelogPrettyRule        = "──────────────────────────────────────────────────────────────────────"
+	ChangelogPrettyHeaderFmt   = "  %s%s%s%s  %s%s%s\n"   // dim, version, reset, dim-bullet, white, title, reset
+	ChangelogPrettyHeaderBare  = "  %s%s%s\n"              // version only when no title parsed
+	ChangelogPrettyBulletFmt   = "  %s%s%s %s\n"           // indent, color marker, reset, text
+	ChangelogPrettyBoldOpen    = "\033[1m"
+	ChangelogPrettyBoldClose   = "\033[22m"
+	ChangelogPrettyCodeOpen    = "\033[36m"
+	ChangelogPrettyCodeClose   = "\033[39m"
+	ChangelogPrettyMarkerL0    = "•"
+	ChangelogPrettyMarkerL1    = "◦"
+	ChangelogPrettyMarkerLN    = "·"
+	ChangelogPrettyIndentUnit  = "    "
+	ChangelogPrettyWrapDefault = 100
+	ChangelogPrettyWrapMin     = 60
+	ChangelogPrettyWrapMax     = 140
+	ChangelogPrettyEnvColumns  = "COLUMNS"
 )
 
 // Exec banner box-drawing.
