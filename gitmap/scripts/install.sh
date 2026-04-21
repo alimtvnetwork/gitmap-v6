@@ -53,8 +53,11 @@ PATH_RELOAD_ALT=""
 PATH_RELOAD_ALT_SHELL=""
 # Per-profile audit trail used by --show-path. Populated by add_to_path
 # and consumed by print_install_summary; safe to read even when empty.
-PATH_PROFILES_WRITTEN=""
-PATH_PROFILES_SKIPPED=""
+PATH_PROFILES_WRITTEN=""    # union of added + updated; back-compat
+PATH_PROFILES_SKIPPED=""    # mirrors PATH_PROFILES_UNCHANGED for back-compat
+PATH_PROFILES_ADDED=""      # profile files where the snippet was newly appended
+PATH_PROFILES_UPDATED=""    # profile files whose snippet body changed
+PATH_PROFILES_UNCHANGED=""  # profile files where the snippet was already byte-identical
 PATH_PWSH_DETECTED="no"
 
 cleanup() {
@@ -998,19 +1001,32 @@ print_install_summary() {
 # print_path_audit dumps the detected shell, pwsh signal, and the full
 # list of profile files written/skipped. Called only under --show-path
 # to keep the default summary terse.
+# print_path_audit dumps the detected shell, pwsh signal, and the full
+# per-status profile lists. Called only under --show-path to keep the
+# default summary terse — but the per-file change table (printed
+# unconditionally by print_profile_change_table) already shows the
+# important info; this audit adds the "why this shell was chosen" detail.
 print_path_audit() {
     printf '\n  \033[36m%s\033[0m\n' "PATH audit (--show-path)" >&2
     printf '    Detected SHELL env: %s\n' "${SHELL:-<unset>}" >&2
     printf '    pwsh detected: %s\n' "${PATH_PWSH_DETECTED}" >&2
-    if [ -n "${PATH_PROFILES_WRITTEN}" ]; then
-        printf '    Profiles written: %s\n' "${PATH_PROFILES_WRITTEN}" >&2
-    else
-        printf '    Profiles written: <none — all already up to date>\n' >&2
-    fi
-    if [ -n "${PATH_PROFILES_SKIPPED}" ]; then
-        printf '    Profiles already present: %s\n' "${PATH_PROFILES_SKIPPED}" >&2
-    fi
+    printf '    Profile mode: %s\n' "${PROFILE_MODE:-auto}" >&2
+    print_audit_list "Profiles added"           "${PATH_PROFILES_ADDED}"
+    print_audit_list "Profiles updated"         "${PATH_PROFILES_UPDATED}"
+    print_audit_list "Profiles already in sync" "${PATH_PROFILES_UNCHANGED}"
     printf '    PATH line: %s\n' "${PATH_LINE}" >&2
+}
+
+# print_audit_list renders one labelled line for a profile-status list.
+# Empty lists print "<none>" so users can confirm a category was checked
+# but produced no entries (vs being skipped entirely).
+print_audit_list() {
+    local label="$1" list="$2"
+    if [ -n "${list}" ]; then
+        printf '    %s: %s\n' "${label}" "${list}" >&2
+    else
+        printf '    %s: <none>\n' "${label}" >&2
+    fi
 }
 
 # ── Resolve install directory ──────────────────────────────────────
