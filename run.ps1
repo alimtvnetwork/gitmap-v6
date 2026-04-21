@@ -686,15 +686,22 @@ function Copy-DocsSite {
                 if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
                     Write-Info "Installing docs dependencies (npm install) at repo root..."
                     npm install --no-audit --no-fund --silent 2>&1 | Out-Null
-                    if ($LASTEXITCODE -ne 0) {
+                    $installExit = $LASTEXITCODE
+                    if ($installExit -ne 0) {
                         Write-Warn "npm install failed - skipping docs build"
+                        Write-ReportError -Stage "docs-npm-install" `
+                            -Command "npm install --no-audit --no-fund --silent" `
+                            -ExitCode $installExit `
+                            -Message "npm install failed at repo root; docs build skipped" `
+                            -Paths @{ repoRoot = $RepoRoot; packageJson = $rootPkg }
                         Pop-Location
                         return
                     }
                 }
                 Write-Info "Auto-building docs (npm run build) at repo root..."
                 npm run build 2>&1 | Out-Null
-                if ($LASTEXITCODE -eq 0 -and (Test-Path $rootDist)) {
+                $buildExit = $LASTEXITCODE
+                if ($buildExit -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
                     if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
                     New-Item -ItemType Directory -Path $docsDest -Force | Out-Null
@@ -706,6 +713,11 @@ function Copy-DocsSite {
                 Pop-Location
             }
             Write-Warn "Auto-build failed - 'gitmap hd' will fail"
+            Write-ReportError -Stage "docs-npm-build" `
+                -Command "npm run build" `
+                -ExitCode $buildExit `
+                -Message "npm run build did not produce dist/ output" `
+                -Paths @{ repoRoot = $RepoRoot; expectedDist = $rootDist; packageJson = $rootPkg }
             return
         }
     }
