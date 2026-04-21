@@ -86,6 +86,13 @@ func runCloneNext(args []string) {
 	flattenedFolder := parsed.BaseName
 	targetPath := filepath.Join(parentDir, flattenedFolder)
 
+	// Stage 1/3 banner — only emitted in -f mode where the multi-stage
+	// nature actually helps. Default mode keeps the legacy terse output
+	// so we don't break existing screenshots / scripts that grep it.
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStagePrepare, currentFolder, flattenedFolder)
+	}
+
 	// Force-flatten pre-step: if the user passed -f / --force AND their
 	// shell cwd is exactly the target folder (the "already flattened"
 	// case from a previous cn run), Windows holds an open handle on
