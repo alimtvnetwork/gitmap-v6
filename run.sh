@@ -29,28 +29,34 @@ DEPLOY_PATH=""
 UPDATE=false
 RUN=false
 TEST=false
+DEBUG_REPO_DETECT=false
 RUN_ARGS=()
 
 # -- Parse arguments -------------------------------------------
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --no-pull)    NO_PULL=true; shift ;;
-        --force-pull) FORCE_PULL=true; shift ;;
-        --no-deploy)  NO_DEPLOY=true; shift ;;
-        --deploy-path)
-            DEPLOY_PATH="$2"; shift 2 ;;
-        --update)     UPDATE=true; shift ;;
-        -r|--run)     RUN=true; shift
+        --no-pull)             NO_PULL=true; shift ;;
+        --force-pull)          FORCE_PULL=true; shift ;;
+        --no-deploy)           NO_DEPLOY=true; shift ;;
+        --deploy-path)         DEPLOY_PATH="$2"; shift 2 ;;
+        --update)              UPDATE=true; shift ;;
+        --debug-repo-detect)   DEBUG_REPO_DETECT=true; shift ;;
+        -r|--run)              RUN=true; shift
             # Collect remaining args for gitmap
             while [[ $# -gt 0 ]]; do
                 RUN_ARGS+=("$1"); shift
             done
             ;;
-        -t|--test)    TEST=true; shift ;;
+        -t|--test)             TEST=true; shift ;;
         *)
             echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
+
+# Honor env-var bridge from `gitmap update --debug-repo-detect`.
+if [[ "${GITMAP_DEBUG_REPO_DETECT:-}" == "1" ]]; then
+    DEBUG_REPO_DETECT=true
+fi
 
 # -- Colors ----------------------------------------------------
 RED='\033[0;31m'
