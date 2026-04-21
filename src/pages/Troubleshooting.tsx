@@ -504,14 +504,13 @@ interface CopyFixButtonProps {
 const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async () => {
     const payload = altCommand
       ? `${command}\n\n# Alternative\n${altCommand}`
       : command;
-    navigator.clipboard.writeText(payload).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
+    await copyToClipboard(payload);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [command, altCommand]);
 
   return (
