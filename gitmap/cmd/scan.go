@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -54,8 +56,18 @@ func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFo
 		defer taskDB.Close()
 	}
 
-	repos, err := scanner.ScanDirWithWorkers(absDir, cfg.ExcludeDirs, workers)
+	// Install a Ctrl+C handler scoped to the directory walk. Once the
+	// scan returns we tear it down so downstream steps (DB upsert,
+	// project detection, etc.) keep using their normal exit semantics.
+	ctx, cancel := newCancellableContext()
+	repos, err := scanner.ScanDirContext(ctx, absDir, cfg.ExcludeDirs, workers)
+	cancel()
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			failPendingTask(taskDB, taskID, "scan cancelled by user")
+			fmt.Fprintln(os.Stderr, "  ⚠ Scan cancelled — no artifacts written.")
+			os.Exit(130)
+		}
 		failPendingTask(taskDB, taskID, fmt.Sprintf(constants.ErrScanFailed, absDir, err))
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, absDir, err)
 		os.Exit(1)
