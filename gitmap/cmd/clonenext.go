@@ -178,6 +178,10 @@ func runCloneNext(args []string) {
 	}
 	fmt.Printf(constants.MsgFlattenDone, targetName, flattenedFolder)
 
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNStageFinalize)
+	}
+
 	// Record version history in DB.
 	recordVersionHistory(targetPath, parsed.CurrentVersion, targetVersion, flattenedFolder)
 
@@ -199,6 +203,10 @@ func runCloneNext(args []string) {
 
 	// Open in VS Code if available.
 	openInVSCode(targetPath)
+
+	if cnFlags.Force {
+		fmt.Printf(constants.MsgCNDone, flattenedFolder)
+	}
 }
 
 // extractRepoName extracts the repository name from a remote URL.
