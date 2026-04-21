@@ -1097,7 +1097,18 @@ main() {
         echo ""
         printf '  \033[32mOK\033[0m  To start using gitmap \033[1mright now\033[0m, run:\n' >&2
         echo "" >&2
-        printf '      \033[36m%s\033[0m\n' "${PATH_RELOAD}" >&2
+        # Label the primary command with its shell so the user can see at
+        # a glance whether it matches the shell they're sitting in. The
+        # PATH_SHELL value is already pwsh-overridden when detect_active_pwsh
+        # fired, so this label is the source of truth for the active shell.
+        printf '      \033[36m%s\033[0m   \033[90m# in %s\033[0m\n' "${PATH_RELOAD}" "${PATH_SHELL}" >&2
+        # When dual-shell wrote both a POSIX profile AND the pwsh profile,
+        # show the alternate command so users in the *other* shell aren't
+        # left with a syntactically wrong hint (e.g. `source ~/.zshrc`
+        # pasted into a pwsh prompt).
+        if [ -n "${PATH_RELOAD_ALT}" ]; then
+            printf '      \033[36m%s\033[0m   \033[90m# in %s\033[0m\n' "${PATH_RELOAD_ALT}" "${PATH_RELOAD_ALT_SHELL}" >&2
+        fi
         echo "" >&2
         printf '     Or open a new terminal window.\n' >&2
         echo "" >&2
