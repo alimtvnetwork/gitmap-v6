@@ -13,6 +13,7 @@ const FlagVerbose = "--verbose"
 const FlagRepoPath = "--repo-path"
 const FlagReportErrors = "--report-errors"
 const FlagReportErrorsFile = "--report-errors-file"
+const FlagDebugRepoDetect = "--debug-repo-detect"
 
 // Report-errors values and env-var bridge to run.ps1 / run.sh.
 const (
@@ -29,6 +30,12 @@ const (
 	MsgReportErrorsSummary = "  → Wrote %d non-fatal failure entr%s to %s\n"
 	WarnReportErrorsCreate = "  ⚠ Could not create report-errors file at %s: %v\n"
 	ErrReportErrorsValue   = "  ✗ Unsupported --report-errors value: %q (supported: json)\n"
+)
+
+// Debug-repo-detect bridge.
+const (
+	EnvDebugRepoDetect    = "GITMAP_DEBUG_REPO_DETECT"
+	MsgDebugRepoDetectOn  = "  → Repo-detect debug enabled (will print marker checks)\n"
 )
 
 // Updater fallback.

@@ -9,19 +9,25 @@ import (
 	"github.com/alimtvnetwork/gitmap-v5/gitmap/constants"
 )
 
-// reportErrorsConfig captures the resolved --report-errors settings.
+// reportErrorsConfig captures the resolved --report-errors and
+// --debug-repo-detect settings. Both share the same flag-propagation and
+// env-injection lifecycle, so they're bundled into one carrier struct.
 type reportErrorsConfig struct {
-	enabled bool
-	format  string
-	file    string
+	reportEnabled   bool
+	format          string
+	file            string
+	debugRepoDetect bool
 }
 
-// resolveReportErrors reads --report-errors / --report-errors-file from
-// os.Args[2:]. Returns an empty (disabled) config when absent.
+// resolveReportErrors reads --report-errors / --report-errors-file and
+// --debug-repo-detect from os.Args[2:]. Returns a zero config when none
+// are present.
 func resolveReportErrors() reportErrorsConfig {
+	cfg := reportErrorsConfig{debugRepoDetect: hasFlag(constants.FlagDebugRepoDetect)}
+
 	value := getFlagValue(constants.FlagReportErrors)
 	if len(value) == 0 {
-		return reportErrorsConfig{}
+		return cfg
 	}
 
 	if value != constants.ReportErrorsJSON {
@@ -34,18 +40,21 @@ func resolveReportErrors() reportErrorsConfig {
 		path = defaultReportPath()
 	}
 
-	abs, err := filepath.Abs(path)
-	if err == nil {
+	if abs, err := filepath.Abs(path); err == nil {
 		path = abs
 	}
 
 	if err := ensureReportFile(path); err != nil {
 		fmt.Fprintf(os.Stderr, constants.WarnReportErrorsCreate, path, err)
 
-		return reportErrorsConfig{}
+		return cfg
 	}
 
-	return reportErrorsConfig{enabled: true, format: value, file: path}
+	cfg.reportEnabled = true
+	cfg.format = value
+	cfg.file = path
+
+	return cfg
 }
 
 // defaultReportPath builds a timestamped report path under the system temp dir.
@@ -74,44 +83,50 @@ func ensureReportFile(path string) error {
 	return f.Close()
 }
 
-// applyToHandoffArgs appends report-errors flags so the handoff worker sees them.
+// applyToHandoffArgs appends flags so the handoff worker sees them.
 func (c reportErrorsConfig) applyToHandoffArgs(args []string) []string {
-	if !c.enabled {
-		return args
+	if c.reportEnabled {
+		args = append(args, constants.FlagReportErrors, c.format)
+		args = append(args, constants.FlagReportErrorsFile, c.file)
 	}
 
-	args = append(args, constants.FlagReportErrors, c.format)
-	args = append(args, constants.FlagReportErrorsFile, c.file)
+	if c.debugRepoDetect {
+		args = append(args, constants.FlagDebugRepoDetect)
+	}
 
 	return args
 }
 
 // applyToEnv injects env vars consumed by run.ps1 / run.sh.
 func (c reportErrorsConfig) applyToEnv(env []string) []string {
-	if !c.enabled {
-		return env
+	if c.reportEnabled {
+		env = append(env,
+			fmt.Sprintf("%s=%s", constants.EnvReportErrorsFormat, c.format),
+			fmt.Sprintf("%s=%s", constants.EnvReportErrorsFile, c.file),
+		)
 	}
 
-	env = append(env,
-		fmt.Sprintf("%s=%s", constants.EnvReportErrorsFormat, c.format),
-		fmt.Sprintf("%s=%s", constants.EnvReportErrorsFile, c.file),
-	)
+	if c.debugRepoDetect {
+		env = append(env, fmt.Sprintf("%s=1", constants.EnvDebugRepoDetect))
+	}
 
 	return env
 }
 
-// announce prints a one-line notice when reporting is active.
+// announce prints a one-line notice when reporting or debug is active.
 func (c reportErrorsConfig) announce() {
-	if !c.enabled {
-		return
+	if c.reportEnabled {
+		fmt.Printf(constants.MsgReportErrorsEnabled, c.file)
 	}
 
-	fmt.Printf(constants.MsgReportErrorsEnabled, c.file)
+	if c.debugRepoDetect {
+		fmt.Print(constants.MsgDebugRepoDetectOn)
+	}
 }
 
 // summarize prints a short summary of the report file after the update finishes.
 func (c reportErrorsConfig) summarize() {
-	if !c.enabled {
+	if !c.reportEnabled {
 		return
 	}
 
