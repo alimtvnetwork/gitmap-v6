@@ -418,6 +418,127 @@ gitmap alias suggest --apply
 
 <div align="center">
 
+## 🚀 gitmap Release
+
+**Current version:** `v3.50.0` · Cross-platform (Windows · Linux · macOS) · Single static binary
+
+</div>
+
+The `gitmap release` command turns a clean working tree into a versioned,
+tagged, multi-target GitHub release in one step — branch + tag + push +
+binary build + checksum + changelog body + GitHub Release page.
+
+### Install or upgrade gitmap
+
+#### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1 | iex
+```
+
+#### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh | sh
+```
+
+#### Pin to an exact version
+
+```powershell
+# Windows — install v3.50.0 exactly, skip the "latest" lookup
+$ver = 'v3.50.0'
+$installer = irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.ps1
+& ([scriptblock]::Create($installer)) -Version $ver -NoDiscovery
+```
+
+```bash
+# Linux / macOS — install v3.50.0 exactly
+curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v5/main/gitmap/scripts/install.sh \
+  | bash -s -- --version v3.50.0 --no-discovery
+```
+
+Verify:
+
+```bash
+gitmap --version
+# gitmap v3.50.0
+```
+
+### Release CLI examples
+
+| Goal | Command |
+|------|---------|
+| Auto-bump minor (`3.50.0 → 3.51.0`) and release | `gitmap r` |
+| Bump patch and release | `gitmap release --bump patch` |
+| Bump minor with binary + zip + checksums | `gitmap release --bump minor --bin --compress --checksums` |
+| Release a specific version with notes | `gitmap release v3.51.0 -N "Performance pass"` |
+| Release any registered repo from anywhere | `gitmap ra my-api v1.4.0` |
+| Pull, then release a registered repo | `gitmap rap my-api v1.4.0` |
+| Release gitmap itself from any directory | `gitmap release-self --bump patch` |
+| Multi-repo: bump every repo under cwd | `gitmap r -y` (run from a folder of repos) |
+| Preview without pushing | `gitmap release --bump patch --dry-run` |
+| List build targets that will be produced | `gitmap release --list-targets` |
+
+```bash
+# End-to-end: register once, release from anywhere
+cd ~/code/my-api
+gitmap as my-api                  # one-time alias
+cd ~                              # go anywhere
+gitmap ra my-api v1.4.0 --pull    # pull --ff-only, release, push, build, attach
+```
+
+> **Auto-stash safety:** dirty trees are stashed before `release-alias`
+> with a label like `my-api-1.4.0-1715000000` and popped on exit. Pass
+> `--no-stash` to abort instead, or `--dry-run` to preview every step.
+
+### What you get — output formats
+
+Every successful release produces all of the following:
+
+| Artifact | Where | Format |
+|----------|-------|--------|
+| Release branch | local + `origin` | `release/v3.51.0` |
+| Annotated tag | local + `origin` | `v3.51.0` |
+| Local manifest | `.gitmap/release/latest.json` | JSON (version, tag, branch) |
+| GitHub Release page | github.com/&lt;owner&gt;/&lt;repo&gt;/releases | Title + body + assets |
+| Release body | GitHub Release page | Markdown — CHANGELOG section + pinned-install snippet |
+| Cross-compiled binaries (with `--bin`) | uploaded as release assets | `gitmap_v3.51.0_<os>_<arch>[.exe]` for 6 targets |
+| Compressed archives (with `--compress`) | uploaded as release assets | `.zip` (Windows) / `.tar.gz` (Linux/macOS) |
+| Checksums (with `--checksums`) | uploaded as release asset | `SHA256SUMS.txt` |
+| Custom zip groups (with `--zip-group`) | uploaded as release assets | `.zip` bundles per group |
+
+**Default build targets** (override with `--targets` or `release.targets` in `config.json`):
+
+```
+linux/amd64    linux/arm64
+darwin/amd64   darwin/arm64
+windows/amd64  windows/arm64
+```
+
+**Sample terminal output:**
+
+```
+  Creating release v3.51.0...
+  ✓ Created branch release/v3.51.0
+  ✓ Created tag v3.51.0
+  ✓ Pushed branch and tag to origin
+  ✓ Release metadata written to .gitmap/release/latest.json
+  ✓ Committed release metadata on release/v3.51.0
+  ✓ Marked v3.51.0 as latest release
+  ✓ Using CHANGELOG.md as release body
+  ✓ Attached gitmap_v3.51.0_windows_amd64.exe
+  ✓ Attached gitmap_v3.51.0_linux_amd64
+  ✓ Attached SHA256SUMS.txt
+
+  ── Release v3.51.0 complete ──
+```
+
+→ Detailed help: [release](gitmap/helptext/release.md) · [release-alias](gitmap/helptext/release-alias.md) · [release-self](gitmap/helptext/release-self.md) · [release-pending](gitmap/helptext/release-pending.md) · [changelog](gitmap/helptext/changelog.md)
+
+---
+
+<div align="center">
+
 ### Release & Versioning
 
 </div>
