@@ -193,18 +193,28 @@ function Invoke-NpmQuiet {
         if ($script:Quiet) {
             & npm @NpmArgs *>&1 | Out-Null
         } else {
-            & npm @NpmArgs
+            # Stream npm output to the host without letting it enter this
+            # function's output pipeline. Without Out-Host, every stdout line
+            # from npm becomes part of the function's return value, so callers
+            # using `return $exitCode` would get an Object[] (npm lines + the
+            # int) instead of a single Int32 — which then breaks any param
+            # typed as [int]ExitCode downstream.
+            & npm @NpmArgs 2>&1 | Out-Host
         }
         $exitCode = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $prevEAP
     }
 
+    if ($null -eq $exitCode) { $exitCode = 0 }
+
     if ($script:Quiet) {
         Write-Host ("  [npm] {0} exit={1}" -f ($NpmArgs -join ' '), $exitCode) -ForegroundColor DarkGray
     }
 
-    return $exitCode
+    # Force scalar [int] return so the caller never receives an array even
+    # if some upstream change reintroduces stray pipeline output.
+    return [int]$exitCode
 }
 
 # -- Banner ----------------------------------------------------
@@ -799,7 +809,7 @@ function Copy-DocsSite {
                 $viteBin = Join-Path $nodeModules ".bin\vite.cmd"
                 if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
                     Write-Info "Installing docs dependencies (npm install) at repo root..."
-                    $installExit = Invoke-NpmQuiet -NpmArgs @('install','--no-audit','--no-fund','--silent')
+                    $installExit = [int](Invoke-NpmQuiet -NpmArgs @('install','--no-audit','--no-fund','--silent'))
                     if ($installExit -ne 0) {
                         Write-Warn "npm install failed - skipping docs build"
                         Write-ReportError -Stage "docs-npm-install" `
@@ -812,7 +822,7 @@ function Copy-DocsSite {
                     }
                 }
                 Write-Info "Auto-building docs (npm run build) at repo root..."
-                $buildExit = Invoke-NpmQuiet -NpmArgs @('run','build')
+                $buildExit = [int](Invoke-NpmQuiet -NpmArgs @('run','build'))
                 if ($buildExit -eq 0 -and (Test-Path $rootDist)) {
                     $distDest = Join-Path $docsDest "dist"
                     if (Test-Path $distDest) { Remove-Item $distDest -Recurse -Force }
@@ -827,7 +837,7 @@ function Copy-DocsSite {
             Write-Warn "Auto-build failed - 'gitmap hd' will fail"
             Write-ReportError -Stage "docs-npm-build" `
                 -Command "npm run build" `
-                -ExitCode $buildExit `
+                -ExitCode ([int]$buildExit) `
                 -Message "npm run build did not produce dist/ output" `
                 -Paths @{ repoRoot = $RepoRoot; expectedDist = $rootDist; packageJson = $rootPkg }
             return
