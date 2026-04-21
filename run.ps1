@@ -809,7 +809,7 @@ function Copy-DocsSite {
                 $viteBin = Join-Path $nodeModules ".bin\vite.cmd"
                 if (-not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)) {
                     Write-Info "Installing docs dependencies (npm install) at repo root..."
-                    $installExit = Invoke-NpmQuiet -NpmArgs @('install','--no-audit','--no-fund','--silent')
+                    $installExit = [int](Invoke-NpmQuiet -NpmArgs @('install','--no-audit','--no-fund','--silent'))
                     if ($installExit -ne 0) {
                         Write-Warn "npm install failed - skipping docs build"
                         Write-ReportError -Stage "docs-npm-install" `
