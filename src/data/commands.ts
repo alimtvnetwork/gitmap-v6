@@ -147,6 +147,47 @@ export const commands: CommandDef[] = [
       { name: "list", description: "List tracked repos" },
     ],
   },
+  {
+    category: "scanning",
+    name: "probe", alias: "pb", description: "Check tracked repos for newer remote tags via ls-remote → shallow-clone fallback. With --depth N, walks up to N newer versions and verifies each via shallow clone (planned v3.36.0)",
+    usage: "gitmap probe [<path>|--all] [--depth N] [--json]",
+    flags: [
+      { flag: "--all", description: "Probe every repo in the database" },
+      { flag: "--depth <n>", description: "Walk up to N newer tags, shallow-verify each (default 1, max 10) — planned v3.36.0" },
+      { flag: "--json", description: "Emit results as JSON for CI consumption" },
+    ],
+    examples: [
+      { command: "gitmap probe --all", description: "Probe every tracked repo for the single newest tag (current behavior)" },
+      { command: "gitmap probe --all --depth 5", description: "Walk up to 5 newer versions per repo, shallow-clone each to verify" },
+      { command: "gitmap probe E:\\src\\my-repo --depth 3", description: "Single repo, 3-deep walk" },
+      { command: "gitmap probe --all --depth 5 --json > probes.json", description: "Machine-readable upgrade-path report" },
+    ],
+    seeAlso: [
+      { name: "find-next", description: "Read VersionProbe results without re-probing" },
+      { name: "scan", description: "Populate the database that probe reads from" },
+      { name: "scan all", description: "Bulk re-scan known roots before probing" },
+    ],
+  },
+  {
+    category: "scanning",
+    name: "find-next", alias: "fn", description: "Read-only: list every repo whose latest VersionProbe row has IsAvailable=1, sorted newest first",
+    usage: "gitmap find-next [--scan-folder <id>] [--include-intermediate] [--json]",
+    flags: [
+      { flag: "--scan-folder <id>", description: "Restrict to one ScanFolder (look up via 'gitmap sf list')" },
+      { flag: "--include-intermediate", description: "Show every verified version from the latest --depth walk, not just the newest (planned v3.36.0)" },
+      { flag: "--json", description: "Emit []FindNextRow as indented JSON" },
+    ],
+    examples: [
+      { command: "gitmap find-next", description: "Every repo with an available update across the whole DB" },
+      { command: "gitmap fn --scan-folder 3", description: "Only repos under ScanFolder id=3" },
+      { command: "gitmap fn --json", description: "JSON output for CI" },
+    ],
+    seeAlso: [
+      { name: "probe", description: "Run the probe to refresh data find-next reads" },
+      { name: "sf list", description: "Find a ScanFolder id" },
+      { name: "pull all", description: "Update the repos that find-next surfaces" },
+    ],
+  },
 
   // ═══════════════════════════════════════════
   // Cloning & Pulling
