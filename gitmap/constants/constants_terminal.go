@@ -131,6 +131,19 @@ const (
 	TermTableRule    = "──────────────────────────────────────────────────────────────────────"
 )
 
+// Scan live progress indicator. Rendered to stderr on a single CR-prefixed
+// line (so stdout / output files stay clean). The "Scanning" prefix uses
+// dim+cyan to set it apart from the boxed banner that follows.
+const (
+	ScanProgressPrefix = "  ⟳ Scanning"
+	// ScanProgressLineFmt: prefix, dirs walked, repos found.
+	// Trailing spaces overwrite any leftover wider previous frame; the
+	// emitter then re-issues "\r" before the next frame.
+	ScanProgressLineFmt   = "\r%s%s%s — %s%d dirs%s · %s%d repos%s          "
+	ScanProgressClearLine = "\r                                                                                \r"
+	ScanProgressDoneFmt   = "  %s✓ Walked %d directories · found %d repositories%s\n"
+)
+
 // Terminal repo entry formats.
 const (
 	TermRepoIcon  = "  📦 %s\n"
