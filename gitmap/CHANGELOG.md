@@ -1,6 +1,74 @@
 # Changelog
 
+## v3.38.0 — (2026-04-21) — VS Code Project Manager sync (`gitmap code` + auto-sync on scan)
+
+### Added
+
+- **New `gitmap code [alias] [path]` command** — registers a path with the
+  `alefragnani.project-manager` VS Code extension and opens VS Code on it
+  in one step. Resolution order: explicit `path` arg → git repo root → CWD.
+  Alias defaults to the folder basename and can be overridden by the first
+  positional arg. Works for any path; the path does **not** need to be a Git
+  repo.
+- **`gitmap scan` now auto-syncs** every discovered repo into the
+  Project Manager `projects.json`. Pass `--no-vscode-sync` to opt out.
+  `scan` itself never opens VS Code.
+- **`gitmap as <newalias>` mirrors the rename** to `projects.json` — the
+  matching `rootPath` entry's `name` field is updated atomically.
+
+### Path resolution (per OS)
+
+The full path to `projects.json` is **never hardcoded**. The new
+`vscodepm` package first discovers the VS Code **user-data root**, then
+appends `User/globalStorage/alefragnani.project-manager/projects.json`:
+
+| OS      | User-data root                                                       |
+|---------|----------------------------------------------------------------------|
+| Windows | `%APPDATA%\Code` → fallback `%USERPROFILE%\AppData\Roaming\Code`     |
+| macOS   | `$HOME/Library/Application Support/Code`                             |
+| Linux   | `$XDG_CONFIG_HOME/Code` → fallback `$HOME/.config/Code`              |
+
+This matches portable / non-standard installations automatically.
+
+### Atomicity & user-edit preservation
+
+- All writes go through a temp-file + `os.Rename` pair so a kill/crash
+  mid-write never produces a corrupted `projects.json`.
+- Foreign entries in `projects.json` (rootPaths gitmap doesn't know about)
+  are **always preserved** — gitmap merges, never replaces.
+- User-edited fields per entry (`paths`, `tags`, `enabled`, `profile`) are
+  preserved on every re-sync. Only `name` is rewritten by gitmap.
+
+### Schema
+
+- New table **`VSCodeProject`** (PascalCase, `INTEGER PRIMARY KEY AUTOINCREMENT`,
+  unique `RootPath COLLATE NOCASE`). DB schema version bumped to **19**.
+- Idempotent migration; legacy databases upgrade silently on the next
+  `gitmap` invocation.
+
+### Files
+
+- New: `gitmap/vscodepm/{path,entry,sync}.go`, `gitmap/cmd/{code,vscodepmsync}.go`,
+  `gitmap/store/vscode_project.go`, `gitmap/model/vscode_project.go`,
+  `gitmap/helptext/code.md`, `gitmap/constants/constants_vscode_pm{,_sql}.go`.
+- Updated: `gitmap/cmd/{scan,asops,rootcore,rootflags}.go`,
+  `gitmap/store/store.go`, `gitmap/constants/{constants,constants_cli,constants_settings}.go`.
+
+### Spec & memory
+
+- New spec: `spec/01-vscode-project-manager-sync/README.md` plus the captured
+  user fixture `spec/01-vscode-project-manager-sync/sample-projects.json`.
+- New memory: `mem://features/vscode-project-manager-sync` (path resolution
+  rule promoted to a Core memory).
+
+### Compatibility
+
+- Pure additive change. Existing flows unaffected when VS Code is not
+  installed: `scan` prints a soft note and continues, `gitmap code` errors
+  cleanly with an actionable hint.
+
 ## v3.32.1 — (2026-04-20) — Fix `gitmap status` looking at legacy bare `output/` path
+
 
 ### Fixed
 
