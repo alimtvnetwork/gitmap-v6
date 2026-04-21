@@ -171,19 +171,44 @@ func cloneOne(rec model.ScanRecord, targetDir string) model.CloneResult {
 	return runClone(rec, dest)
 }
 
-// runClone executes the git clone command.
+// runClone executes `git clone`, choosing the branch arguments based on
+// how confident we are in the recorded branch (see pickCloneStrategy).
+//
+// When the recorded branch comes from a trusted source (HEAD,
+// remote-tracking, or default), we pass `-b <branch>` so the clone
+// lands directly on that branch. When the source is detached/unknown
+// or the branch is empty, we omit `-b` entirely and let the remote's
+// HEAD pick the initial branch — never silently swap to a wrong
+// branch and never fail with "Remote branch '' not found".
+//
+// The chosen strategy's reason is propagated into CloneResult.Notes
+// so users can audit `--branch-source-debug` output and clone results
+// against each other.
 func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	url := pickURL(rec)
-	cmd := exec.Command(constants.GitBin, constants.GitClone,
-		constants.GitBranchFlag, rec.Branch, url, dest)
+	strategy := pickCloneStrategy(rec)
+
+	args := []string{constants.GitClone}
+	if strategy.useBranchFlag {
+		args = append(args, constants.GitBranchFlag, strategy.branch)
+	}
+	args = append(args, url, dest)
+
+	cmd := exec.Command(constants.GitBin, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := fmt.Sprintf("%s: %s", err.Error(), string(out))
 
-		return model.CloneResult{Record: rec, Success: false, Error: msg}
+		return model.CloneResult{
+			Record: rec, Success: false, Error: msg,
+			Notes: strategy.reason,
+		}
 	}
 
-	return model.CloneResult{Record: rec, Success: true}
+	return model.CloneResult{
+		Record: rec, Success: true,
+		Notes: strategy.reason,
+	}
 }
 
 // pickURL selects the best available URL from a record.

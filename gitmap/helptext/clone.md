@@ -37,6 +37,25 @@ trusts the cache as long as the local HEAD still matches.
 
 Delete the cache file to force a full reclone of every entry.
 
+## Branch selection strategy
+
+When cloning from a scan output file, gitmap consults the `branchSource`
+field recorded for each repo to decide how to invoke `git clone`:
+
+| Source            | Behavior                                                |
+|-------------------|---------------------------------------------------------|
+| `HEAD`            | `git clone -b <branch> ...` — recorded branch trusted   |
+| `remote-tracking` | `git clone -b <branch> ...` — recorded branch trusted   |
+| `default`         | `git clone -b <branch> ...` — recorded branch trusted   |
+| `detached`        | `git clone <url> <dest>` — falls back to remote `HEAD`  |
+| `unknown` / empty | `git clone <url> <dest>` — falls back to remote `HEAD`  |
+
+This prevents `fatal: Remote branch '' not found` failures on repos
+that were scanned in a detached or unresolvable state, and avoids
+silently checking out a stale or fabricated branch name. The decision
+made for each repo is recorded in `CloneResult.Notes` so it can be
+audited via `--verbose` runs or programmatic consumers.
+
 ## Examples
 
 ### Example 1: Clone from a direct URL (versioned — auto-flattened)
