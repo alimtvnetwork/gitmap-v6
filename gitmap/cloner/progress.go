@@ -17,6 +17,7 @@ type Progress struct {
 	quiet   bool
 	cloned  int
 	pulled  int
+	skipped int
 	failed  int
 }
 
@@ -55,6 +56,16 @@ func (p *Progress) Done(result model.CloneResult, pulled bool) {
 	fmt.Fprintf(os.Stderr, constants.ProgressDoneFmt, formatDuration(elapsed))
 }
 
+// Skip marks a repo as skipped because it was already up to date.
+func (p *Progress) Skip(result model.CloneResult) {
+	p.skipped++
+	if p.quiet {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, constants.ProgressSkipFmt)
+}
+
 // Fail marks a repo as failed.
 func (p *Progress) Fail(result model.CloneResult) {
 	p.failed++
@@ -75,7 +86,7 @@ func (p *Progress) PrintSummary() {
 	fmt.Fprintf(os.Stderr, constants.ProgressSummaryFmt,
 		p.current, p.total, formatDuration(elapsed))
 	fmt.Fprintf(os.Stderr, constants.ProgressDetailFmt,
-		p.cloned, p.pulled, p.failed)
+		p.cloned, p.pulled, p.skipped, p.failed)
 }
 
 // formatDuration returns a human-readable duration string.
