@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import DocsLayout from "@/components/docs/DocsLayout";
 import CodeBlock from "@/components/docs/CodeBlock";
 import SearchBar from "@/components/docs/SearchBar";
-import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check, Link2 } from "lucide-react";
+import { AlertTriangle, FolderX, FileWarning, KeyRound, Network, Lock, GitBranch, Wrench, Copy, Check, Link2, Stethoscope, Terminal, FileText, ListChecks } from "lucide-react";
 
 type Category = "paths" | "config" | "auth" | "network" | "locks" | "git" | "build";
 
