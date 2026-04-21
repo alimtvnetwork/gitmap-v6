@@ -18,6 +18,8 @@ import (
 func runUpdate() {
 	requireOnline()
 	repoPath := resolveRepoPath()
+	report := resolveReportErrors()
+	report.announce()
 
 	selfPath, err := os.Executable()
 	if err != nil {
@@ -27,7 +29,7 @@ func runUpdate() {
 
 	copyPath := createHandoffCopy(selfPath)
 	fmt.Printf(constants.MsgUpdateActive, selfPath, copyPath)
-	launchHandoff(copyPath, repoPath)
+	launchHandoff(copyPath, repoPath, report)
 }
 
 // resolveRepoPath returns the repo path from --repo-path flag or embedded constant.
@@ -128,18 +130,20 @@ func makeExecutable(path string) {
 }
 
 // launchHandoff runs the handoff binary with update-runner command.
-func launchHandoff(copyPath, repoPath string) {
+func launchHandoff(copyPath, repoPath string, report reportErrorsConfig) {
 	copyArgs := []string{constants.CmdUpdateRunner}
 	if hasFlag(constants.FlagVerbose) {
 		copyArgs = append(copyArgs, constants.FlagVerbose)
 	}
 
 	copyArgs = append(copyArgs, constants.FlagRepoPath, repoPath)
+	copyArgs = report.applyToHandoffArgs(copyArgs)
 
 	cmd := exec.Command(copyPath, copyArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+	cmd.Env = report.applyToEnv(os.Environ())
 	if err := cmd.Run(); err != nil {
 		handleHandoffError(err)
 	}
@@ -161,12 +165,14 @@ func handleHandoffError(err error) {
 // migration so the next CLI invocation never has to repair the database.
 func runUpdateRunner() {
 	repoPath := resolveRepoPath()
+	report := resolveReportErrors()
 
 	initRunnerVerbose()
 	fmt.Printf(constants.MsgUpdateStarting)
 	fmt.Printf(constants.MsgUpdateRepoPath, repoPath)
-	executeUpdate(repoPath)
+	executeUpdate(repoPath, report)
 	runPostUpdateMigrate()
+	report.summarize()
 }
 
 // getFlagValue returns the value following a flag like --repo-path <value>.
