@@ -53,8 +53,11 @@ PATH_RELOAD_ALT=""
 PATH_RELOAD_ALT_SHELL=""
 # Per-profile audit trail used by --show-path. Populated by add_to_path
 # and consumed by print_install_summary; safe to read even when empty.
-PATH_PROFILES_WRITTEN=""
-PATH_PROFILES_SKIPPED=""
+PATH_PROFILES_WRITTEN=""    # union of added + updated; back-compat
+PATH_PROFILES_SKIPPED=""    # mirrors PATH_PROFILES_UNCHANGED for back-compat
+PATH_PROFILES_ADDED=""      # profile files where the snippet was newly appended
+PATH_PROFILES_UPDATED=""    # profile files whose snippet body changed
+PATH_PROFILES_UNCHANGED=""  # profile files where the snippet was already byte-identical
 PATH_PWSH_DETECTED="no"
 
 cleanup() {
@@ -588,10 +591,16 @@ pwsh_profile_path() {
 
 # add_path_to_profile writes a marker-block snippet (per
 # spec/04-generic-cli/21-post-install-shell-activation) to a single
-# profile file. Idempotent: rewrites the existing block if present.
-# Third arg is the snippet shell flavour: "bash" | "fish" | "pwsh".
-# (Legacy callers passed "false"/"true" — both are coerced to bash/fish.)
-# Returns 0 if written, 1 if no-op.
+# profile file. Idempotent across all three outcomes: appends when
+# absent, rewrites in place when present-but-different, no-ops when
+# present-and-identical. Third arg is the snippet shell flavour:
+# "bash" | "fish" | "pwsh". (Legacy callers passed "false"/"true" —
+# both are coerced to bash/fish.)
+#
+# Exit codes — used by add_to_path to render the per-file status table:
+#   0 = added    (new block appended to the file)
+#   1 = unchanged (block already present and byte-identical to snippet)
+#   2 = updated  (block was present but body changed; rewritten in place)
 add_path_to_profile() {
     local dir="$1" profile_file="$2" shell_kind="$3"
 
@@ -604,11 +613,29 @@ add_path_to_profile() {
     local marker_open="# gitmap shell wrapper v2 - managed by gitmap installer. Do not edit manually."
     local marker_close="# gitmap shell wrapper v2 end"
 
-    # Single-source-of-truth: ask the freshly-installed gitmap binary
-    # for the canonical snippet bytes. Falls back to an inline heredoc
-    # if the binary isn't on PATH yet (called before install_binary
-    # completed).
-    local snippet=""
+    local snippet
+    snippet="$(resolve_path_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
+
+    mkdir -p "$(dirname "${profile_file}")"
+    touch "${profile_file}"
+
+    if grep -qF "${marker_open}" "${profile_file}" 2>/dev/null; then
+        rewrite_marker_block "${profile_file}" "${marker_open}" "${marker_close}" "${snippet}"
+
+        return $?
+    fi
+
+    printf '\n%s\n' "${snippet}" >> "${profile_file}"
+
+    return 0
+}
+
+# resolve_path_snippet returns the canonical PATH snippet body for a
+# shell, preferring the freshly-installed gitmap binary's
+# `setup print-path-snippet` output and falling back to a hard-coded
+# template when the binary isn't yet on disk.
+resolve_path_snippet() {
+    local shell_kind="$1" dir="$2" open="$3" close="$4"
     local gitmap_bin=""
     if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
         gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
@@ -618,30 +645,79 @@ add_path_to_profile() {
     elif command -v gitmap >/dev/null 2>&1; then
         gitmap_bin="$(command -v gitmap)"
     fi
+    local snippet=""
     if [ -n "${gitmap_bin}" ]; then
         snippet="$("${gitmap_bin}" setup print-path-snippet \
             --shell "${shell_kind}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
     fi
     if [ -z "${snippet}" ]; then
-        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
+        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${open}" "${close}")"
     fi
+    printf '%s' "${snippet}"
+}
 
-    mkdir -p "$(dirname "${profile_file}")"
-    touch "${profile_file}"
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+#
+# NOTE: awk vars are named open_marker / close_marker because `close`
+# is a reserved gawk builtin and `close=...` triggers a fatal error.
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+#
+# NOTE: awk vars are named open_marker / close_marker because `close`
+# is a reserved gawk builtin and `close=...` triggers a fatal error.
+# Diff uses `diff -q` (POSIX, ubiquitous) instead of `cmp` because some
+# minimal containers omit cmp from the busybox build.
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+#
+# NOTE: awk vars are named open_marker / close_marker because `close`
+# is a reserved gawk builtin and `close=...` triggers a fatal error.
+# Comparison uses files_equal (pure-bash byte read) so we don't depend
+# on `cmp` or `diff` — both are missing in some minimal containers.
+rewrite_marker_block() {
+    local profile_file="$1" open="$2" close="$3" snippet="$4"
+    local tmp
+    tmp="$(mktemp)"
+    awk -v open_marker="${open}" -v close_marker="${close}" -v body="${snippet}" '
+        $0 == open_marker { skip = 1; print body; next }
+        skip && $0 == close_marker { skip = 0; next }
+        !skip { print }
+    ' "${profile_file}" > "${tmp}"
+    if files_equal "${tmp}" "${profile_file}"; then
+        rm -f "${tmp}"
 
-    if grep -qF "${marker_open}" "${profile_file}" 2>/dev/null; then
-        local tmp
-        tmp="$(mktemp)"
-        awk -v open="${marker_open}" -v close="${marker_close}" -v body="${snippet}" '
-            $0 == open { skip = 1; print body; next }
-            skip && $0 == close { skip = 0; next }
-            !skip { print }
-        ' "${profile_file}" > "${tmp}" && mv "${tmp}" "${profile_file}"
+        return 1 # unchanged
+    fi
+    mv "${tmp}" "${profile_file}"
+
+    return 2 # updated
+}
+
+# files_equal returns 0 iff $1 and $2 have identical bytes. Pure bash
+# (no cmp/diff dependency). Compares size first as a fast path.
+files_equal() {
+    local a="$1" b="$2"
+    local size_a size_b
+    size_a=$(wc -c < "${a}" 2>/dev/null || echo -1)
+    size_b=$(wc -c < "${b}" 2>/dev/null || echo -1)
+    if [ "${size_a}" != "${size_b}" ]; then
         return 1
     fi
-
-    printf '\n%s\n' "${snippet}" >> "${profile_file}"
-    return 0
+    local hash_a hash_b
+    hash_a=$(sha1sum "${a}" 2>/dev/null | awk '{print $1}')
+    hash_b=$(sha1sum "${b}" 2>/dev/null | awk '{print $1}')
+    [ -n "${hash_a}" ] && [ "${hash_a}" = "${hash_b}" ]
 }
 
 # fallback_snippet renders the marker-block snippet body when the
@@ -678,41 +754,35 @@ add_to_path() {
     PATH_SHELL="${shell_name}"
 
     local primary_profile=""
-    local profiles_written=""
-    local profiles_skipped=""
+    # Three outcome lists drive both the live per-file table and the
+    # final summary. Lists are space-separated paths, populated by
+    # record_profile_outcome from add_path_to_profile's exit code.
+    local profiles_added=""
+    local profiles_updated=""
+    local profiles_unchanged=""
 
     # ── Write to all relevant POSIX/bash/zsh profiles ──────────────
     # This ensures gitmap is available regardless of which shell the user opens.
 
+    step "Writing PATH snippet to shell profiles..."
+
     # zsh profiles (both, to cover login + interactive shells)
     if should_write_profile zsh && { [ "${shell_name}" = "zsh" ] || [ -f "${HOME}/.zshrc" ] || [ -f "${HOME}/.zprofile" ]; }; then
         # .zshrc — interactive shells (most terminal emulators)
-        if add_path_to_profile "${dir}" "${HOME}/.zshrc" false; then
-            profiles_written="${profiles_written} ~/.zshrc"
-        else
-            profiles_skipped="${profiles_skipped} ~/.zshrc"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.zshrc" false
+        record_profile_outcome $? "~/.zshrc"
         # .zprofile — login shells (macOS Terminal.app)
-        if add_path_to_profile "${dir}" "${HOME}/.zprofile" false; then
-            profiles_written="${profiles_written} ~/.zprofile"
-        else
-            profiles_skipped="${profiles_skipped} ~/.zprofile"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.zprofile" false
+        record_profile_outcome $? "~/.zprofile"
     fi
 
     # bash profiles
     if should_write_profile bash && { [ "${shell_name}" = "bash" ] || [ -f "${HOME}/.bashrc" ] || [ -f "${HOME}/.bash_profile" ]; }; then
-        if add_path_to_profile "${dir}" "${HOME}/.bashrc" false; then
-            profiles_written="${profiles_written} ~/.bashrc"
-        else
-            profiles_skipped="${profiles_skipped} ~/.bashrc"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.bashrc" false
+        record_profile_outcome $? "~/.bashrc"
         if [ -f "${HOME}/.bash_profile" ]; then
-            if add_path_to_profile "${dir}" "${HOME}/.bash_profile" false; then
-                profiles_written="${profiles_written} ~/.bash_profile"
-            else
-                profiles_skipped="${profiles_skipped} ~/.bash_profile"
-            fi
+            add_path_to_profile "${dir}" "${HOME}/.bash_profile" false
+            record_profile_outcome $? "~/.bash_profile"
         fi
     fi
 
@@ -720,21 +790,15 @@ add_to_path() {
     # Skipped under single-shell modes (zsh/bash/pwsh/fish) to honour
     # the "only this shell family" contract.
     if [ "${PROFILE_MODE}" = "auto" ] || [ "${PROFILE_MODE}" = "both" ]; then
-        if add_path_to_profile "${dir}" "${HOME}/.profile" false; then
-            profiles_written="${profiles_written} ~/.profile"
-        else
-            profiles_skipped="${profiles_skipped} ~/.profile"
-        fi
+        add_path_to_profile "${dir}" "${HOME}/.profile" false
+        record_profile_outcome $? "~/.profile"
     fi
 
     # fish (only if fish is installed or is the default shell)
     if should_write_profile fish && { [ "${shell_name}" = "fish" ] || command -v fish >/dev/null 2>&1; }; then
         local fish_config="${HOME}/.config/fish/config.fish"
-        if add_path_to_profile "${dir}" "${fish_config}" fish; then
-            profiles_written="${profiles_written} ~/.config/fish/config.fish"
-        else
-            profiles_skipped="${profiles_skipped} ~/.config/fish/config.fish"
-        fi
+        add_path_to_profile "${dir}" "${fish_config}" fish
+        record_profile_outcome $? "~/.config/fish/config.fish"
     fi
 
     # PowerShell on Unix — detected when the installer was launched from
@@ -758,11 +822,8 @@ add_to_path() {
         fi
         local pwsh_profile
         pwsh_profile="$(pwsh_profile_path)"
-        if add_path_to_profile "${dir}" "${pwsh_profile}" pwsh; then
-            profiles_written="${profiles_written} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
-        else
-            profiles_skipped="${profiles_skipped} ~/.config/powershell/Microsoft.PowerShell_profile.ps1"
-        fi
+        add_path_to_profile "${dir}" "${pwsh_profile}" pwsh
+        record_profile_outcome $? "~/.config/powershell/Microsoft.PowerShell_profile.ps1"
     fi
 
     # If the user is actively in pwsh, the pwsh profile becomes the primary
@@ -803,31 +864,39 @@ add_to_path() {
             ;;
     esac
 
-    # Cross-shell reload hint: when the installer wrote BOTH the active
+    # Cross-shell reload hint: when the installer touched BOTH the active
     # shell's profile AND the other family's profile (typical under
-    # --dual-shell or when pwsh is detected alongside zsh on macOS),
-    # expose the *other* shell's reload command as PATH_RELOAD_ALT.
-    # Without this, a pwsh user could see `source ~/.zshrc` (which fails
-    # in pwsh) or a zsh user could see `. $PROFILE` (which fails in zsh).
-    resolve_alt_reload "${profiles_written}"
+    # --profile both / --dual-shell, or when pwsh is detected alongside
+    # zsh on macOS), expose the *other* shell's reload command as
+    # PATH_RELOAD_ALT. Pass the UNION of all three lists — the alt is
+    # about which profile *contains* the snippet, not whether we
+    # rewrote it on this run.
+    resolve_alt_reload "${profiles_added} ${profiles_updated} ${profiles_unchanged}"
 
-    # Report what was written
-    if [ -n "${profiles_written}" ]; then
-        ok "Added to PATH in:${profiles_written}"
+    # Per-file change report: one line per profile with its idempotency
+    # outcome so the user can audit exactly what changed and what was
+    # already in place. Always printed (not gated behind --show-path)
+    # because this is the answer to "did the installer touch my dotfiles?"
+    print_profile_change_table
+
+    # Persist the per-profile lists so print_install_summary + the audit
+    # block can echo them. PATH_PROFILES_WRITTEN is the union of added +
+    # updated for backward-compat with --show-path output; the new
+    # PATH_PROFILES_UNCHANGED list exposes the no-op count separately.
+    PATH_PROFILES_WRITTEN="${profiles_added# }${profiles_updated:+ }${profiles_updated# }"
+    PATH_PROFILES_SKIPPED="${profiles_unchanged# }"
+    PATH_PROFILES_ADDED="${profiles_added# }"
+    PATH_PROFILES_UPDATED="${profiles_updated# }"
+    PATH_PROFILES_UNCHANGED="${profiles_unchanged# }"
+
+    # PATH_STATUS feeds the one-line summary in print_install_summary.
+    if [ -n "${profiles_added}" ]; then
         PATH_STATUS="added"
+    elif [ -n "${profiles_updated}" ]; then
+        PATH_STATUS="updated"
     else
-        step "PATH already configured in all profiles"
         PATH_STATUS="already present"
     fi
-
-    if [ -n "${profiles_skipped}" ]; then
-        step "Already present in:${profiles_skipped}"
-    fi
-
-    # Persist the per-profile lists so print_install_summary can echo
-    # them when --show-path is set. Trailing-trimmed for clean display.
-    PATH_PROFILES_WRITTEN="${profiles_written# }"
-    PATH_PROFILES_SKIPPED="${profiles_skipped# }"
 
     if [ "${has_session_path}" = true ]; then
         return
@@ -835,6 +904,62 @@ add_to_path() {
 
     # Update current session (only effective when script is sourced, not piped)
     export PATH="${PATH}:${dir}"
+}
+
+# record_profile_outcome appends $2 to the appropriate per-status list
+# based on the exit code from add_path_to_profile (passed as $1).
+#   0 = added → profiles_added
+#   1 = unchanged → profiles_unchanged
+#   2 = updated → profiles_updated
+# Uses the caller's locals via dynamic scope (bash function-local vars
+# from add_to_path are visible here). Kept tiny so the call sites in
+# add_to_path stay one line each.
+record_profile_outcome() {
+    local code="$1" path="$2"
+    case "${code}" in
+        0) profiles_added="${profiles_added} ${path}" ;;
+        2) profiles_updated="${profiles_updated} ${path}" ;;
+        *) profiles_unchanged="${profiles_unchanged} ${path}" ;;
+    esac
+}
+
+# print_profile_change_table renders a per-file status line for every
+# profile we touched. Symbols mirror common diff conventions so the
+# output reads at a glance:
+#   [+] added     — new gitmap block appended to a previously-untouched file
+#   [~] updated   — block was present but body changed (e.g. install dir moved)
+#   [=] unchanged — block already present and identical (true no-op)
+print_profile_change_table() {
+    local total
+    total=$(count_words "${profiles_added}")
+    total=$((total + $(count_words "${profiles_updated}")))
+    total=$((total + $(count_words "${profiles_unchanged}")))
+    if [ "${total}" -eq 0 ]; then
+        warn "No shell profiles were eligible for the PATH snippet."
+        return
+    fi
+    step "PATH snippet status (${total} profile$( [ ${total} -ne 1 ] && echo s)):"
+    print_status_lines "+" 32 "${profiles_added}"
+    print_status_lines "~" 33 "${profiles_updated}"
+    print_status_lines "=" 90 "${profiles_unchanged}"
+}
+
+# print_status_lines emits one indented coloured line per path in $3,
+# tagged with the symbol $1 (e.g. +/~/=) and ANSI colour code $2.
+# Empty lists are silently skipped so a no-op category produces no row.
+print_status_lines() {
+    local symbol="$1" color="$2" list="$3" path
+    for path in ${list}; do
+        printf '    \033[%sm[%s]\033[0m %s\n' "${color}" "${symbol}" "${path}" >&2
+    done
+}
+
+# count_words returns the number of whitespace-separated tokens in $1.
+# Wrapper around `set --` so callers don't pollute their argv.
+count_words() {
+    # shellcheck disable=SC2086
+    set -- ${1}
+    echo $#
 }
 
 # resolve_alt_reload picks a secondary reload command for the *other*
@@ -917,19 +1042,32 @@ print_install_summary() {
 # print_path_audit dumps the detected shell, pwsh signal, and the full
 # list of profile files written/skipped. Called only under --show-path
 # to keep the default summary terse.
+# print_path_audit dumps the detected shell, pwsh signal, and the full
+# per-status profile lists. Called only under --show-path to keep the
+# default summary terse — but the per-file change table (printed
+# unconditionally by print_profile_change_table) already shows the
+# important info; this audit adds the "why this shell was chosen" detail.
 print_path_audit() {
     printf '\n  \033[36m%s\033[0m\n' "PATH audit (--show-path)" >&2
     printf '    Detected SHELL env: %s\n' "${SHELL:-<unset>}" >&2
     printf '    pwsh detected: %s\n' "${PATH_PWSH_DETECTED}" >&2
-    if [ -n "${PATH_PROFILES_WRITTEN}" ]; then
-        printf '    Profiles written: %s\n' "${PATH_PROFILES_WRITTEN}" >&2
-    else
-        printf '    Profiles written: <none — all already up to date>\n' >&2
-    fi
-    if [ -n "${PATH_PROFILES_SKIPPED}" ]; then
-        printf '    Profiles already present: %s\n' "${PATH_PROFILES_SKIPPED}" >&2
-    fi
+    printf '    Profile mode: %s\n' "${PROFILE_MODE:-auto}" >&2
+    print_audit_list "Profiles added"           "${PATH_PROFILES_ADDED}"
+    print_audit_list "Profiles updated"         "${PATH_PROFILES_UPDATED}"
+    print_audit_list "Profiles already in sync" "${PATH_PROFILES_UNCHANGED}"
     printf '    PATH line: %s\n' "${PATH_LINE}" >&2
+}
+
+# print_audit_list renders one labelled line for a profile-status list.
+# Empty lists print "<none>" so users can confirm a category was checked
+# but produced no entries (vs being skipped entirely).
+print_audit_list() {
+    local label="$1" list="$2"
+    if [ -n "${list}" ]; then
+        printf '    %s: %s\n' "${label}" "${list}" >&2
+    else
+        printf '    %s: <none>\n' "${label}" >&2
+    fi
 }
 
 # ── Resolve install directory ──────────────────────────────────────
