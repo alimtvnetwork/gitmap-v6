@@ -140,17 +140,14 @@ const (
 //
 // SelfInstallProfileModes is the back-compat alias kept for existing
 // references in selfinstall.go and tests.
-var (
-	SelfInstallShellModes = []string{
-		ShellModeAuto,
-		ShellModeBoth,
-		ShellModeZsh,
-		ShellModeBash,
-		ShellModePwsh,
-		ShellModeFish,
-	}
-	SelfInstallProfileModes = SelfInstallShellModes
-)
+// Single-line initializer (NOT a `var (...)` block) so the constants-collision
+// linter does not misread the indented `ShellMode*,` element lines as new
+// top-level var declarations duplicating the const names above.
+var SelfInstallShellModes = []string{ShellModeAuto, ShellModeBoth, ShellModeZsh, ShellModeBash, ShellModePwsh, ShellModeFish}
+
+// SelfInstallProfileModes is the back-compat alias kept for existing
+// references in selfinstall.go and tests.
+var SelfInstallProfileModes = SelfInstallShellModes
 
 // ErrSelfInstallShellModeInvalid fires when --shell-mode gets an unknown
 // value (singleton or combo token). Format: %q = full bad value, %s =
