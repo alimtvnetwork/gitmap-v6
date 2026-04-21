@@ -49,8 +49,8 @@ function ColorSwatch({ hsl, label, token }: { hsl: string; label?: string; token
   const [copied, setCopied] = useState(false);
   const cssValue = `hsl(${hsl})`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(token ? `var(${token})` : hsl);
+  const handleCopy = async () => {
+    await copyToClipboard(token ? `var(${token})` : hsl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
