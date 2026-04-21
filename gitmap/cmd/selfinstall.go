@@ -379,23 +379,45 @@ func buildSelfInstallPwshCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 }
 
 // buildSelfInstallBashCmd builds the Unix invocation and propagates
-// --profile + --show-path through to install.sh. When the resolved
-// profile mode is `both`, GITMAP_DUAL_SHELL=1 is also exported as a
-// belt-and-suspenders signal so detect_active_pwsh inside install.sh
-// fires from either the env var OR the explicit flag.
+// --shell-mode + --show-path through to install.sh. When the resolved
+// shell mode requires pwsh (`both` OR any combo containing `pwsh`),
+// GITMAP_DUAL_SHELL=1 is also exported as a belt-and-suspenders signal
+// so detect_active_pwsh inside install.sh fires from either the env
+// var OR the explicit flag.
 func buildSelfInstallBashCmd(path, dir string, opts selfInstallOpts) *exec.Cmd {
 	args := []string{path, "--dir", dir}
 	if len(opts.Version) > 0 {
 		args = append(args, "--version", opts.Version)
 	}
-	args = append(args, constants.FlagSelfProfile, opts.Profile)
+	args = append(args, constants.FlagSelfShellMode, opts.ShellMode)
 	if opts.ShowPath {
 		args = append(args, constants.FlagSelfShowPath)
 	}
 	cmd := exec.Command("bash", args...)
-	if opts.Profile == constants.ProfileModeBoth {
+	if shellModeRequiresPwsh(opts.ShellMode) {
 		cmd.Env = append(os.Environ(), "GITMAP_DUAL_SHELL=1")
 	}
 
 	return cmd
+}
+
+// shellModeRequiresPwsh reports whether the resolved mode forces a pwsh
+// profile write. Covers `both` (writes everything) and any combo whose
+// tokens include `pwsh` (e.g. `zsh+pwsh`, `bash+pwsh`, `zsh+bash+pwsh`).
+// Singletons other than `pwsh` itself return false — the user explicitly
+// asked for a non-pwsh shell.
+func shellModeRequiresPwsh(mode string) bool {
+	if mode == constants.ShellModeBoth || mode == constants.ShellModePwsh {
+		return true
+	}
+	if !strings.Contains(mode, constants.ShellModeComboSep) {
+		return false
+	}
+	for _, tok := range strings.Split(mode, constants.ShellModeComboSep) {
+		if tok == constants.ShellModePwsh {
+			return true
+		}
+	}
+
+	return false
 }
