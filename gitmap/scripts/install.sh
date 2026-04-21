@@ -588,10 +588,16 @@ pwsh_profile_path() {
 
 # add_path_to_profile writes a marker-block snippet (per
 # spec/04-generic-cli/21-post-install-shell-activation) to a single
-# profile file. Idempotent: rewrites the existing block if present.
-# Third arg is the snippet shell flavour: "bash" | "fish" | "pwsh".
-# (Legacy callers passed "false"/"true" — both are coerced to bash/fish.)
-# Returns 0 if written, 1 if no-op.
+# profile file. Idempotent across all three outcomes: appends when
+# absent, rewrites in place when present-but-different, no-ops when
+# present-and-identical. Third arg is the snippet shell flavour:
+# "bash" | "fish" | "pwsh". (Legacy callers passed "false"/"true" —
+# both are coerced to bash/fish.)
+#
+# Exit codes — used by add_to_path to render the per-file status table:
+#   0 = added    (new block appended to the file)
+#   1 = unchanged (block already present and byte-identical to snippet)
+#   2 = updated  (block was present but body changed; rewritten in place)
 add_path_to_profile() {
     local dir="$1" profile_file="$2" shell_kind="$3"
 
@@ -604,11 +610,29 @@ add_path_to_profile() {
     local marker_open="# gitmap shell wrapper v2 - managed by gitmap installer. Do not edit manually."
     local marker_close="# gitmap shell wrapper v2 end"
 
-    # Single-source-of-truth: ask the freshly-installed gitmap binary
-    # for the canonical snippet bytes. Falls back to an inline heredoc
-    # if the binary isn't on PATH yet (called before install_binary
-    # completed).
-    local snippet=""
+    local snippet
+    snippet="$(resolve_path_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
+
+    mkdir -p "$(dirname "${profile_file}")"
+    touch "${profile_file}"
+
+    if grep -qF "${marker_open}" "${profile_file}" 2>/dev/null; then
+        rewrite_marker_block "${profile_file}" "${marker_open}" "${marker_close}" "${snippet}"
+
+        return $?
+    fi
+
+    printf '\n%s\n' "${snippet}" >> "${profile_file}"
+
+    return 0
+}
+
+# resolve_path_snippet returns the canonical PATH snippet body for a
+# shell, preferring the freshly-installed gitmap binary's
+# `setup print-path-snippet` output and falling back to a hard-coded
+# template when the binary isn't yet on disk.
+resolve_path_snippet() {
+    local shell_kind="$1" dir="$2" open="$3" close="$4"
     local gitmap_bin=""
     if [ -x "${INSTALL_DIR:-}/${APP_SUBDIR}/gitmap" ]; then
         gitmap_bin="${INSTALL_DIR}/${APP_SUBDIR}/gitmap"
@@ -618,30 +642,38 @@ add_path_to_profile() {
     elif command -v gitmap >/dev/null 2>&1; then
         gitmap_bin="$(command -v gitmap)"
     fi
+    local snippet=""
     if [ -n "${gitmap_bin}" ]; then
         snippet="$("${gitmap_bin}" setup print-path-snippet \
             --shell "${shell_kind}" --dir "${dir}" --manager "installer" 2>/dev/null || true)"
     fi
     if [ -z "${snippet}" ]; then
-        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${marker_open}" "${marker_close}")"
+        snippet="$(fallback_snippet "${shell_kind}" "${dir}" "${open}" "${close}")"
     fi
+    printf '%s' "${snippet}"
+}
 
-    mkdir -p "$(dirname "${profile_file}")"
-    touch "${profile_file}"
+# rewrite_marker_block replaces the existing marker block in profile_file
+# with the supplied snippet. Compares byte-for-byte before writing so we
+# can return 1 (unchanged) vs 2 (updated) — this is what powers the
+# "already present" vs "updated" distinction in the per-file report.
+rewrite_marker_block() {
+    local profile_file="$1" open="$2" close="$3" snippet="$4"
+    local tmp
+    tmp="$(mktemp)"
+    awk -v open="${open}" -v close="${close}" -v body="${snippet}" '
+        $0 == open { skip = 1; print body; next }
+        skip && $0 == close { skip = 0; next }
+        !skip { print }
+    ' "${profile_file}" > "${tmp}"
+    if cmp -s "${tmp}" "${profile_file}"; then
+        rm -f "${tmp}"
 
-    if grep -qF "${marker_open}" "${profile_file}" 2>/dev/null; then
-        local tmp
-        tmp="$(mktemp)"
-        awk -v open="${marker_open}" -v close="${marker_close}" -v body="${snippet}" '
-            $0 == open { skip = 1; print body; next }
-            skip && $0 == close { skip = 0; next }
-            !skip { print }
-        ' "${profile_file}" > "${tmp}" && mv "${tmp}" "${profile_file}"
-        return 1
+        return 1 # unchanged
     fi
+    mv "${tmp}" "${profile_file}"
 
-    printf '\n%s\n' "${snippet}" >> "${profile_file}"
-    return 0
+    return 2 # updated
 }
 
 # fallback_snippet renders the marker-block snippet body when the
