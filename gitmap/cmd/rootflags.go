@@ -6,8 +6,43 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
+// ScanFlags bundles every parsed scan-command flag so callers don't have
+// to thread a long positional return list through helper functions.
+// Adding a new flag here is preferred over extending the tuple returned
+// by parseScanFlags — the latter is kept only for backward compatibility
+// with existing call sites.
+type ScanFlags struct {
+	Dir                string
+	ConfigPath         string
+	Mode               string
+	Output             string
+	OutFile            string
+	OutputPath         string
+	GHDesktop          bool
+	OpenFolder         bool
+	Quiet              bool
+	NoVSCodeSync       bool
+	NoAutoTags         bool
+	Workers            int
+	BranchSourceDebug  bool
+}
+
 // parseScanFlags parses flags for the scan command.
+//
+// NOTE: The positional return tuple is preserved for backward
+// compatibility with callers that destructure it directly. New flags
+// are exposed via ParseScanFlags (struct form) instead so the tuple
+// doesn't keep growing without bound.
 func parseScanFlags(args []string) (dir, configPath, mode, output, outFile, outputPath string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int) {
+	f := ParseScanFlags(args)
+
+	return f.Dir, f.ConfigPath, f.Mode, f.Output, f.OutFile, f.OutputPath,
+		f.GHDesktop, f.OpenFolder, f.Quiet, f.NoVSCodeSync, f.NoAutoTags, f.Workers
+}
+
+// ParseScanFlags is the struct-returning form. New code MUST use this
+// rather than the legacy tuple form.
+func ParseScanFlags(args []string) ScanFlags {
 	fs := flag.NewFlagSet(constants.CmdScan, flag.ExitOnError)
 	cfgFlag := fs.String("config", constants.DefaultConfigPath, constants.FlagDescConfig)
 	modeFlag := fs.String("mode", "", constants.FlagDescMode)
@@ -18,11 +53,24 @@ func parseScanFlags(args []string) (dir, configPath, mode, output, outFile, outp
 	noVSCodeSyncFlag := fs.Bool(constants.FlagNoVSCodeSync, false, constants.FlagDescNoVSCodeSync)
 	noAutoTagsFlag := fs.Bool(constants.FlagNoAutoTags, false, constants.FlagDescNoAutoTags)
 	workersFlag := fs.Int(constants.FlagScanWorkers, constants.DefaultScanWorkers, constants.FlagDescScanWorkers)
+	branchSrcDebugFlag := fs.Bool(constants.FlagBranchSourceDebug, false, constants.FlagDescBranchSourceDebug)
 	fs.Parse(args)
 
-	dir = resolveScanDir(fs)
-
-	return dir, *cfgFlag, *modeFlag, *outputFlag, *outFileFlag, *outputPathFlag, *ghDesktopFlag, *openFlag, *quietFlag, *noVSCodeSyncFlag, *noAutoTagsFlag, *workersFlag
+	return ScanFlags{
+		Dir:               resolveScanDir(fs),
+		ConfigPath:        *cfgFlag,
+		Mode:              *modeFlag,
+		Output:            *outputFlag,
+		OutFile:           *outFileFlag,
+		OutputPath:        *outputPathFlag,
+		GHDesktop:         *ghDesktopFlag,
+		OpenFolder:        *openFlag,
+		Quiet:             *quietFlag,
+		NoVSCodeSync:      *noVSCodeSyncFlag,
+		NoAutoTags:        *noAutoTagsFlag,
+		Workers:           *workersFlag,
+		BranchSourceDebug: *branchSrcDebugFlag,
+	}
 }
 
 // registerScanBoolFlags registers boolean flags for the scan command.
