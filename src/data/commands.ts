@@ -64,6 +64,8 @@ export const commands: CommandDef[] = [
       { flag: "--quiet", description: "Suppress clone help section" },
       { flag: "--no-vscode-sync", description: "Skip syncing scanned repos into VS Code Project Manager projects.json (default: sync ON)" },
       { flag: "--no-auto-tags", description: "Skip auto-derived tags (git/node/go/python/rust/docker) when syncing (default: tags ON)" },
+      { flag: "--workers <n>", description: "Worker pool size for the parallel walker (0 = auto, capped at 16)" },
+      { flag: "--branch-source-debug", description: "Print how each repo's branch was determined (HEAD/remote-tracking/default/unknown)" },
     ],
     examples: [
       { command: "gitmap scan ~/projects", description: "Scan all repos under ~/projects (auto-syncs into VS Code Project Manager + auto-tags)" },
@@ -72,6 +74,7 @@ export const commands: CommandDef[] = [
       { command: "gitmap s --output csv --output-path ./backup", description: "CSV output to custom directory" },
       { command: "gitmap scan ~/projects --no-vscode-sync", description: "Scan without touching VS Code Project Manager" },
       { command: "gitmap scan ~/projects --no-auto-tags", description: "Sync without auto-derived language/tooling tags" },
+      { command: "gitmap scan ~/projects --branch-source-debug", description: "Show how each repo's branch was detected (diagnostic)" },
     ],
     seeAlso: [
       { name: "rescan", description: "Re-scan using cached parameters" },
