@@ -201,15 +201,8 @@ func loadTrackedPatterns() map[string]bool {
 	return tracked
 }
 
-// gitTopLevel returns the absolute path to the current repo's root.
-func gitTopLevel() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return "", err
-	}
+// (gitTopLevel is provided by as.go; we reuse it here.)
 
-	return strings.TrimSpace(string(out)), nil
-}
 
 // printLFSCommonBanner prints the header for the run.
 func printLFSCommonBanner(dryRun bool) {
