@@ -1,12 +1,36 @@
 // Package scanner walks directories and detects Git repositories.
+//
+// The walker uses a small bounded worker pool so independent subtrees are
+// crawled in parallel. On large folder trees this is I/O bound and yields
+// a meaningful speedup; on small trees the pool collapses to effectively
+// sequential work because the dispatch loop short-circuits when only one
+// directory is in flight.
+//
+// Concurrency contract:
+//   - Bounded by ScanWorkers (default = runtime.NumCPU(), capped by
+//     scanWorkersMax to avoid pathological fd exhaustion on huge trees).
+//   - Symlinks are NOT followed (consistent with the previous serial
+//     implementation; see spec/01-app/03-scanner.md).
+//   - When a `.git` directory is found the parent is recorded as a repo
+//     and the subtree is NOT descended further (same rule as before).
+//   - The first I/O error from any worker wins and is returned; remaining
+//     workers drain and exit. Partial results discovered before the error
+//     are still returned so callers can render what was found.
 package scanner
 
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
+
+// scanWorkersMax caps the worker pool regardless of CPU count. Filesystem
+// scans are I/O bound but each open dir consumes a file descriptor; 16 is
+// well below the default ulimit on every supported platform.
+const scanWorkersMax = 16
 
 // RepoInfo holds raw data extracted from a discovered Git repo.
 type RepoInfo struct {
@@ -15,13 +39,28 @@ type RepoInfo struct {
 }
 
 // ScanDir walks root recursively and returns all Git repo paths found.
+// Subtrees are crawled by a bounded worker pool; result order is not
+// guaranteed (callers that depend on lexical order must sort).
 func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return walkTree(absRoot, absRoot, buildExcludeSet(excludeDirs))
+	return walkParallel(absRoot, buildExcludeSet(excludeDirs), defaultWorkerCount())
+}
+
+// defaultWorkerCount picks a sensible pool size for the host CPU.
+func defaultWorkerCount() int {
+	n := runtime.NumCPU()
+	if n < 1 {
+		return 1
+	}
+	if n > scanWorkersMax {
+		return scanWorkersMax
+	}
+
+	return n
 }
 
 // buildExcludeSet converts a slice to a set for O(1) lookups.
@@ -34,66 +73,132 @@ func buildExcludeSet(dirs []string) map[string]bool {
 	return set
 }
 
-// walkTree recursively walks the directory tree from current.
-func walkTree(root, current string, exclude map[string]bool) ([]RepoInfo, error) {
-	var repos []RepoInfo
-	entries, err := os.ReadDir(current)
-	if err != nil {
-		return repos, err
-	}
+// scanState bundles the shared mutable state passed to every worker. It
+// keeps the worker function tiny (well under the per-func line limit) and
+// makes the synchronization rules obvious in one place.
+type scanState struct {
+	root    string
+	exclude map[string]bool
 
-	return processEntries(root, current, entries, exclude, repos)
+	queue chan string  // pending directories to walk
+	wg    sync.WaitGroup // tracks outstanding queued items, NOT workers
+
+	mu     sync.Mutex
+	repos  []RepoInfo
+	firstErr error
 }
 
-// processEntries iterates directory entries and collects repos.
-func processEntries(
-	root, current string,
-	entries []os.DirEntry,
-	exclude map[string]bool,
-	repos []RepoInfo,
-) ([]RepoInfo, error) {
-	for _, entry := range entries {
-		if entry.IsDir() {
-			found, err := handleDir(root, current, entry, exclude)
-			if err != nil {
-				return repos, err
+// walkParallel runs a fixed-size worker pool that consumes directories
+// from an unbounded-capacity FIFO and enqueues child directories back.
+// The queue is closed when wg drops to zero — i.e. every dispatched
+// directory has been fully processed and produced no new work.
+func walkParallel(root string, exclude map[string]bool, workers int) ([]RepoInfo, error) {
+	st := &scanState{
+		root:    root,
+		exclude: exclude,
+		// Buffer sized generously so workers rarely block on enqueue.
+		// A bounded buffer is fine — if it fills, workers backpressure
+		// each other, which is acceptable; deadlock is impossible
+		// because every send is paired with a wg.Add and the closer
+		// only fires after wg.Done across all sends.
+		queue: make(chan string, 1024),
+	}
+
+	st.wg.Add(1)
+	st.queue <- root
+
+	var workerWG sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		workerWG.Add(1)
+		go func() {
+			defer workerWG.Done()
+			for dir := range st.queue {
+				st.processDir(dir)
+				st.wg.Done()
 			}
-			repos = append(repos, found...)
-		}
+		}()
 	}
 
-	return repos, nil
+	// Closer goroutine: once every queued dir has been processed (and
+	// thus had a chance to enqueue its children), close the queue so
+	// workers exit their range loop.
+	go func() {
+		st.wg.Wait()
+		close(st.queue)
+	}()
+
+	workerWG.Wait()
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	return st.repos, st.firstErr
 }
 
-// handleDir decides whether a directory is a repo, excluded, or walkable.
-func handleDir(
-	root, current string,
-	entry os.DirEntry,
-	exclude map[string]bool,
-) ([]RepoInfo, error) {
-	name := entry.Name()
-	fullPath := filepath.Join(current, name)
+// processDir reads one directory and dispatches its child directories
+// back onto the queue. Errors short-circuit further enqueues for THIS
+// dir but do not stop other workers — the first error is captured and
+// returned at the end.
+func (st *scanState) processDir(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		st.recordErr(err)
 
-	if exclude[name] {
-		return nil, nil
+		return
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		st.handleSubdir(dir, entry)
+	}
+}
+
+// handleSubdir applies the exclude filter and the repo-detection rule,
+// then either records the parent as a repo or enqueues the subdir for
+// further walking.
+func (st *scanState) handleSubdir(parent string, entry os.DirEntry) {
+	name := entry.Name()
+	if st.exclude[name] {
+		return
 	}
 	if name == constants.ExtGit {
-		return foundRepo(root, current)
-	}
+		st.recordRepo(parent)
 
-	return walkTree(root, fullPath, exclude)
+		return
+	}
+	st.enqueue(filepath.Join(parent, name))
 }
 
-// foundRepo creates a RepoInfo for the current directory (parent of .git).
-func foundRepo(root, repoPath string) ([]RepoInfo, error) {
-	rel, err := filepath.Rel(root, repoPath)
+// enqueue dispatches a directory for processing.
+func (st *scanState) enqueue(path string) {
+	st.wg.Add(1)
+	st.queue <- path
+}
+
+// recordRepo appends a discovered repo (parent of the .git dir) under
+// the shared mutex. Repo recording is the only mutex contention point.
+func (st *scanState) recordRepo(repoPath string) {
+	rel, err := filepath.Rel(st.root, repoPath)
 	if err != nil {
-		return nil, err
+		st.recordErr(err)
+
+		return
 	}
-	info := RepoInfo{
+	st.mu.Lock()
+	st.repos = append(st.repos, RepoInfo{
 		AbsolutePath: repoPath,
 		RelativePath: rel,
-	}
+	})
+	st.mu.Unlock()
+}
 
-	return []RepoInfo{info}, nil
+// recordErr stores the FIRST error to occur. Later errors are dropped to
+// keep the public signature single-error and avoid a noisy multi-error.
+func (st *scanState) recordErr(err error) {
+	st.mu.Lock()
+	if st.firstErr == nil {
+		st.firstErr = err
+	}
+	st.mu.Unlock()
 }
