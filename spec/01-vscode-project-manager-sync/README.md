@@ -33,13 +33,12 @@ Each entry in `projects.json` is an object with exactly these fields:
 |------------|-----------|------------------------------------------------------------------|
 | `name`     | string    | DB alias. On first insert: folder basename. Updated by `gitmap as`. |
 | `rootPath` | string    | **Match key.** Absolute path. Native separators per OS.          |
-| `paths`    | string[]  | Always `[]` from gitmap. Preserved on upsert if user edited it.  |
-| `tags`     | string[]  | Always `[]` from gitmap (v1). Preserved on upsert if user edited.|
+| `paths`    | string[]  | Multi-root: gitmap-managed paths UNIONed with user-added (v3.39.0+). |
+| `tags`     | string[]  | Auto-derived (v3.40.0+) — see "Auto tags". UNIONed with user edits.  |
 | `enabled`  | boolean   | `true` on insert. Preserved on upsert.                           |
 | `profile`  | string    | `""` on insert. Preserved on upsert.                             |
 
-**Multi-root (`paths`) shipped in v3.39.0** — see "Multi-root paths" below.
-**Auto-tags are still deferred** to a future revision.
+**Multi-root (`paths`) shipped in v3.39.0** and **auto-tags shipped in v3.40.0**.
 
 ### 2.1 Multi-root paths (v3.39.0)
 
@@ -51,6 +50,29 @@ Each entry in `projects.json` is an object with exactly these fields:
   `vscodepm.OverwritePaths`) bypasses union semantics.
 - `gitmap as <newalias>` only rewrites `name`. Multi-root paths, tags,
   enabled, and profile are preserved on rename.
+
+### 2.2 Auto tags (v3.40.0)
+
+Tags are NOT stored in SQLite — they're computed at sync time from the
+rootPath's filesystem and UNIONed into the existing `tags` array on disk.
+User-added tags are never removed.
+
+| Marker (top-level only)                              | Tag      |
+|------------------------------------------------------|----------|
+| `.git`                                               | `git`    |
+| `package.json`                                       | `node`   |
+| `go.mod`                                             | `go`     |
+| `pyproject.toml` / `requirements.txt`                | `python` |
+| `Cargo.toml`                                         | `rust`   |
+| `Dockerfile` / `compose.yaml` / `docker-compose.yml` | `docker` |
+
+Detection rules:
+
+- Shallow (top-level entries only — no recursion).
+- Read-only (no shelling out, no network).
+- Deterministic emission order (`constants.AutoTagOrder`) so re-syncs
+  produce stable diffs.
+- Opt-out per scan: `gitmap scan --no-auto-tags`.
 
 ## 3. File location — derived from VS Code user-data root
 
