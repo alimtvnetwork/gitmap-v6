@@ -88,6 +88,7 @@ const navItems = [
   { title: "Temp Release", url: "/temp-release", icon: Layers },
   { title: "Release Self", url: "/release-self", icon: Tag },
   { title: "Doctor", url: "/doctor", icon: Stethoscope },
+  { title: "Troubleshooting", url: "/troubleshooting", icon: AlertTriangle },
   { title: "Clone Next", url: "/clone-next", icon: GitBranch },
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
   { title: "Setup", url: "/setup", icon: Settings },

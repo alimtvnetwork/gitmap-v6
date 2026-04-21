@@ -119,6 +119,7 @@ const App = () => (
           <Route path="/scan-command" element={<ScanCommandPage />} />
           <Route path="/clone-command" element={<CloneCommandPage />} />
           <Route path="/scan-clone-flags" element={<ScanCloneFlagsPage />} />
+          <Route path="/troubleshooting" element={<TroubleshootingPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
