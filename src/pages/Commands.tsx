@@ -89,8 +89,8 @@ const CommandsPage = () => {
     return md;
   }, []);
 
-  const handleCopyAll = useCallback(() => {
-    navigator.clipboard.writeText(generateMarkdown());
+  const handleCopyAll = useCallback(async () => {
+    await copyToClipboard(generateMarkdown());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [generateMarkdown]);
