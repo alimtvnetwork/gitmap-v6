@@ -176,8 +176,12 @@ func runCloneNext(args []string) {
 	}
 
 	// Handle removal of the old versioned folder (only if different from flattened path).
+	// With -f / --force the user has already opted into a flat layout, so we
+	// auto-skip the "Remove current folder?" prompt and the lock-detector loop
+	// that follows it. Without -f, behavior is unchanged.
 	if currentFolder != flattenedFolder {
-		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, cnFlags.Keep)
+		keep := cnFlags.Keep || cnFlags.Force
+		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, keep)
 	}
 
 	// Set GITMAP_SHELL_HANDOFF for the shell wrapper to cd into the new folder.
