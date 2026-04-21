@@ -32,6 +32,11 @@ import (
 // well below the default ulimit on every supported platform.
 const scanWorkersMax = 16
 
+// MaxScanWorkers exposes the upper bound for callers (e.g. CLI flag
+// validators) that want to clamp user-provided values into the supported
+// range.
+const MaxScanWorkers = scanWorkersMax
+
 // RepoInfo holds raw data extracted from a discovered Git repo.
 type RepoInfo struct {
 	AbsolutePath string
@@ -39,15 +44,37 @@ type RepoInfo struct {
 }
 
 // ScanDir walks root recursively and returns all Git repo paths found.
-// Subtrees are crawled by a bounded worker pool; result order is not
-// guaranteed (callers that depend on lexical order must sort).
+// Subtrees are crawled by a bounded worker pool sized via
+// defaultWorkerCount(); result order is not guaranteed (callers that
+// depend on lexical order must sort).
 func ScanDir(root string, excludeDirs []string) ([]RepoInfo, error) {
+	return ScanDirWithWorkers(root, excludeDirs, 0)
+}
+
+// ScanDirWithWorkers walks root using exactly `workers` goroutines.
+// A value of 0 (or any negative number) selects the platform default
+// from defaultWorkerCount(). Values larger than MaxScanWorkers are
+// clamped down to keep the pool under the per-process fd budget.
+func ScanDirWithWorkers(root string, excludeDirs []string, workers int) ([]RepoInfo, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return walkParallel(absRoot, buildExcludeSet(excludeDirs), defaultWorkerCount())
+	return walkParallel(absRoot, buildExcludeSet(excludeDirs), resolveWorkerCount(workers))
+}
+
+// resolveWorkerCount normalizes a caller-supplied worker count: 0 / <0
+// means "auto", and any positive value is clamped to [1, MaxScanWorkers].
+func resolveWorkerCount(requested int) int {
+	if requested <= 0 {
+		return defaultWorkerCount()
+	}
+	if requested > scanWorkersMax {
+		return scanWorkersMax
+	}
+
+	return requested
 }
 
 // defaultWorkerCount picks a sensible pool size for the host CPU.
