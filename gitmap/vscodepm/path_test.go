@@ -2,6 +2,7 @@ package vscodepm
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"

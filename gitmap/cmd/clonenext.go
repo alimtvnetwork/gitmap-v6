@@ -28,13 +28,9 @@ func runCloneNext(args []string) {
 		return
 	}
 	checkHelp("clone-next", args)
-	versionArg, deleteFlag, keepFlag, noDesktop, createRemote, sshKeyName, verboseMode := parseCloneNextFlags(args)
-	if len(versionArg) == 0 {
-		fmt.Fprintln(os.Stderr, constants.ErrCloneNextUsage)
-		os.Exit(1)
-	}
+	cnFlags := parseCloneNextFlags(args)
 
-	if verboseMode {
+	if cnFlags.Verbose {
 		log, err := verbose.Init()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, constants.WarnVerboseLogFailed, err)
@@ -43,8 +39,20 @@ func runCloneNext(args []string) {
 		}
 	}
 
+	// Batch mode: --csv or --all triggers the multi-repo dispatcher.
+	if shouldRunBatch(cnFlags) {
+		runCloneNextBatch(cnFlags.CSVPath, cnFlags.All)
+
+		return
+	}
+
+	if len(cnFlags.VersionArg) == 0 {
+		fmt.Fprintln(os.Stderr, constants.ErrCloneNextUsage)
+		os.Exit(1)
+	}
+
 	requireOnline()
-	applySSHKey(sshKeyName)
+	applySSHKey(cnFlags.SSHKeyName)
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -65,7 +73,7 @@ func runCloneNext(args []string) {
 	repoName := extractRepoName(remoteURL)
 
 	parsed := clonenext.ParseRepoName(repoName)
-	targetVersion, err := clonenext.ResolveTarget(parsed, versionArg)
+	targetVersion, err := clonenext.ResolveTarget(parsed, cnFlags.VersionArg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrCloneNextBadVersion, err)
 		os.Exit(1)
@@ -103,7 +111,7 @@ func runCloneNext(args []string) {
 	}
 
 	// Optionally check and create the target GitHub repo when --create-remote is set.
-	if createRemote {
+	if cnFlags.CreateRemote {
 		owner, _, parseErr := clonenext.ParseOwnerRepo(remoteURL)
 		if parseErr != nil {
 			fmt.Fprintf(os.Stderr, constants.ErrCloneNextRemoteParse, parseErr)
@@ -138,13 +146,13 @@ func runCloneNext(args []string) {
 	// Record version history in DB.
 	recordVersionHistory(targetPath, parsed.CurrentVersion, targetVersion, flattenedFolder)
 
-	if !noDesktop {
+	if !cnFlags.NoDesktop {
 		registerCloneNextDesktop(targetName, targetPath)
 	}
 
 	// Handle removal of the old versioned folder (only if different from flattened path).
 	if currentFolder != flattenedFolder {
-		handleCloneNextRemoval(currentFolder, cwd, targetPath, deleteFlag, keepFlag)
+		handleCloneNextRemoval(currentFolder, cwd, targetPath, cnFlags.Delete, cnFlags.Keep)
 	}
 
 	// Set GITMAP_SHELL_HANDOFF for the shell wrapper to cd into the new folder.

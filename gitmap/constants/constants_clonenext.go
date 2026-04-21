@@ -34,6 +34,8 @@ const (
 	FlagDescCloneNextKeep         = "Keep current folder without prompting"
 	FlagDescCloneNextNoDesktop    = "Skip GitHub Desktop registration"
 	FlagDescCloneNextCreateRemote = "Create target GitHub repo if it does not exist (requires GITHUB_TOKEN)"
+	FlagDescCloneNextCSV          = "Read repo paths from CSV file (one path per row, header optional)"
+	FlagDescCloneNextAll          = "Walk current folder and run cn on every git repo found one level deep"
 )
 
 // Clone-next help strings for usage output.
@@ -45,4 +47,20 @@ const (
 	HelpCNSSHKey       = "  --ssh-key, -K       SSH key name to use for clone"
 	HelpCNVerbose      = "  --verbose           Show detailed clone-next output"
 	HelpCNCreateRemote = "  --create-remote     Create target GitHub repo if missing (needs GITHUB_TOKEN)"
+	HelpCNCSV          = "  --csv <path>        Batch mode: read repo list from CSV (one path per row)"
+	HelpCNAll          = "  --all               Batch mode: cn every git repo one level under cwd"
+)
+
+// Clone-next batch mode messages and statuses (v3.42.0+).
+const (
+	MsgCloneNextBatchStart   = "→ Batch cn over %d repo(s)\n"
+	MsgCloneNextBatchRepo    = "  • %s: %s -> %s\n"
+	MsgCloneNextBatchSummary = "✓ Batch complete: %d ok, %d failed, %d skipped\n"
+	MsgCloneNextBatchReport  = "  Report: %s\n"
+	WarnCloneNextBatchReport = "Warning: could not write batch report: %v\n"
+	ErrCloneNextBatchLoad    = "Error: could not load batch input: %v\n"
+
+	BatchStatusOK      = "ok"
+	BatchStatusFailed  = "failed"
+	BatchStatusSkipped = "skipped"
 )
