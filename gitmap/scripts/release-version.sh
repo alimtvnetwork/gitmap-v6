@@ -226,6 +226,7 @@ interactive_pick() {
     local i=1
     local -a choices=()
     echo "" >&2
+    echo "  Requested: $VERSION (not found)" >&2
     echo "  Most recent published releases:" >&2
     while IFS= read -r tag; do
         choices+=("$tag")
@@ -234,8 +235,14 @@ interactive_pick() {
     done <<< "$recent"
     echo "    [N] Quit (default)" >&2
     printf "  Pick a number to install instead, or N to quit: " >&2
+
     local reply=""
-    read -r reply </dev/tty || reply="N"
+    if ! read -r reply </dev/tty; then
+        echo "" >&2
+        err "Could not read from /dev/tty; aborting."
+        exit $EXIT_VERSION_MISSING
+    fi
+
     if [ -z "$reply" ] || [[ "$reply" =~ ^[Nn] ]]; then
         exit $EXIT_VERSION_MISSING
     fi
