@@ -145,6 +145,9 @@ const (
 	FlagDescOpen          = "Open output folder after scan completes"
 	FlagDescQuiet         = "Suppress terminal clone help section"
 	FlagDescVerbose       = "Write detailed stdout/stderr debug log to a timestamped file"
+	FlagScanWorkers       = "workers"
+	FlagDescScanWorkers   = "Worker pool size for scan (0 = auto, capped at 16)"
+	DefaultScanWorkers    = 0
 	FlagDescSetupConfig   = "Path to git-setup.json config file"
 	FlagDescDryRun        = "Preview changes without applying them"
 	FlagDescAssets        = "Directory or file to attach to the release"
