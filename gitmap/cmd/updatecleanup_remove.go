@@ -1,12 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // cleanupRemoveMaxAttempts caps the retry loop for transient Windows file locks
@@ -16,69 +13,79 @@ const (
 	cleanupRemoveRetryDelay  = 200 * time.Millisecond
 )
 
-// cleanupTempArtifacts removes update handoff copies and generated scripts.
-func cleanupTempArtifacts(ctx updateCleanupContext) int {
-	return removeCleanupPatterns(ctx.tempPatterns, ctx.selfPath, constants.MsgUpdateTempRemoved)
+// cleanupTempArtifacts processes every gitmap-update-* / *.ps1 candidate
+// and records each outcome in the shared report.
+func cleanupTempArtifacts(ctx updateCleanupContext, report *cleanupReport) {
+	processCleanupPatterns(ctx.tempPatterns, ctx.selfPath, cleanupKindTemp, report)
 }
 
-// cleanupBackupArtifacts removes .old binaries left by deploy and PATH sync.
-func cleanupBackupArtifacts(ctx updateCleanupContext) int {
-	return removeCleanupPatterns(ctx.backupPatterns, ctx.selfPath, constants.MsgUpdateOldRemoved)
+// cleanupBackupArtifacts processes every *.old candidate and records each
+// outcome in the shared report.
+func cleanupBackupArtifacts(ctx updateCleanupContext, report *cleanupReport) {
+	processCleanupPatterns(ctx.backupPatterns, ctx.selfPath, cleanupKindBackup, report)
 }
 
-// removeCleanupPatterns removes every file matched by the provided glob list.
-func removeCleanupPatterns(patterns []string, selfPath, successMsg string) int {
+// processCleanupPatterns walks every glob pattern in the group, deduplicates
+// matches across overlapping pattern lists, and records one cleanupResult
+// per unique candidate.
+func processCleanupPatterns(patterns []string, selfPath string, kind cleanupArtifactKind, report *cleanupReport) {
 	seen := map[string]bool{}
-	cleaned := 0
 	for _, pattern := range patterns {
-		cleaned += removeCleanupPattern(pattern, selfPath, seen, successMsg)
+		processCleanupPattern(pattern, selfPath, kind, seen, report)
 	}
-
-	return cleaned
 }
 
-// removeCleanupPattern removes files for a single glob pattern.
-func removeCleanupPattern(pattern, selfPath string, seen map[string]bool, successMsg string) int {
+// processCleanupPattern runs a single glob and records one result per match.
+// A glob error itself is recorded so the user sees which pattern misfired.
+func processCleanupPattern(pattern, selfPath string, kind cleanupArtifactKind, seen map[string]bool, report *cleanupReport) {
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		logUpdateCleanupGlobError(pattern, err)
+		report.record(cleanupResult{
+			Path:   pattern,
+			Kind:   kind,
+			Status: cleanupStatusGlobError,
+			Reason: "invalid cleanup glob pattern",
+			Err:    err,
+		})
 
-		return 0
+		return
 	}
 
-	cleaned := 0
 	for _, match := range matches {
-		if removeCleanupMatch(match, selfPath, seen, successMsg) {
-			cleaned++
-		}
+		processCleanupMatch(match, selfPath, kind, seen, report)
 	}
-
-	return cleaned
 }
 
-// removeCleanupMatch removes a single cleanup candidate once.
-func removeCleanupMatch(match, selfPath string, seen map[string]bool, successMsg string) bool {
+// processCleanupMatch evaluates one candidate against the dedupe set and
+// the active-binary guard, then attempts removal.
+func processCleanupMatch(match, selfPath string, kind cleanupArtifactKind, seen map[string]bool, report *cleanupReport) {
 	cleanPath := filepath.Clean(match)
 	normalizedPath := normalizeCleanupPath(cleanPath)
-	if hasSeenCleanupPath(seen, normalizedPath) {
-		return false
-	}
-	if isActiveCleanupPath(normalizedPath, selfPath) {
-		return false
-	}
 
-	return removeCleanupFile(match, cleanPath, successMsg)
-}
-
-// hasSeenCleanupPath reports whether this cleanup path was already processed.
-func hasSeenCleanupPath(seen map[string]bool, normalizedPath string) bool {
 	if seen[normalizedPath] {
-		return true
-	}
+		report.record(cleanupResult{
+			Path:   cleanPath,
+			Kind:   kind,
+			Status: cleanupStatusSkippedDuplicate,
+			Reason: "already processed via another pattern",
+		})
 
+		return
+	}
 	seen[normalizedPath] = true
 
-	return false
+	if isActiveCleanupPath(normalizedPath, selfPath) {
+		report.record(cleanupResult{
+			Path:   cleanPath,
+			Kind:   kind,
+			Status: cleanupStatusSkippedActive,
+			Reason: "candidate is the currently-running gitmap binary",
+		})
+
+		return
+	}
+
+	report.record(removeCleanupCandidate(match, cleanPath, kind))
 }
 
 // isActiveCleanupPath reports whether the candidate points to the active binary.
@@ -86,18 +93,21 @@ func isActiveCleanupPath(normalizedPath, selfPath string) bool {
 	return len(selfPath) > 0 && normalizedPath == normalizeCleanupPath(selfPath)
 }
 
-// removeCleanupFile removes a cleanup candidate and prints the success message.
-// Retries a few times with a small delay because Windows can briefly hold a
-// handle on a file we just renamed (e.g. gitmap.exe.old) or on a binary that
-// our handoff process is still releasing.
-func removeCleanupFile(match, cleanPath, successMsg string) bool {
+// removeCleanupCandidate attempts os.Remove with a small retry loop and
+// returns a fully-classified cleanupResult. Retries exist because Windows
+// frequently holds a brief sharing lock on a freshly-renamed .old file or
+// on a binary the parent handoff process is still releasing.
+func removeCleanupCandidate(match, cleanPath string, kind cleanupArtifactKind) cleanupResult {
 	var lastErr error
 	for attempt := 1; attempt <= cleanupRemoveMaxAttempts; attempt++ {
 		err := os.Remove(match)
 		if err == nil {
-			fmt.Printf(successMsg, filepath.Base(match))
-
-			return true
+			return cleanupResult{
+				Path:   cleanPath,
+				Kind:   kind,
+				Status: cleanupStatusRemoved,
+				Reason: "deleted successfully",
+			}
 		}
 
 		lastErr = err
@@ -106,27 +116,13 @@ func removeCleanupFile(match, cleanPath, successMsg string) bool {
 		}
 	}
 
-	logUpdateCleanupRemoveError(cleanPath, lastErr)
+	status, reason := classifyRemoveError(lastErr)
 
-	return false
-}
-
-// logUpdateCleanupExecutableError reports os.Executable failures.
-func logUpdateCleanupExecutableError(err error) {
-	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupExecPath, err)
-}
-
-// logUpdateCleanupConfigReadError reports powershell.json read failures.
-func logUpdateCleanupConfigReadError(path string, err error) {
-	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupConfigRead, path, err)
-}
-
-// logUpdateCleanupGlobError reports filepath.Glob failures.
-func logUpdateCleanupGlobError(path string, err error) {
-	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupGlob, path, err)
-}
-
-// logUpdateCleanupRemoveError reports os.Remove failures.
-func logUpdateCleanupRemoveError(path string, err error) {
-	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupRemove, path, err)
+	return cleanupResult{
+		Path:   cleanPath,
+		Kind:   kind,
+		Status: status,
+		Reason: reason,
+		Err:    lastErr,
+	}
 }

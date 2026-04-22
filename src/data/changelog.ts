@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.13.1",
+    date: "2026-04-22",
+    subtitle: "Structured per-artifact cleanup report — every candidate now logs path + status + reason code",
+    items: [
+      "Replaced the ad-hoc `update-cleanup` output with a structured `cleanupReport` (`gitmap/cmd/updatecleanup_report.go`). Every candidate now produces one line of the form `<symbol> [<kind>] <path> — <status>: <reason>` followed by a status-grouped summary table with `removed=N failed=N total=N` totals.",
+      "Stable status codes are emitted so logs are grep-able and CI can parse them: `removed`, `locked`, `missing`, `skipped-active`, `skipped-duplicate`, `skipped-too-large`, `skipped-not-in-root`, `glob-error`. Each status has a fixed reason string (e.g. `locked: permission denied — file may be held by another process`).",
+      "Refactored `gitmap/cmd/updatecleanup_remove.go` and `gitmap/cmd/updatecleanup_extra.go` to record results into the shared report instead of printing directly. `classifyRemoveError` distinguishes `fs.ErrNotExist` (missing — harmless) from `fs.ErrPermission` (locked — actionable) instead of lumping every failure into a single Access-Denied stderr line.",
+      "Output stream selection: `removed` / `missing` / `skipped-*` go to stdout; `locked` and `glob-error` go to stderr so CI consumers can detect actionable failures with a stream filter.",
+      "Removed obsolete constants `MsgUpdateCleanDone`, `MsgUpdateTempRemoved`, `MsgUpdateOldRemoved`, `ErrUpdateCleanupGlob`, `ErrUpdateCleanupRemove` and the `logUpdateCleanupGlobError` / `logUpdateCleanupRemoveError` helpers — superseded by the report's per-artifact lines.",
+      "Added `gitmap/cmd/updatecleanup_report_test.go` covering `classifyRemoveError`, summary counts (`removedCount` / `errorCount`), and the sort rank that orders the summary table (Removed → Locked → GlobError → Missing → skipped-*).",
+    ],
+  },
+  {
     version: "v3.13.0",
     date: "2026-04-22",
     subtitle: "Three-phase self-update handoff — cleanup runs from the deployed binary, not the still-locked handoff copy",
