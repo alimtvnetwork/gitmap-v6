@@ -328,6 +328,103 @@ gitmap cn v++ --no-flatten                      # keep nested folder layout
 
 <div align="center">
 
+### Scan & Clone — `--config`, `--mode`, `--output` recipes
+
+</div>
+
+Concrete, copy-pasteable examples for the three flags you'll reach for most.
+Defaults are `--config ./data/config.json`, `--mode https`, and
+`--output terminal`. Source of truth: [`gitmap/helptext/scan.md`](gitmap/helptext/scan.md)
+and [`gitmap/helptext/clone.md`](gitmap/helptext/clone.md).
+
+#### `--config <path>` — point scan at a non-default config
+
+```bash
+# default: reads ./data/config.json relative to the binary
+gitmap scan ~/projects
+
+# point at a project-local config (commit it alongside your repo list)
+gitmap scan ~/projects --config ./gitmap.config.json
+
+# CI: point at a profile that excludes vendored & node_modules trees
+gitmap scan /workspace --config /etc/gitmap/ci-profile.json --quiet
+
+# different config for a different drive on Windows
+gitmap scan D:\wp-work --config D:\gitmap\configs\wp.json
+```
+
+The `--config` path is recorded in the scan cache, so a follow-up
+`gitmap rescan` replays the exact same config without re-typing it.
+
+#### `--mode ssh|https` — pick the clone-URL flavor recorded in output
+
+```bash
+# HTTPS (default) — works without keys, prompts for token on private repos
+gitmap scan ~/projects --mode https
+# → records: https://github.com/<owner>/<repo>.git
+
+# SSH — uses your ~/.ssh keys, no token prompt, works for private repos
+gitmap scan ~/projects --mode ssh
+# → records: git@github.com:<owner>/<repo>.git
+
+# scan once in HTTPS, then re-scan in SSH for a CI machine that has keys
+gitmap scan ~/projects --mode https --output json --output-path ./out/https
+gitmap scan ~/projects --mode ssh   --output json --output-path ./out/ssh
+```
+
+The mode only affects the **URL string written to the output files** —
+your local working copies are not touched. Downstream `gitmap clone`
+honours whichever URL the file contains, so the choice flows end-to-end.
+
+#### `--output csv|json|terminal` — pick the artifact format
+
+```bash
+# terminal (default) — pretty-print to stdout, no files written
+gitmap scan ~/projects
+
+# csv — machine-readable spreadsheet (one row per repo)
+gitmap scan ~/projects --output csv
+# → writes ./.gitmap/output/gitmap.csv
+
+# json — full structured payload (branch, remote, tags, last-commit SHA, ...)
+gitmap scan ~/projects --output json
+# → writes ./.gitmap/output/gitmap.json
+
+# custom output directory (handy in CI artifact uploads)
+gitmap scan ~/projects --output json --output-path ./build/scan-results
+```
+
+#### Combined recipes (the patterns you'll actually use)
+
+```bash
+# 1. Daily local sync: HTTPS + JSON, cached config
+gitmap scan ~/projects --config ~/.gitmap/personal.json --mode https --output json
+
+# 2. CI snapshot for SSH-keyed runners: SSH + CSV
+gitmap scan /workspace --config /etc/gitmap/ci.json --mode ssh --output csv
+
+# 3. Quick one-off sanity check (no files, no config tweaks)
+gitmap scan . --output terminal
+
+# 4. Scan once, then bulk-clone elsewhere using the SSH JSON manifest
+gitmap scan ~/projects --mode ssh --output json --output-path ./manifest
+gitmap clone ./manifest/gitmap.json --target-dir /opt/restored --safe-pull
+
+# 5. CSV → another machine → clone everything via HTTPS
+gitmap scan ~/projects --mode https --output csv --output-path ./share
+# (copy ./share/gitmap.csv to the other host, then:)
+gitmap clone ./gitmap.csv --target-dir ~/work --github-desktop
+```
+
+`gitmap clone` automatically picks the right input parser from the file
+extension (`.json` / `.csv` / `.txt`) or the shorthand keywords `json` /
+`csv` / `text`, so the `--output` format you chose at scan time is the
+format `clone` will read on the other side.
+
+---
+
+<div align="center">
+
 ### Move & Merge
 
 </div>
