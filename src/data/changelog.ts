@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.13.0",
+    date: "2026-04-22",
+    subtitle: "Three-phase self-update handoff — cleanup runs from the deployed binary, not the still-locked handoff copy",
+    items: [
+      "Fixed `gitmap update-cleanup` Access-Denied errors on Windows for `gitmap-update-<pid>.exe` and `gitmap.exe.old`. Root cause: cleanup was invoked from inside the running handoff process, which still held an exclusive file lock on its own binary. New Phase 3 in `gitmap/cmd/updatehandoff_phase3.go` resolves the freshly-deployed `gitmap.exe` via `exec.LookPath`, then spawns `cmd.exe /C ping 127.0.0.1 -n 3 >nul & start \"\" /B \"<deployed>\" update-cleanup` detached. The 2s ping delay lets the handoff process exit and release its lock; the deployed binary (a different file) then removes both leftovers cleanly.",
+      "Removed obsolete `scheduleHandoffSelfDelete` from `gitmap/cmd/update.go` — superseded by the Phase 3 cleanup handoff which handles the handoff copy AND the `.exe.old` backup in one pass.",
+      "Updated specs `spec/03-general/02f-self-update-orchestration.md`, `spec/08-generic-update/05-handoff-mechanism.md`, and `spec/08-generic-update/06-cleanup.md` to document the three-phase model (Phase 1: handoff copy, Phase 2: build/deploy, Phase 3: cleanup handoff to deployed binary).",
+      "Regenerated mermaid diagrams `spec/08-generic-update/images/handoff-mechanism-flow.mmd` and `spec/08-generic-update/images/cleanup-flow.mmd` to show the third handoff explicitly, including the lock-conflict explanation.",
+      "Changelog UI: added optional `subtitle` field to `ChangelogEntry` (rendered under the version row in muted small text, indented past the chevron + tag icons) and indented the bullet body with a left border so items sit visually under the version pill instead of hugging the timeline.",
+    ],
+  },
+  {
     version: "v3.12.0",
     date: "2026-04-20",
     items: [
