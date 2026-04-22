@@ -41,14 +41,4 @@ func runAddIgnore(args []string) {
 	fmt.Printf(constants.MsgAddIgnoreWritten, res.WrittenPath, res.ManagedLines, res.UserLines)
 }
 
-// runAddAttributes is a Phase 3 stub so dispatchAdd compiles.
-func runAddAttributes(_ []string) {
-	fmt.Fprintln(os.Stderr, "add attributes: not yet implemented (Phase 3)")
-	os.Exit(1)
-}
-
-// runAddLFSInstall is a Phase 3 stub so dispatchAdd compiles.
-func runAddLFSInstall(_ []string) {
-	fmt.Fprintln(os.Stderr, "add lfs-install: not yet implemented (Phase 3)")
-	os.Exit(1)
-}
+// runAddAttributes / runAddLFSInstall live in addattributes.go.

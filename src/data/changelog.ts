@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.15.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap add attributes` + `gitmap add lfs-install` — completes the templates trio",
+    items: [
+      "Added `gitmap add attributes [langs...]` (alias `aa`) in `gitmap/cmd/addattributes.go` — mirror of `add ignore` but writes to `./.gitattributes` using the dedicated `# >>> gitmap-attributes (do not edit between markers) >>>` / `# <<< gitmap-attributes <<<` markers. Same single-pass dedupe, atomic write, and `Changed=false` no-op on re-run.",
+      "Added `gitmap add lfs-install` (alias `alfs`) — runs `git lfs install --local` (streaming stdout/stderr so users see the LFS hook installation) then merges the curated `lfs/common.gitattributes` into `./.gitattributes`. The LFS template uses the attributes markers so it co-exists cleanly with `add attributes`.",
+      "Replaced the Phase-2 stubs in `addignore.go` with the real handlers; both `runAddAttributes` and `runAddLFSInstall` now share a `targetInCwd(ext)` helper.",
+      "Added `gitmap/templates/merge_attributes_test.go`: verifies attributes markers (and that they don't leak the ignore markers), LFS merge writes to `.gitattributes` via attribute markers, attributes idempotence, and the kind→extension mapping (`ignore`→`.gitignore`, `attributes`+`lfs`→`.gitattributes`). The LFS test also locks in `*.svg filter=lfs` MUST NOT appear.",
+    ],
+  },
+  {
     version: "v3.14.0",
     date: "2026-04-22",
     subtitle: "`gitmap add ignore` — curated, idempotent .gitignore templates with marker-block merge",
