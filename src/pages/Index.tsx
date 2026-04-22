@@ -13,7 +13,7 @@ const HomePage = () => {
           <h1 className="text-4xl md:text-5xl font-heading font-bold docs-h1">
             gitmap
           </h1>
-          <span className="px-2 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary border border-primary/20">
+          <span className="px-2 py-0.5 rounded text-xs font-mono bg-primary/10 text-foreground border border-primary/20">
             {VERSION}
           </span>
         </div>
