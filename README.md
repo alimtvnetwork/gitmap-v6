@@ -356,6 +356,10 @@ gitmap scan D:\wp-work --config D:\gitmap\configs\wp.json
 The `--config` path is recorded in the scan cache, so a follow-up
 `gitmap rescan` replays the exact same config without re-typing it.
 
+> 📖 **Full key reference:** every JSON key gitmap reads from `data/config.json`
+> — defaults, allowed values, and the nested `release` shape — is documented
+> in [`docs/config-schema.md`](docs/config-schema.md).
+
 #### `--mode ssh|https` — pick the clone-URL flavor recorded in output
 
 ```bash
