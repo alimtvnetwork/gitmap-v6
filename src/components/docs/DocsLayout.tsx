@@ -4,19 +4,17 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DocsSidebar } from "@/components/docs/DocsSidebar";
 import CommandPalette from "@/components/docs/CommandPalette";
 import { VERSION } from "@/constants/index";
+import { getCurrentTheme, setTheme } from "@/lib/theme";
 
 interface DocsLayoutProps {
   children: React.ReactNode;
 }
 
 const DocsLayout = ({ children }: DocsLayoutProps) => {
-  const [dark, setDark] = useState(() =>
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark"),
-  );
+  const [dark, setDark] = useState(() => getCurrentTheme() === "dark");
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
+    setTheme(dark ? "dark" : "light");
   }, [dark]);
 
   return (

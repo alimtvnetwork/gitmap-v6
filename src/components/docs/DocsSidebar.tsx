@@ -49,6 +49,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { getCurrentTheme, setTheme } from "@/lib/theme";
 
 const navItems = [
   { title: "Home", url: "/", icon: Home },
