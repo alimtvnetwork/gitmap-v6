@@ -93,7 +93,7 @@ const ChangelogPage = () => {
                   <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span className="font-mono font-semibold text-sm">{entry.version}</span>
                   {isLatest && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background">
                       latest
                     </span>
                   )}

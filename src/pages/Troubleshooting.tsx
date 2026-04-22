@@ -521,7 +521,7 @@ const CopyFixButton = ({ command, altCommand }: CopyFixButtonProps) => {
       title={copied ? "Copied!" : "Copy fix command"}
       className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
         copied
-          ? "border-primary bg-primary/15 text-primary"
+          ? "border-primary bg-primary/15 text-foreground dark:bg-primary/30 dark:text-background"
           : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
       }`}
     >
@@ -561,7 +561,7 @@ const CopyLinkButton = ({ issueId }: { issueId: string }) => {
       title={copied ? "Link copied!" : "Copy link to this issue"}
       className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
         copied
-          ? "border-primary bg-primary/15 text-primary"
+          ? "border-primary bg-primary/15 text-foreground dark:bg-primary/30 dark:text-background"
           : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
       }`}
     >
@@ -641,7 +641,7 @@ const DiagnosticChecklist = () => {
             <li key={step.title} className="flex gap-3">
               <span
                 aria-hidden="true"
-                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/15 text-primary font-mono text-sm font-semibold"
+                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/15 text-foreground border border-primary/25 dark:bg-primary/30 dark:text-background font-mono text-sm font-semibold"
               >
                 {idx + 1}
               </span>
@@ -684,7 +684,7 @@ const ChecklistCommand = ({ command }: { command: string }) => {
         title={copied ? "Copied!" : "Copy command"}
         className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-7 h-7 rounded border transition-colors ${
           copied
-            ? "border-primary bg-primary/15 text-primary"
+            ? "border-primary bg-primary/15 text-foreground dark:bg-primary/30 dark:text-background"
             : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/40"
         }`}
       >

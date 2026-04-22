@@ -199,10 +199,10 @@ const ScanCloneFlagsPage = () => {
                 >
                   <td className="px-4 py-2 font-mono text-xs whitespace-nowrap">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-md ${
+                      className={`inline-block px-2 py-0.5 rounded-md border ${
                         row.command === "scan"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-accent/30 text-accent-foreground"
+                          ? "bg-primary/10 text-foreground border-primary/20 dark:bg-primary/25 dark:text-background"
+                          : "bg-accent/30 text-accent-foreground border-accent/40 dark:bg-accent/40"
                       }`}
                     >
                       {row.command}

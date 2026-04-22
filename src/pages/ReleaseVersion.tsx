@@ -91,7 +91,7 @@ const ReleaseVersionPage = () => {
       <div className="space-y-10 max-w-3xl">
         {/* Header */}
         <header className="space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-mono text-primary">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-mono text-foreground dark:bg-primary/25 dark:text-background">
             <Tag className="h-3.5 w-3.5" />
             release {version}
           </div>
