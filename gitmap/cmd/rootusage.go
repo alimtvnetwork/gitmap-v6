@@ -74,7 +74,7 @@ func printGroupGitOps() {
 	fmt.Println(constants.HelpWatch)
 	fmt.Println(constants.HelpHasAnyUpdates)
 	fmt.Println(constants.HelpLatestBr)
-	fmt.Println(constants.HelpLFSCommon)
+	fmt.Println(constants.MsgHelpLFSCommon)
 }
 
 // printGroupNavigation prints the navigation commands.
