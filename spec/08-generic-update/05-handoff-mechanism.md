@@ -20,11 +20,14 @@ the running binary, which may still be alive when deploy happens.
 
 ---
 
-## Solution: Copy-and-Handoff
+## Solution: Three-Phase Copy-and-Handoff
 
 The running binary creates a **temporary copy of itself**, launches
 the copy as a **worker process**, and exits. The worker is a different
-file, so it does not conflict with the original binary's lock.
+file, so it does not conflict with the original binary's lock. After
+build & deploy, the worker hands off ONE MORE TIME — to the freshly
+deployed binary — to perform cleanup. This is required because the
+worker still holds a lock on its own handoff copy and cannot remove it.
 
 ### Flow
 
@@ -33,16 +36,19 @@ file, so it does not conflict with the original binary's lock.
 ```
 <binary>.exe update
     │
-    ├── 1. Copy self → <binary>-update-<pid>.exe (temp dir or same dir)
-    ├── 2. Launch temp copy: <binary>-update-<pid>.exe update-runner
-    ├── 3. Parent waits (synchronous — cmd.Run, not cmd.Start)
+    ├── Phase 1: Copy self → <binary>-update-<pid>.exe (temp dir or same dir)
+    ├── Phase 1: Launch temp copy: <binary>-update-<pid>.exe update-runner
+    ├── Phase 1: Parent waits (synchronous — cmd.Run, not cmd.Start)
     │
     └── Worker (<binary>-update-<pid>.exe update-runner):
-        ├── 4. Generate temp PowerShell script
-        ├── 5. Script calls run.ps1 (pull, build, deploy)
-        ├── 6. Deploy uses rename-first on the ORIGINAL binary
-        ├── 7. Verify version
-        └── 8. Clean up temp files
+        ├── Phase 2: Generate temp PowerShell script
+        ├── Phase 2: Script calls run.ps1 (pull, build, deploy)
+        ├── Phase 2: Deploy uses rename-first on the ORIGINAL binary
+        ├── Phase 2: Verify version
+        │
+        └── Phase 3: Spawn deployed <binary>.exe update-cleanup (detached, ~2s delayed)
+            └── Worker exits — its handoff file becomes unlocked
+                └── Deployed binary removes handoff copy + .old backup
 ```
 
 ### Why the Parent Waits

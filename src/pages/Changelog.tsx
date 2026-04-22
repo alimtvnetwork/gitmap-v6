@@ -83,28 +83,35 @@ const ChangelogPage = () => {
 
                 <button
                   onClick={() => toggle(entry.version)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors text-left"
+                  className="w-full flex flex-col gap-1 px-4 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors text-left"
                 >
-                  {isOpen ? (
-                    <ChevronDown className="h-4 w-4 text-primary shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
-                  <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="font-mono font-semibold text-sm">{entry.version}</span>
-                  {isLatest && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">
-                      latest
+                  <div className="flex items-center gap-3">
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 text-primary shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                    <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="font-mono font-semibold text-sm">{entry.version}</span>
+                    {isLatest && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">
+                        latest
+                      </span>
+                    )}
+                    {entry.date && (
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {entry.date}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {entry.items.length} change{entry.items.length !== 1 ? "s" : ""}
                     </span>
+                  </div>
+                  {entry.subtitle && (
+                    <p className="text-xs text-muted-foreground/90 pl-[3.25rem] pr-4 leading-snug font-sans">
+                      {entry.subtitle}
+                    </p>
                   )}
-                  {entry.date && (
-                    <span className="text-xs text-muted-foreground font-mono">
-                      {entry.date}
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {entry.items.length} change{entry.items.length !== 1 ? "s" : ""}
-                  </span>
                 </button>
 
                 <AnimatePresence initial={false}>
@@ -116,7 +123,7 @@ const ChangelogPage = () => {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <ul className="mt-1 ml-4 space-y-1 pb-2">
+                      <ul className="mt-1 ml-12 mr-2 space-y-1 pb-2 border-l border-border/60 pl-4">
                         {entry.items.map((item, j) => (
                           <li key={j} className="text-sm text-muted-foreground flex gap-2">
                             <span className="text-primary mt-1.5 shrink-0">•</span>

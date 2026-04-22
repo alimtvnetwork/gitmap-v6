@@ -14,79 +14,76 @@ See [`images/cleanup-flow.mmd`](images/cleanup-flow.mmd)
 
 ## Artifacts That Need Cleanup
 
-| Artifact | Created By | Location |
-|----------|------------|----------|
-| `<binary>-update-<pid>.exe` | Handoff copy (Step 1) | Same dir as binary or temp dir |
-| `<binary>-update-*.ps1` | Generated PowerShell script | System temp dir |
-| `<binary>.exe.old` | Rename-first deploy | Deploy directory |
-| `<binary>-updater-tmp-<pid>.exe` | Standalone updater handoff | Same dir as updater |
+| Artifact | Created By | Location | Lock-prone on Windows |
+|----------|------------|----------|------------------------|
+| `<binary>-update-<pid>.exe` | Handoff copy (Phase 1) | Same dir as binary or temp dir | YES — held by the handoff process |
+| `<binary>-update-*.ps1` | Generated PowerShell script | System temp dir | NO |
+| `<binary>.exe.old` | Rename-first deploy (Phase 2) | Deploy directory | YES — briefly held by AV/Explorer |
+| `<binary>-updater-tmp-<pid>.exe` | Standalone updater handoff | Same dir as updater | YES |
 
 ---
 
-## Cleanup Command
+## Why Cleanup CANNOT Run Inside the Handoff Process
 
-Provide an explicit cleanup command:
+A naive design would call `update-cleanup` at the end of the Phase 2
+worker (the running handoff copy). This fails on Windows:
 
 ```
-<binary> update-cleanup
+Cleaning up update artifacts...
+Error: could not remove cleanup artifact at .\gitmap-update-4692.exe: Access is denied.
+Error: could not remove cleanup artifact at .\gitmap.exe.old: Access is denied.
 ```
 
-This command scans the binary's directory and temp directory for
-leftover artifacts and removes them.
+The handoff process holds an exclusive lock on its own binary
+(`gitmap-update-<pid>.exe`), so `os.Remove` returns `Access is denied`.
+The `.old` backup is also frequently locked at this exact moment by AV
+scanners or Explorer indexing, because it was just renamed.
 
-### Implementation
+The fix is **Phase 3** — handing off cleanup to the freshly deployed
+binary (a different file with no shared lock).
+
+---
+
+## Phase 3 Cleanup Handoff
+
+After Phase 2 completes, the still-running handoff copy spawns the
+freshly deployed binary detached, with a small delay so its own
+process can exit and release the file lock first.
+
+### Windows
 
 ```go
-func runUpdateCleanup() {
-    // 1. Clean up .old backups in the binary's directory
-    selfDir := resolveInstalledDir()
-    cleanGlob(selfDir, "*.old")
-
-    // 2. Clean up handoff copies
-    cleanGlob(selfDir, "<binary>-update-*")
-    cleanGlob(os.TempDir(), "<binary>-update-*")
-
-    // 3. Clean up generated scripts
-    cleanGlob(os.TempDir(), "<binary>-update-*.ps1")
-}
-
-func cleanGlob(dir, pattern string) {
-    matches, err := filepath.Glob(filepath.Join(dir, pattern))
-    if err != nil {
+func scheduleDeployedCleanupHandoff() {
+    deployed := resolveDeployedBinaryPath()
+    if deployed == "" {
         return
     }
-
-    for _, match := range matches {
-        if err := os.Remove(match); err != nil {
-            fmt.Printf("  !! Could not remove %s: %v\n", filepath.Base(match), err)
-            continue
-        }
-        fmt.Printf("  OK Removed %s\n", filepath.Base(match))
-    }
+    cmdLine := fmt.Sprintf(
+        `ping 127.0.0.1 -n 3 >nul & start "" /B "%s" update-cleanup`,
+        deployed,
+    )
+    cmd := exec.Command("cmd.exe", "/C", cmdLine)
+    _ = cmd.Start() // detached, fire-and-forget
 }
 ```
 
----
+- `ping 127.0.0.1 -n 3 >nul` sleeps ~2s using only built-in `cmd`.
+- `start "" /B` detaches without opening a new window.
+- The handoff process exits immediately after `cmd.Start()`. By the
+  time the deployed binary's `update-cleanup` actually runs, the
+  handoff file is unlocked.
 
-## Automatic Cleanup
+### Unix
 
-The update process should attempt automatic cleanup after a successful
-update. However, some files may be locked (e.g., the handoff copy is
-still running). In that case:
-
-1. **Try to clean up immediately** after the update completes.
-2. **If any files are locked**, skip them silently — they will be
-   cleaned up on the next `update-cleanup` or next update.
-3. **Never fail the update** because cleanup failed.
+No lock conflicts exist — the deployed binary's `update-cleanup` is
+invoked inline (or skipped entirely if the handoff copy IS the
+deployed binary).
 
 ```go
-func attemptAutoCleanup() {
-    // Best-effort — ignore errors
-    matches, _ := filepath.Glob(filepath.Join(selfDir, "<binary>-update-*"))
-    for _, m := range matches {
-        os.Remove(m) // Ignore error — may be locked
-    }
-}
+cmd := exec.Command(deployed, "update-cleanup")
+cmd.Stdout = os.Stdout
+cmd.Stderr = os.Stderr
+_ = cmd.Run()
 ```
 
 ---
