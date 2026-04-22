@@ -8,6 +8,43 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.16.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap templates list` / `templates show` — discover the embedded corpus and your overlay",
+    items: [
+      "Added `gitmap templates` subcommand router (alias `tpl`) in `gitmap/cmd/templatescli.go`, wired into `dispatch()` in `root.go` (alongside the previously-missed `dispatchAdd` hook, now also re-confirmed). Subcommands: `list` (alias `tl`) and `show <kind> <lang>` (alias `ts`).",
+      "Added `gitmap templates list` — prints a `KIND / LANG / SOURCE / PATH` table with stable kind ordering (ignore → attributes → lfs) then alphabetical lang. The `SOURCE` column reads `user` when the template comes from `~/.gitmap/templates/` and `embed` when it comes from the binary, making it obvious which entries you've customized.",
+      "Added `gitmap templates show <kind> <lang>` — writes the resolved template (overlay > embed) to stdout *with* its audit-trail header preserved, so `gitmap templates show ignore go > .gitignore.curated` round-trips cleanly and is diffable against future re-curations.",
+      "Added `gitmap/templates/list.go` (+ `dirfs.go` empty-FS fallback): walks the embedded `assets/` first, then overlays user entries from `~/.gitmap/templates/` (silent skip when the dir doesn't exist). The merge map is keyed `<kind>/<lang>` so user files always shadow embeds.",
+      "Added `gitmap/constants/constants_templates_cli.go`: `CmdTemplates`/`tpl`, sub-aliases `tl`/`ts`, format strings, error strings, and the user-facing `UsageTemplatesRoot` block.",
+      "Added `gitmap/templates/list_test.go`: locks in (1) the embedded corpus shows up with `SourceEmbed`, (2) entries are sorted by kind-rank then lang, (3) a user-overlay file flips `SourceEmbed` → `SourceUser` for the matching `<kind>/<lang>`, and (4) `parseRelTemplatePath` correctly rejects wrong-extension/unknown-kind inputs.",
+    ],
+  },
+  {
+    version: "v3.15.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap add attributes` + `gitmap add lfs-install` — completes the templates trio",
+    items: [
+      "Added `gitmap add attributes [langs...]` (alias `aa`) in `gitmap/cmd/addattributes.go` — mirror of `add ignore` but writes to `./.gitattributes` using the dedicated `# >>> gitmap-attributes (do not edit between markers) >>>` / `# <<< gitmap-attributes <<<` markers. Same single-pass dedupe, atomic write, and `Changed=false` no-op on re-run.",
+      "Added `gitmap add lfs-install` (alias `alfs`) — runs `git lfs install --local` (streaming stdout/stderr so users see the LFS hook installation) then merges the curated `lfs/common.gitattributes` into `./.gitattributes`. The LFS template uses the attributes markers so it co-exists cleanly with `add attributes`.",
+      "Replaced the Phase-2 stubs in `addignore.go` with the real handlers; both `runAddAttributes` and `runAddLFSInstall` now share a `targetInCwd(ext)` helper.",
+      "Added `gitmap/templates/merge_attributes_test.go`: verifies attributes markers (and that they don't leak the ignore markers), LFS merge writes to `.gitattributes` via attribute markers, attributes idempotence, and the kind→extension mapping (`ignore`→`.gitignore`, `attributes`+`lfs`→`.gitattributes`). The LFS test also locks in `*.svg filter=lfs` MUST NOT appear.",
+    ],
+  },
+  {
+    version: "v3.14.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap add ignore` — curated, idempotent .gitignore templates with marker-block merge",
+    items: [
+      "Added `gitmap add` subcommand router (`gitmap/cmd/rootadd.go`, `gitmap/constants/constants_add.go`) wired into `dispatch()` in `root.go`. Top-level alias `ad`. Routes to `add ignore` (alias `ai`), `add attributes` (alias `aa`, Phase 3), and `add lfs-install` (alias `alfs`, Phase 3).",
+      "Added `gitmap add ignore [langs...]` — composes `common` plus each requested language template into a marker-block (`# >>> gitmap-ignore ... >>>` / `# <<< gitmap-ignore <<<`), preserves user-authored entries below `# user entries`, and writes atomically via temp file + rename.",
+      "Added `gitmap/templates/merge.go` engine: single-pass dedupe keyed on trimmed line (comments dedupe too), audit-trail headers (`# source:` / `# kind:` / `# lang:` / `# version:`) stripped before merge, blank-line collapse, idempotent — re-running with identical args yields a byte-identical file (`MergeResult.Changed=false`).",
+      "Seeded curated corpus in `gitmap/templates/assets/` (Phase 1): `ignore/{common,go,node,python,rust,csharp}.gitignore`, `attributes/{common,go,node,python,rust,csharp}.gitattributes`, and `lfs/common.gitattributes`. Common attributes normalize `*.svg` to `text eol=lf` (NOT LFS — SVG is XML and diffs cleanly); `*.bat`/`*.cmd`/`*.ps1` keep CRLF; raster/archive formats forced binary.",
+      "Added `gitmap/templates/{embed.go,resolver.go,materialize.go,paths.go}` (Phase 0): `//go:embed all:assets`, `~/.gitmap/templates/` user overlay (overlay > embed resolution order) so users on read-only install paths (e.g. `C:\\Program Files\\gitmap`) can still customize, idempotent first-run materializer that skips any already-present file.",
+      "Added tests: `merge_test.go` (creates-with-markers, idempotence, user-entry preservation, cross-lang dedupe, additive lang re-run), `resolver_test.go` (overlay-wins, missing-template error, dir creation), `corpus_test.go` (audit-header enforcement on every embedded file + locks in the no-`*.svg`-in-LFS rule).",
+    ],
+  },
+  {
     version: "v3.13.0",
     date: "2026-04-22",
     subtitle: "Three-phase self-update handoff — cleanup runs from the deployed binary, not the still-locked handoff copy",
