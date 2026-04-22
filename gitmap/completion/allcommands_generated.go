@@ -88,6 +88,8 @@ var generatedCommands = []string{
 	"latest-branch",
 	"lb",
 	"ld",
+	"lfs-common",
+	"lfsc",
 	"list",
 	"list-releases",
 	"list-versions",
