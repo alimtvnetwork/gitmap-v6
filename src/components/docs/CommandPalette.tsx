@@ -123,7 +123,7 @@ const CommandPalette = () => {
                 <BookOpen className="mr-2 h-4 w-4 text-muted-foreground" />
                 <span className="font-sans font-semibold">{cmd.name}</span>
                 {cmd.alias && (
-                  <span className="ml-1 text-xs font-sans font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">{cmd.alias}</span>
+                  <span className="ml-1 text-xs font-sans font-medium text-foreground bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded dark:bg-primary/25 dark:text-background">{cmd.alias}</span>
                 )}
                 <span className="text-muted-foreground ml-2 text-xs truncate">{cmd.description}</span>
               </CommandItem>

@@ -16,7 +16,7 @@ const DocsLayout = ({ children }: DocsLayoutProps) => {
           <header className="h-12 flex items-center border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
             <SidebarTrigger className="ml-3" />
 <span className="ml-3 text-sm font-mono text-muted-foreground">gitmap documentation</span>
-            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-primary rounded">{VERSION}</span>
+            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-foreground border border-primary/20 rounded dark:bg-primary/25 dark:text-background">{VERSION}</span>
             <div className="ml-auto mr-3">
               <CommandPalette />
             </div>
