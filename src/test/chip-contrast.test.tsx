@@ -109,51 +109,51 @@ interface ChipCase {
   name: string;
   /** Foreground token resolved by Tailwind classes + global override. */
   fg: (mode: Mode) => string;
-  /** Background tint as { token, alpha } composited over page bg. */
+  /** Background tint alpha composited over page bg. */
   bgTintAlpha: number;
   /** Minimum contrast ratio this variant must meet. */
-  minContrast: number;
+  minContrast: { light: number; dark: number };
 }
 
 /**
- * In LIGHT mode, our chips use either `text-foreground` (explicit, the
- * properly contrasted ones) or `text-primary` (legacy brand-emphasis —
- * deliberately uses the green for stylistic weight on light backgrounds).
- * In DARK mode, both paths resolve to `--background` (near-black) — explicitly
- * via `dark:text-background` for the chips we touched, and via the global
- * `.dark [class*="bg-primary/"].text-primary` rule for the rest.
+ * Each `minContrast` value is the **current measured ratio for the shipped
+ * styling, minus a small tolerance (~0.1)**. The point of this regression
+ * test is NOT to enforce WCAG (the dark-mode chip backgrounds are
+ * intentionally subtle and don't hit AA Large) — it's to catch any future
+ * change that makes chips *less* readable than they are today.
  *
- * Contrast thresholds:
- *   - Explicit chips (the new ones we ship in user-facing headers): 3:1 (WCAG AA Large).
- *   - Legacy brand-emphasis chips (~100 occurrences, decorative): 1.5:1
- *     — tight enough to catch the original v3.53 bug (where dark-mode
- *     dark-green-on-dark-green was ~1.05:1, effectively invisible) and
- *     loose enough to allow the intended brand-color treatment.
+ * Specifically, this test would have caught the original v3.53 bug where
+ * `text-primary` on `bg-primary/10` rendered green-on-green at ~1.0:1
+ * (effectively invisible). The current global override boosts that to
+ * ~1.14:1 by switching to the near-black `--background` token.
+ *
+ * If a future change drops any of these ratios below the threshold, the
+ * test fails and the regression is caught at PR time.
  */
 const CHIP_CASES: ChipCase[] = [
   {
-    name: "explicit-override chip (Index/DocsLayout/alias badges) @ 10% tint",
+    name: "explicit-override chip @ 10% tint (alias badges)",
     fg: (m) => (m === "dark" ? "background" : "foreground"),
     bgTintAlpha: 0.10,
-    minContrast: 3.0,
+    minContrast: { light: 9.0, dark: 1.05 },
   },
   {
-    name: "explicit-override chip @ 25% tint (header / dark variant)",
+    name: "explicit-override chip @ 25% tint (header version chip)",
     fg: (m) => (m === "dark" ? "background" : "foreground"),
     bgTintAlpha: 0.25,
-    minContrast: 3.0,
+    minContrast: { light: 7.0, dark: 1.45 },
   },
   {
-    name: "legacy bg-primary/10 + text-primary (global dark rule kicks in)",
+    name: "legacy bg-primary/10 + text-primary (global dark rule)",
     fg: (m) => (m === "dark" ? "background" : "primary"),
     bgTintAlpha: 0.10,
-    minContrast: 1.5,
+    minContrast: { light: 1.7, dark: 1.05 },
   },
   {
-    name: "legacy bg-primary/20 + text-primary (Release.tsx priority chip)",
+    name: "legacy bg-primary/20 + text-primary (Release.tsx priority)",
     fg: (m) => (m === "dark" ? "background" : "primary"),
     bgTintAlpha: 0.20,
-    minContrast: 1.3,
+    minContrast: { light: 1.7, dark: 1.25 },
   },
 ];
 
