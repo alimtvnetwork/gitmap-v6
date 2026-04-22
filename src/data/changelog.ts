@@ -8,6 +8,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.24.1",
+    date: "2026-04-22",
+    subtitle: "Quote-highlight fixture: single quotes stay inert, mixed quotes render deterministically",
+    items: [
+      "Added `gitmap/render/testdata/pretty/case-006-mixed-quotes.in.md` + `.want.txt` paired fixture exercised by the existing table-driven `TestPrettyFixtures` loop in `gitmap/render/pretty_test.go` — no test code changes needed (drop-in pattern as documented in the loop's header comment). Four paragraph blocks lock the contract for `render.HighlightQuotes`: (1) prose with only apostrophes (`it's`, `user's`) emits **zero** `[C]…[/C]` tokens, (2) two double-quoted spans on the same line (`\"git status\"` and `\"git log\"`) each get their own independent cyan span with `user's` between them untouched, (3) the degenerate empty-string span `\"\"` is wrapped deterministically as `[C]\"\"[/C]` (proves the open/close state machine handles back-to-back quote chars without dropping the close), (4) interleaved `\"first span\"` / `'single'` / `\"second span\"` confirms single-quote characters never flip the `inQuote` state machine even when sandwiched between double-quoted spans. Snapshot-style `.want.txt` makes any accidental regression in the highlighter — e.g. someone 'helpfully' adding single-quote support, or breaking the alternating open/close pairing — fail loudly with a unified diff in CI instead of silently corrupting CLI output.",
+    ],
+  },
+  {
     version: "v3.24.0",
     date: "2026-04-22",
     subtitle: "Unified `--pretty` / `--no-pretty` flag across `help`, `templates show`, and `changelog` (with `render.PrettyMode` + shared `Decide` ladder)",
