@@ -34,10 +34,10 @@ const PostMortemsPage = () => {
       <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setActiveFilter("all")}
-          className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
+          className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors duration-300 hover:shadow-sm hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
             activeFilter === "all"
               ? "border-primary bg-primary/10 text-foreground dark:bg-primary/15 dark:text-primary"
-              : "border-border text-muted-foreground hover:text-foreground"
+              : "border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
           }`}
         >
           All ({postMortems.length})
@@ -50,10 +50,10 @@ const PostMortemsPage = () => {
             <button
               key={cat}
               onClick={() => setActiveFilter(cat)}
-              className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
+              className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors duration-300 hover:shadow-sm hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 activeFilter === cat
                   ? "border-primary bg-primary/10 text-foreground dark:bg-primary/15 dark:text-primary"
-                  : "border-border text-muted-foreground hover:text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
               }`}
             >
               {config.label} ({count})
