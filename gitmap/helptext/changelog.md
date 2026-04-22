@@ -33,7 +33,9 @@ Bullet text is routed through the same pretty markdown renderer used by
 - Headers, version, and bullet markers keep their depth-based coloring
   (green at depth 0, cyan at depth 1, dim at depth 2+).
 
-Set `GITMAP_NO_PRETTY=1` or pipe to a non-TTY to get raw markdown.
+Set `GITMAP_NO_PRETTY=1` or pipe to a non-TTY to get raw markdown. Use
+`--pretty` to force ANSI rendering (e.g. `gitmap cl --latest --pretty | less -R`)
+or `--no-pretty` to strip every ANSI escape (e.g. for redirects/grep).
 
 ## Examples
 

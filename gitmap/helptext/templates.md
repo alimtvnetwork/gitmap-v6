@@ -122,13 +122,14 @@ this kicks in for **markdown overlays** you drop into
 `~/.gitmap/templates/<kind>/<lang>.md` and for any future markdown
 templates added to the embed.
 
-Two opt-outs, both honored even on a TTY:
+Three opt-outs / opt-ins, all honored across the CLI:
 
-- `--raw` — per-invocation flag. Use when you need byte-faithful output
-  inside a TTY session (e.g. `templates show notes intro.md --raw | sha256sum`).
-- `GITMAP_NO_PRETTY=1` — environment opt-out, shared with `gitmap help`.
-  Set it once in your shell profile to disable pretty rendering across
-  the whole CLI.
+- `--pretty` — force ANSI rendering even when stdout is not a TTY
+  (handy for `gitmap templates show notes intro.md --pretty | less -R`).
+- `--no-pretty` (alias: legacy `--raw`) — strip ANSI even on a TTY.
+- `GITMAP_NO_PRETTY=1` — environment opt-out, shared with `gitmap help`
+  and `gitmap changelog`. Set it once in your shell profile to disable
+  pretty rendering across the whole CLI.
 
 Pipes and redirects automatically bypass the renderer (stdout is no
 longer a TTY), so `templates show foo bar > out.md` always writes the
