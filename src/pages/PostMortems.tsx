@@ -36,7 +36,7 @@ const PostMortemsPage = () => {
           onClick={() => setActiveFilter("all")}
           className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
             activeFilter === "all"
-              ? "border-primary bg-primary/10 text-primary"
+              ? "border-primary bg-primary/10 text-foreground dark:bg-primary/25 dark:text-background"
               : "border-border text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -52,7 +52,7 @@ const PostMortemsPage = () => {
               onClick={() => setActiveFilter(cat)}
               className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
                 activeFilter === cat
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "border-primary bg-primary/10 text-foreground dark:bg-primary/25 dark:text-background"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
