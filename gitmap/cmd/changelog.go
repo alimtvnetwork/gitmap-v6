@@ -12,12 +12,15 @@ import (
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/release"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
 )
 
 // runChangelog handles the 'changelog' command.
 func runChangelog(args []string) {
 	checkHelp("changelog", args)
-	version, latest, limit, openFile, source := parseChangelogFlags(args)
+	cleaned, mode := ParsePrettyFlag(args)
+	pretty := render.Decide(mode, render.StdoutIsTerminal(), true)
+	version, latest, limit, openFile, source := parseChangelogFlags(cleaned)
 	version, openFile = resolveChangelogAlias(version, openFile)
 	if openFile {
 		handleChangelogOpen(latest, version)
@@ -26,7 +29,7 @@ func runChangelog(args []string) {
 		return
 	}
 
-	dispatchChangelogOutput(version, latest, limit, source)
+	dispatchChangelogOutput(version, latest, limit, source, pretty)
 }
 
 // resolveChangelogAlias detects if the version arg is actually a file-open alias.
@@ -51,7 +54,9 @@ func handleChangelogOpen(latest bool, version string) {
 }
 
 // dispatchChangelogOutput prints the appropriate changelog entries.
-func dispatchChangelogOutput(version string, latest bool, limit int, source string) {
+// `pretty` controls ANSI rendering for headers + bullet bodies; pass
+// false to emit terminal-safe plain text (no escape codes anywhere).
+func dispatchChangelogOutput(version string, latest bool, limit int, source string, pretty bool) {
 	entries, err := release.ReadChangelog()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrChangelogRead, constants.ChangelogFile, err)
@@ -59,16 +64,16 @@ func dispatchChangelogOutput(version string, latest bool, limit int, source stri
 	}
 	entries = filterChangelogBySource(entries, source)
 	if latest {
-		printChangelogEntries(entries, 1)
+		printChangelogEntries(entries, 1, pretty)
 
 		return
 	}
 	if len(version) > 0 {
-		printSingleVersion(entries, version)
+		printSingleVersion(entries, version, pretty)
 
 		return
 	}
-	printChangelogEntries(entries, limit)
+	printChangelogEntries(entries, limit, pretty)
 }
 
 // filterChangelogBySource keeps only entries whose version exists in the DB with the given source.
@@ -111,16 +116,18 @@ func loadChangelogSourceMap() map[string]string {
 }
 
 // printSingleVersion finds and prints one version's changelog.
-func printSingleVersion(entries []release.ChangelogEntry, version string) {
+func printSingleVersion(entries []release.ChangelogEntry, version string, pretty bool) {
 	entry, found := release.FindChangelogEntry(entries, version)
 	if !found {
 		fmt.Fprintf(os.Stderr, constants.ErrChangelogVersionNotFound, release.NormalizeVersion(version))
 		os.Exit(1)
 	}
-	printChangelogEntry(entry)
+	printChangelogEntry(entry, pretty)
 }
 
-// parseChangelogFlags parses flags for the changelog command.
+// parseChangelogFlags parses flags for the changelog command. The
+// --pretty / --no-pretty flag is stripped by the caller before reaching
+// here, so this FlagSet stays focused on the command's own flags.
 func parseChangelogFlags(args []string) (version string, latest bool, limit int, openFile bool, source string) {
 	fs := flag.NewFlagSet(constants.CmdChangelog, flag.ExitOnError)
 	latestFlag := fs.Bool("latest", false, constants.FlagDescLatest)
@@ -141,22 +148,22 @@ func parseChangelogFlags(args []string) (version string, latest bool, limit int,
 }
 
 // printChangelogEntries prints the newest N changelog entries.
-func printChangelogEntries(entries []release.ChangelogEntry, limit int) {
+func printChangelogEntries(entries []release.ChangelogEntry, limit int, pretty bool) {
 	if limit > len(entries) {
 		limit = len(entries)
 	}
 	for i := 0; i < limit; i++ {
-		printChangelogEntry(entries[i])
+		printChangelogEntry(entries[i], pretty)
 	}
 }
 
-// printChangelogEntry prints a single changelog entry using the new
-// pretty renderer (header rule + colored version + indented bullets with
-// inline-markdown styling and word wrapping). The legacy bare format is
-// still available via constants.ChangelogVersionFmt / ChangelogNoteFmt
-// for any caller that wants raw output.
-func printChangelogEntry(entry release.ChangelogEntry) {
-	renderChangelogEntry(entry)
+// printChangelogEntry prints a single changelog entry. When pretty is
+// true the rich renderer (colored header + inline-markdown bullets +
+// word wrapping) is used; when false, the same layout is emitted with
+// every ANSI escape sequence suppressed — output is safe to redirect
+// into a file or pipe into tools that choke on color codes.
+func printChangelogEntry(entry release.ChangelogEntry, pretty bool) {
+	renderChangelogEntry(entry, pretty)
 }
 
 // openChangelogFile opens CHANGELOG.md with the default OS app.

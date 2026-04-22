@@ -46,8 +46,7 @@ Examples:
 	errTemplatesListFail   = "templates list: %v\n"
 	errUnknownTemplatesSub = "unknown 'templates' subcommand: %s\n"
 	flagTemplatesShowRaw   = "raw"
-	flagDescTemplatesRaw   = "Print template bytes verbatim, skipping the pretty markdown renderer"
-	envTemplatesNoPretty   = "GITMAP_NO_PRETTY"
+	flagDescTemplatesRaw   = "Deprecated alias for --no-pretty (kept for v3.23.x back-compat)"
 )
 
 // dispatchTemplates routes `gitmap templates <subcommand>` calls.
@@ -95,13 +94,18 @@ func runTemplatesList() {
 }
 
 // runTemplatesShow prints one template to stdout. Markdown templates
-// (.md / .markdown) are routed through render.RenderANSI when the user
-// is on a real TTY and hasn't opted out via --raw or GITMAP_NO_PRETTY,
-// matching the help-text rendering contract. Non-markdown templates
-// (.gitignore, .gitattributes, …) are always written byte-for-byte so
-// the output stays diff-friendly and safe to redirect into a file.
+// (.md / .markdown) are routed through render.RenderANSI when the
+// shared render.Decide() ladder says so for the parsed PrettyMode.
+// Non-markdown templates (.gitignore, .gitattributes, …) are always
+// written byte-for-byte regardless of mode — render.Decide enforces
+// that via its isMarkdown gate, so the dominant
+// `templates show ignore go > .gitignore` redirect workflow is safe.
+//
+// Flag precedence: --pretty / --no-pretty (preferred) win over the
+// legacy --raw flag, which is kept as a deprecated alias for
+// --no-pretty (back-compat with v3.23.x scripts).
 func runTemplatesShow(args []string) {
-	rest, raw := parseTemplatesShowFlags(args)
+	rest, mode := parseTemplatesShowFlags(args)
 	if len(rest) < 2 {
 		fmt.Fprint(os.Stderr, errTemplatesShowArgs)
 		os.Exit(1)
@@ -114,7 +118,7 @@ func runTemplatesShow(args []string) {
 	}
 
 	out := r.Content
-	if shouldPrettyRenderTemplate(r.Path, raw) {
+	if render.Decide(mode, render.StdoutIsTerminal(), isMarkdownTemplatePath(r.Path)) {
 		out = []byte(render.RenderANSI(string(r.Content)))
 	}
 
@@ -124,37 +128,24 @@ func runTemplatesShow(args []string) {
 	}
 }
 
-// parseTemplatesShowFlags pulls --raw out of the arg list and returns the
-// remaining positional args + the flag value. Uses a dedicated FlagSet so
-// flags can appear before or after the <kind> <lang> positionals.
-func parseTemplatesShowFlags(args []string) ([]string, bool) {
+// parseTemplatesShowFlags extracts --pretty / --no-pretty (preferred) and
+// the legacy --raw alias from args, returning the cleaned positional
+// slice + the resolved render.PrettyMode. --raw is treated as
+// --no-pretty for back-compat with v3.23.x. When both are present,
+// --pretty wins (--raw only downgrades when mode is still Auto).
+func parseTemplatesShowFlags(args []string) ([]string, render.PrettyMode) {
+	cleaned, mode := ParsePrettyFlag(args)
+
 	fs := flag.NewFlagSet(cmdTemplatesShow, flag.ExitOnError)
 	rawFlag := fs.Bool(flagTemplatesShowRaw, false, flagDescTemplatesRaw)
-	reordered := reorderFlagsBeforeArgs(args)
+	reordered := reorderFlagsBeforeArgs(cleaned)
 	_ = fs.Parse(reordered)
 
-	return fs.Args(), *rawFlag
-}
-
-// shouldPrettyRenderTemplate decides whether to route template bytes
-// through the pretty markdown renderer. All gates must pass:
-//
-//   - the template path has a markdown extension (.md / .markdown);
-//   - the user did not pass --raw;
-//   - GITMAP_NO_PRETTY is unset (shared opt-out env, mirrors helptext);
-//   - stdout is connected to a real TTY (so pipes / redirects stay clean).
-func shouldPrettyRenderTemplate(path string, raw bool) bool {
-	if raw {
-		return false
-	}
-	if !isMarkdownTemplatePath(path) {
-		return false
-	}
-	if os.Getenv(envTemplatesNoPretty) != "" {
-		return false
+	if *rawFlag && mode == render.PrettyAuto {
+		mode = render.PrettyOff
 	}
 
-	return templatesStdoutIsTerminal()
+	return fs.Args(), mode
 }
 
 // isMarkdownTemplatePath returns true for .md / .markdown files
@@ -165,17 +156,6 @@ func isMarkdownTemplatePath(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 
 	return ext == ".md" || ext == ".markdown"
-}
-
-// templatesStdoutIsTerminal mirrors helptext.stdoutIsTerminal — kept
-// local to avoid exporting helptext internals just for one caller.
-func templatesStdoutIsTerminal() bool {
-	info, err := os.Stdout.Stat()
-	if err != nil {
-		return false
-	}
-
-	return (info.Mode() & os.ModeCharDevice) != 0
 }
 
 // sourceLabel maps a templates.Source to the user-facing column value.
