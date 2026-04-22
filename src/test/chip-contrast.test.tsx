@@ -200,7 +200,7 @@ describe("chip foreground-color readability (regression)", () => {
 
   for (const chip of CHIP_CASES) {
     for (const mode of ["light", "dark"] as const) {
-      it(`${chip.name} — ${mode} mode meets ${chip.minContrast}:1 contrast`, () => {
+      it(`${chip.name} — ${mode} mode meets ${chip.minContrast[mode]}:1 baseline`, () => {
         const fg = fgRgb(mode, chip.fg(mode));
         const bg = effectiveBg(mode, chip.bgTintAlpha);
         const ratio = contrastRatio(fg, bg);
@@ -208,7 +208,7 @@ describe("chip foreground-color readability (regression)", () => {
           ratio,
           `chip "${chip.name}" in ${mode} mode: fg=${chip.fg(mode)} ` +
             `vs ${chip.bgTintAlpha * 100}% primary tint → ratio ${ratio.toFixed(2)}:1`,
-        ).toBeGreaterThanOrEqual(chip.minContrast);
+        ).toBeGreaterThanOrEqual(chip.minContrast[mode]);
       });
     }
   }
