@@ -58,6 +58,14 @@ import CloneCommandPage from "./pages/CloneCommand";
 import CloneNextCommandPage from "./pages/CloneNextCommand";
 import ScanCloneFlagsPage from "./pages/ScanCloneFlags";
 import TroubleshootingPage from "./pages/Troubleshooting";
+import DiffPage from "./pages/Diff";
+import MvPage from "./pages/Mv";
+import MergeBothPage from "./pages/MergeBoth";
+import MergeLeftPage from "./pages/MergeLeft";
+import MergeRightPage from "./pages/MergeRight";
+import CommitLeftPage from "./pages/CommitLeft";
+import CommitRightPage from "./pages/CommitRight";
+import CommitBothPage from "./pages/CommitBoth";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +130,14 @@ const App = () => (
           <Route path="/clone-next-command" element={<CloneNextCommandPage />} />
           <Route path="/scan-clone-flags" element={<ScanCloneFlagsPage />} />
           <Route path="/troubleshooting" element={<TroubleshootingPage />} />
+          <Route path="/diff" element={<DiffPage />} />
+          <Route path="/mv" element={<MvPage />} />
+          <Route path="/merge-both" element={<MergeBothPage />} />
+          <Route path="/merge-left" element={<MergeLeftPage />} />
+          <Route path="/merge-right" element={<MergeRightPage />} />
+          <Route path="/commit-left" element={<CommitLeftPage />} />
+          <Route path="/commit-right" element={<CommitRightPage />} />
+          <Route path="/commit-both" element={<CommitBothPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
