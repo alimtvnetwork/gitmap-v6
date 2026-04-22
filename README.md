@@ -53,6 +53,8 @@ irm https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/gitmap/script
 curl -fsSL https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/gitmap/scripts/install.sh | sh
 ```
 
+> **How install resolves a version:** every installer follows the generic contract in [`spec/07-generic-release/09-generic-install-script-behavior.md`](spec/07-generic-release/09-generic-install-script-behavior.md). In short — **strict tag mode** (`--version <tag>` / `-Version <tag>`) installs that exact release with **no fallback whatsoever** (no `latest`, no sibling probe, no main-branch HEAD; missing tag → exit 1). **Discovery mode** (no tag supplied) probes the next 20 `-v<N+i>` sibling repos in parallel, then falls back to `releases/latest`, and finally to the default branch HEAD as a last resort.
+
 ### Uninstall — Quick (one-liner)
 
 Removes the gitmap binary, deploy folder, PATH entries, and (optionally) the user data folder. First tries the canonical `gitmap self-uninstall`; falls back to a manual sweep if gitmap is no longer on PATH.
