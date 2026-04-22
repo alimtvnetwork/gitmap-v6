@@ -80,7 +80,7 @@ const CloneNextPage = () => {
         <div className="flex items-center gap-3 mb-2">
           <GitBranch className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-heading font-bold docs-h1">clone-next</h1>
-          <span className="text-xs font-mono bg-primary/10 text-foreground border border-primary/20 px-2 py-0.5 rounded dark:bg-primary/25 dark:text-background">cn</span>
+          <span className="text-xs font-mono bg-primary/10 text-foreground border border-primary/20 px-2 py-0.5 rounded dark:bg-primary/15 dark:text-primary">cn</span>
         </div>
         <p className="text-muted-foreground mb-8 text-lg">
           Clone the next or a specific versioned iteration of the current repository. Automatically flattens

@@ -25,7 +25,7 @@ const DocsLayout = ({ children }: DocsLayoutProps) => {
           <header className="h-12 flex items-center border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
             <SidebarTrigger className="ml-3" />
             <span className="ml-3 text-sm font-mono text-muted-foreground">gitmap documentation</span>
-            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-foreground border border-primary/20 rounded dark:bg-primary/25 dark:text-background">
+            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-foreground border border-primary/20 rounded dark:bg-primary/20 dark:text-primary dark:border-primary/40">
               {VERSION}
             </span>
             <button
@@ -33,7 +33,7 @@ const DocsLayout = ({ children }: DocsLayoutProps) => {
               onClick={() => setDark((d) => !d)}
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
               title={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded border border-primary/20 bg-primary/10 text-foreground hover:bg-primary/20 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10 dark:bg-primary/25 dark:text-background dark:hover:bg-primary/40 transition-colors duration-300"
+              className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded border border-primary/20 bg-primary/10 text-foreground hover:bg-primary/20 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10 dark:bg-primary/20 dark:text-primary dark:border-primary/40 dark:hover:bg-primary/30 transition-colors duration-300"
             >
               {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>

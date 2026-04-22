@@ -79,13 +79,13 @@ const DiffProfilesPage = () => (
         <h2 className="text-xl font-heading font-bold text-foreground mb-4 docs-h2">Profile Resolution Logic</h2>
         <div className="border border-border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">1. Open Profile A DB</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">1. Open Profile A DB</span>
             <span className="text-muted-foreground">→</span>
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">2. Open Profile B DB</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">2. Open Profile B DB</span>
             <span className="text-muted-foreground">→</span>
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">3. Load repo lists</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">3. Load repo lists</span>
             <span className="text-muted-foreground">→</span>
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">4. Match by RepoName</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">4. Match by RepoName</span>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
             Each profile name resolves to its database file via <code className="text-primary">store.OpenProfile()</code>.

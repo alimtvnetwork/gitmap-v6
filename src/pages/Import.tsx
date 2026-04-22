@@ -176,11 +176,11 @@ const ImportPage = () => (
         <div className="border border-border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">1. Import group</span>
+              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">1. Import group</span>
               <span className="text-muted-foreground">→</span>
-              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">2. Resolve slugs</span>
+              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">2. Resolve slugs</span>
               <span className="text-muted-foreground">→</span>
-              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">3. Link repos</span>
+              <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">3. Link repos</span>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">

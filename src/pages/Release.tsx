@@ -205,11 +205,11 @@ const ReleasePage = () => {
           <h3 className="text-base font-heading font-semibold text-foreground mt-6 mb-3">Target Resolution (Three-Layer)</h3>
           <div className="bg-card border border-border rounded-lg p-4 space-y-2">
             <div className="flex items-center gap-3 font-mono text-sm">
-              <span className="bg-primary/20 text-foreground border border-primary/30 dark:bg-primary/30 dark:text-background px-3 py-1 rounded font-semibold">1. --targets flag</span>
+              <span className="bg-primary/20 text-foreground border border-primary/30 dark:bg-primary/20 dark:text-primary px-3 py-1 rounded font-semibold">1. --targets flag</span>
               <span className="text-muted-foreground">→ Highest priority (always wins)</span>
             </div>
             <div className="flex items-center gap-3 font-mono text-sm">
-              <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background px-3 py-1 rounded">2. config.json</span>
+              <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary px-3 py-1 rounded">2. config.json</span>
               <span className="text-muted-foreground">→ release.targets array</span>
             </div>
             <div className="flex items-center gap-3 font-mono text-sm">
