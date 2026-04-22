@@ -44,7 +44,8 @@ def main() -> int:
     fixed = sorted(baseline - current)
     unchanged = sorted(current & baseline)
 
-    print_summary(added, fixed, unchanged, baseline_present=baseline_present)
+    print_summary(added, fixed, unchanged, baseline_present=baseline_present,
+                  current_path=args.current, baseline_path=args.baseline)
 
     # Seeding run (no baseline yet): never gate. Surface the findings as
     # warnings so the next run has something to diff against, but exit 0
@@ -53,15 +54,18 @@ def main() -> int:
         for f in added:
             file, line, linter, message = f
             print(f"::warning file={file},line={line}::"
-                  f"[{linter}] {message} (seeding baseline)")
+                  f"[{linter}] {message} (seeding baseline; "
+                  f"report={args.current})")
         return 0
 
     if added:
         # GitHub Actions error annotations — surface in the PR check UI.
+        # Each annotation includes the source report path so log readers
+        # can locate the raw JSON entry without grepping the whole job.
         for f in added:
             file, line, linter, message = f
             print(f"::error file={file},line={line}::"
-                  f"[{linter}] {message} (NEW)")
+                  f"[{linter}] {message} (NEW in {args.current})")
         return 1
 
     return 0
@@ -111,15 +115,27 @@ def extract_findings(issues: Iterable[dict]) -> Iterable[Finding]:
 
 
 def print_summary(added: list[Finding], fixed: list[Finding],
-                  unchanged: list[Finding], baseline_present: bool) -> None:
+                  unchanged: list[Finding], baseline_present: bool,
+                  current_path: str = "", baseline_path: str = "") -> None:
     """Print a human-readable diff so log readers don't need to scroll
     through raw JSON. Mirrors the test-summary.sh layout for visual
-    consistency across CI jobs."""
+    consistency across CI jobs.
+
+    Source report paths are echoed up front so failures in CI logs
+    always cite the JSON file that produced them — useful when multiple
+    lint jobs (root vs. gitmap submodule) run in the same workflow.
+    """
     print()
     print("=" * 72)
     print("  GOLANGCI-LINT DIFF vs LAST SUCCESSFUL MAIN")
     print("=" * 72)
     print()
+    if current_path:
+        print(f"  current  : {current_path}")
+    if baseline_path:
+        print(f"  baseline : {baseline_path}")
+    if current_path or baseline_path:
+        print()
 
     if not baseline_present:
         print("  ⚠ No baseline cached yet — this run will seed the cache.")
