@@ -56,7 +56,8 @@ func dispatchUtility(command string) bool {
 	}
 	if command == constants.CmdHelp {
 		if len(os.Args) >= 3 && !isFlagToken(os.Args[2]) {
-			helptext.Print(os.Args[2])
+			_, mode := ParsePrettyFlag(os.Args[3:])
+			helptext.PrintWithMode(os.Args[2], mode)
 
 			return true
 		}
