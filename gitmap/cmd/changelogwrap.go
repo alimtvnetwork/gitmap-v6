@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
 )
 
 // changelogWrapWidth resolves the terminal column width used for wrapping
@@ -31,13 +32,21 @@ func changelogWrapWidth() int {
 }
 
 // renderInlineMarkdown converts a small subset of Markdown to ANSI-styled
-// text: **bold** and `code`. Other markdown is passed through unchanged.
-// Depth is reserved for future depth-aware tweaks (e.g. dimming nested
-// code spans); currently unused.
+// text for changelog bullet bodies:
+//
+//   - **bold**        → bright ANSI
+//   - `inline code`   → dim/cyan code styling
+//   - "double quote"  → cyan span (delegated to render.HighlightQuotesANSI
+//     so the rule stays in lockstep with the help-text pretty renderer)
+//
+// Other markdown is passed through unchanged. Single quotes / apostrophes
+// are intentionally left alone. Depth is reserved for future depth-aware
+// tweaks (e.g. dimming nested code spans); currently unused.
 func renderInlineMarkdown(text string, _ int) string {
 	out := convertInlineSpans(text, "**", constants.ChangelogPrettyBoldOpen, constants.ChangelogPrettyBoldClose)
+	out = convertInlineSpans(out, "`", constants.ChangelogPrettyCodeOpen, constants.ChangelogPrettyCodeClose)
 
-	return convertInlineSpans(out, "`", constants.ChangelogPrettyCodeOpen, constants.ChangelogPrettyCodeClose)
+	return render.HighlightQuotesANSI(out)
 }
 
 // convertInlineSpans replaces matched delim pairs with ANSI open/close.
