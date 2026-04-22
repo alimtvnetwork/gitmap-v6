@@ -37,10 +37,17 @@ func parse(lines []string) []block {
 			depth := headingDepth(line)
 			out = append(out, block{kind: bkHeading, text: line, depth: depth})
 			i++
-			if i < len(lines) && isItalic(lines[i]) {
-				out = append(out, block{kind: bkSubtitle, text: stripItalic(lines[i])})
-				i++
+			// Subtitle peek: tolerate a single blank line between the
+			// heading and an italic subtitle (typical markdown style).
+			j := i
+			if j < len(lines) && strings.TrimSpace(lines[j]) == "" {
+				j++
 			}
+			if j < len(lines) && isItalic(lines[j]) {
+				out = append(out, block{kind: bkSubtitle, text: stripItalic(lines[j])})
+				i = j + 1
+			}
+
 		case strings.TrimSpace(line) == "":
 			out = append(out, block{kind: bkBlank})
 			i++
