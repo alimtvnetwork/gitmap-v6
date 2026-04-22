@@ -45,11 +45,27 @@ to so you can tell at a glance which templates you've forked.
 
     KIND        LANG            SOURCE  PATH
     ignore      common          embed   assets/ignore/common.gitignore
+    ignore      csharp          embed   assets/ignore/csharp.gitignore
     ignore      go              embed   assets/ignore/go.gitignore
+    ignore      java            embed   assets/ignore/java.gitignore
+    ignore      kotlin          embed   assets/ignore/kotlin.gitignore
     ignore      node            user    /home/me/.gitmap/templates/ignore/node.gitignore
+    ignore      php             embed   assets/ignore/php.gitignore
     ignore      python          embed   assets/ignore/python.gitignore
+    ignore      ruby            embed   assets/ignore/ruby.gitignore
+    ignore      rust            embed   assets/ignore/rust.gitignore
+    ignore      swift           embed   assets/ignore/swift.gitignore
     attributes  common          embed   assets/attributes/common.gitattributes
+    attributes  csharp          embed   assets/attributes/csharp.gitattributes
     attributes  go              embed   assets/attributes/go.gitattributes
+    attributes  java            embed   assets/attributes/java.gitattributes
+    attributes  kotlin          embed   assets/attributes/kotlin.gitattributes
+    attributes  node            embed   assets/attributes/node.gitattributes
+    attributes  php             embed   assets/attributes/php.gitattributes
+    attributes  python          embed   assets/attributes/python.gitattributes
+    attributes  ruby            embed   assets/attributes/ruby.gitattributes
+    attributes  rust            embed   assets/attributes/rust.gitattributes
+    attributes  swift           embed   assets/attributes/swift.gitattributes
     lfs         common          embed   assets/lfs/common.gitattributes
 
 The `node` row above shows what a forked template looks like: SOURCE flips
