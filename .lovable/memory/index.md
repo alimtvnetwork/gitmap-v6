@@ -51,3 +51,4 @@ Current version: v3.50.0.
 - [Constants Structure](mem://tech/constants-structure) — Avoiding redeclaration errors with unique suffixes and domain-specific files
 - [Code Red Error Mgmt](mem://tech/code-red-error-management) — Zero-swallow error policy and os.Stderr standardized format
 - [Internal Memory Standard](mem://project/internal-memory-standard) — Folder structure and file naming conventions for project planning
+- [Templates: ignore/attributes/pretty](mem://features/templates-ignore-attributes) — Embedded `.gitignore`/`.gitattributes` templates per language, idempotent marker-block merge, `~/.gitmap/templates/` overlay, `add ignore`/`add attributes`/`add lfs-install` subcommands, pretty markdown renderer with fixture corpus (Phase 0 scaffolded; spec 109, plan 04)
