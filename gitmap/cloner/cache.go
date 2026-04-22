@@ -146,7 +146,11 @@ func (c *CloneCache) IsUpToDate(rec model.ScanRecord, dest string) bool {
 		return true
 	}
 
-	return remoteSHA == entry.RemoteSHA && remoteSHA == entry.HeadSHA
+	if remoteSHA != entry.RemoteSHA {
+		return false
+	}
+
+	return entry.RemoteSHA == entry.HeadSHA
 }
 
 // Record stores or updates the cache entry for rec at dest. Best-effort:

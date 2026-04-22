@@ -56,11 +56,11 @@ func CurrentBranch(repoPath string) (string, error) {
 
 // DetectBranch returns the branch name and a label describing how it was
 // detected. Resolution order:
-//  1. HEAD via `git rev-parse --abbrev-ref HEAD` — labelled "HEAD" when on a
+//  1. HEAD via `git rev-parse --abbrev-ref HEAD` — labeled "HEAD" when on a
 //     named branch, or "detached" when HEAD points directly at a commit.
 //  2. Remote-tracking branch via `git symbolic-ref refs/remotes/origin/HEAD`
-//     — labelled "remote-tracking".
-//  3. Built-in default branch — labelled "default".
+//     — labeled "remote-tracking".
+//  3. Built-in default branch — labeled "default".
 // If no resolution succeeds the returned source is "unknown".
 func DetectBranch(repoPath string) (branch, source string) {
 	out, err := runGit(repoPath,
