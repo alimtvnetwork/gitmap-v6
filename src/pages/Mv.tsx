@@ -52,7 +52,7 @@ const MvPage = () => (
         <div className="flex items-center gap-3 mb-2">
           <Move className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">mv</h1>
-          <span className="font-mono text-xs px-2 py-1 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary dark:border-primary/40">alias: move</span>
+          <span className="font-mono text-xs px-2 py-1 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary dark:border-primary/40 transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">alias: move</span>
         </div>
         <p className="text-lg text-muted-foreground">
           Move every file from LEFT into RIGHT, then delete LEFT entirely. Either endpoint can be a local folder OR a remote git URL with an

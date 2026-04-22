@@ -39,7 +39,7 @@ const MergeBothPage = () => (
         <div className="flex items-center gap-3 mb-2">
           <GitMerge className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">merge-both</h1>
-          <span className="font-mono text-xs px-2 py-1 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary dark:border-primary/40">alias: mb</span>
+          <span className="font-mono text-xs px-2 py-1 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary dark:border-primary/40 transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">alias: mb</span>
         </div>
         <p className="text-lg text-muted-foreground">
           Two-way file-level merge between LEFT and RIGHT. Files present on only one side are copied to the other; files present on both with

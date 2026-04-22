@@ -83,7 +83,7 @@ const PostMortemsPage = () => {
                   </span>
                   <span className="text-sm font-medium">{pm.title}</span>
                   {pm.version && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">
                       <Tag className="h-2.5 w-2.5" />
                       {pm.version}
                     </span>
