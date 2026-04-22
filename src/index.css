@@ -138,6 +138,72 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   Shared interaction utilities
+   Use these helpers on buttons, chips, badges, and any tappable surface so
+   hover shadow, border treatment, and the canonical 300ms transition stay
+   consistent project-wide. Compose with semantic tokens — never hardcode
+   colors here.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* Base motion + focus ring for any interactive element.
+     Pairs cleanly with shadcn buttons, custom chips, and link cards. */
+  .interactive-base {
+    @apply transition-all duration-300 ease-out
+           focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-ring focus-visible:ring-offset-2
+           focus-visible:ring-offset-background;
+  }
+
+  /* Hover lift: subtle elevation for buttons and CTA cards.
+     Keeps movement horizontal-safe (no translateY on text-only chips). */
+  .btn-hover-lift {
+    @apply interactive-base
+           hover:shadow-lg hover:shadow-primary/10
+           hover:border-primary/40
+           active:shadow-sm;
+  }
+
+  /* Chip base: shared sizing, border, radius, and motion for all tinted
+     status pills. Pair with one of the .chip-* color modifiers below. */
+  .chip-base {
+    @apply interactive-base
+           inline-flex items-center gap-1.5
+           px-2.5 py-0.5 rounded-md
+           text-xs font-medium
+           border
+           hover:shadow-sm;
+  }
+
+  .chip-primary {
+    @apply chip-base
+           bg-primary/10 text-foreground border-primary/20
+           hover:bg-primary/15 hover:border-primary/40
+           dark:bg-primary/15 dark:text-primary dark:border-primary/40
+           dark:hover:bg-primary/25;
+  }
+
+  .chip-secondary {
+    @apply chip-base
+           bg-secondary text-secondary-foreground border-border
+           hover:bg-secondary/80 hover:border-border;
+  }
+
+  .chip-muted {
+    @apply chip-base
+           bg-muted text-muted-foreground border-border
+           hover:bg-muted/80 hover:text-foreground;
+  }
+
+  .chip-destructive {
+    @apply chip-base
+           bg-destructive/10 text-destructive border-destructive/20
+           hover:bg-destructive/15 hover:border-destructive/40
+           dark:bg-destructive/20 dark:text-destructive-foreground dark:border-destructive/50
+           dark:hover:bg-destructive/30;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Global chip readability patch (dark mode)
    Any element with a tinted primary background (bg-primary/10, /20, /25, etc.)
    AND text-primary becomes hard to read in dark mode because text-primary is
