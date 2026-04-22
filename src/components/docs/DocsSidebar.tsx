@@ -96,6 +96,7 @@ const navItems = [
   { title: "Setup", url: "/setup", icon: Settings },
   { title: "Install", url: "/install", icon: Hammer },
   { title: "Help Dashboard", url: "/help-dashboard", icon: MonitorPlay },
+  { title: "Help Index", url: "/help-index", icon: BookOpen },
   { title: "Diff", url: "/diff", icon: GitCompare },
   { title: "Move (mv)", url: "/mv", icon: Move },
   { title: "Merge Both", url: "/merge-both", icon: GitMerge },

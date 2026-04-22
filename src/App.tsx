@@ -46,6 +46,7 @@ import SetupPage from "./pages/Setup";
 import DesignSystemPage from "./pages/DesignSystem";
 import InstallPage from "./pages/Install";
 import HelpDashboardPage from "./pages/HelpDashboard";
+import HelpIndexPage from "./pages/HelpIndex";
 import PostMortemsPage from "./pages/PostMortems";
 import VersionHistoryPage from "./pages/VersionHistory";
 import ScanAllSpecPage from "./pages/ScanAllSpec";
@@ -119,6 +120,7 @@ const App = () => (
           <Route path="/design-system" element={<DesignSystemPage />} />
           <Route path="/install" element={<InstallPage />} />
           <Route path="/help-dashboard" element={<HelpDashboardPage />} />
+          <Route path="/help-index" element={<HelpIndexPage />} />
           <Route path="/post-mortems" element={<PostMortemsPage />} />
           <Route path="/scan-all" element={<ScanAllSpecPage />} />
           <Route path="/desktop-sync" element={<DesktopSyncSpecPage />} />
