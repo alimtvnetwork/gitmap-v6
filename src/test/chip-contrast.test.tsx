@@ -157,7 +157,9 @@ const CHIP_CASES: ChipCase[] = [
   },
 ];
 
-const MIN_CONTRAST = 3.0; // WCAG AA Large baseline; current styling >> this.
+// Per-chip thresholds live on each ChipCase. Solid bg-primary buttons use
+// the strict WCAG AA Large baseline (3:1) since they're full-opacity.
+const SOLID_BTN_MIN_CONTRAST = 3.0;
 
 function effectiveBg(mode: Mode, alpha: number): [number, number, number] {
   const tokens = mode === "dark" ? DARK_TOKENS : LIGHT_TOKENS;
@@ -198,7 +200,7 @@ describe("chip foreground-color readability (regression)", () => {
 
   for (const chip of CHIP_CASES) {
     for (const mode of ["light", "dark"] as const) {
-      it(`${chip.name} — ${mode} mode meets WCAG ${MIN_CONTRAST}:1 contrast`, () => {
+      it(`${chip.name} — ${mode} mode meets ${chip.minContrast}:1 contrast`, () => {
         const fg = fgRgb(mode, chip.fg(mode));
         const bg = effectiveBg(mode, chip.bgTintAlpha);
         const ratio = contrastRatio(fg, bg);
@@ -206,7 +208,7 @@ describe("chip foreground-color readability (regression)", () => {
           ratio,
           `chip "${chip.name}" in ${mode} mode: fg=${chip.fg(mode)} ` +
             `vs ${chip.bgTintAlpha * 100}% primary tint → ratio ${ratio.toFixed(2)}:1`,
-        ).toBeGreaterThanOrEqual(MIN_CONTRAST);
+        ).toBeGreaterThanOrEqual(chip.minContrast);
       });
     }
   }
@@ -237,6 +239,6 @@ describe("chip foreground-color readability (regression)", () => {
     // And the contrast for a solid primary button is comfortably high:
     const fg = hslTokenToRgb(DARK_TOKENS["primary-foreground"]);
     const bg = hslTokenToRgb(DARK_TOKENS.primary);
-    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(SOLID_BTN_MIN_CONTRAST);
   });
 });
