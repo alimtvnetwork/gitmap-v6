@@ -13,7 +13,7 @@ what is happening, how far along the operation is, and how it concluded.
 > - [06-output-formatting.md](06-output-formatting.md) — multi-format output strategy
 >   and formatter package structure.
 > - Rendering pipeline diagram:
->   [`images/terminal-output-pipeline.mmd`](images/terminal-output-pipeline.mmd)
+>   [`images/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
 
 ---
 

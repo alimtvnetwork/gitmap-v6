@@ -217,7 +217,7 @@ A reusable blueprint for cross-compiled CLI binary releases via CI/CD.
 | 05 | [release-assets.md](07-generic-release/05-release-assets.md) | Asset naming & packaging |
 | 06 | [release-metadata.md](07-generic-release/06-release-metadata.md) | Version resolution & tagging |
 
-Diagram: [`07-generic-release/images/release-pipeline-flow.jpg`](07-generic-release/images/release-pipeline-flow.jpg)
+Diagram: [`07-generic-release/diagrams/release-pipeline-flow.jpg`](07-generic-release/diagrams/release-pipeline-flow.jpg)
 
 ---
 
@@ -235,7 +235,7 @@ A reusable blueprint for CLI self-update: deploy-to-running-location, rename-fir
 | 06 | [cleanup.md](08-generic-update/06-cleanup.md) | Post-update artifact removal |
 | 07 | [console-safe-handoff.md](08-generic-update/07-console-safe-handoff.md) | Prevent async handoff from breaking the console |
 
-Diagram: [`08-generic-update/images/self-update-flow.jpg`](08-generic-update/images/self-update-flow.jpg)
+Diagram: [`08-generic-update/diagrams/self-update-flow.jpg`](08-generic-update/diagrams/self-update-flow.jpg)
 
 ---
 
@@ -243,7 +243,7 @@ Diagram: [`08-generic-update/images/self-update-flow.jpg`](08-generic-update/ima
 
 CI/CD pipeline architecture: CI, release, vulnerability scanning, installation, changelog, help, env, output, branding.
 
-Diagram: [`09-pipeline/images/ci-pipeline-flow.jpg`](09-pipeline/images/ci-pipeline-flow.jpg)
+Diagram: [`09-pipeline/diagrams/ci-pipeline-flow.jpg`](09-pipeline/diagrams/ci-pipeline-flow.jpg)
 
 ---
 
