@@ -130,6 +130,13 @@ if ($alreadyDelegated) {
     Write-Host "  [discovery] INSTALLER_DELEGATED=1; skipping discovery (loop guard)"
 } elseif ($NoDiscovery) {
     Write-Host "  [discovery] -NoDiscovery set; skipping probe"
+} elseif (-not [string]::IsNullOrWhiteSpace($Version)) {
+    # Strict-tag contract (spec/07-generic-release/09-generic-install-script-behavior.md §3):
+    # An explicit -Version pins the install to that exact release.
+    # MUST NOT probe -v<N+i> sibling repos. MUST NOT call releases/latest.
+    # MUST NOT fall back to main on failure. The canonical installer
+    # downstream enforces the same contract on the asset download path.
+    Write-Host "  [strict] -Version $Version pinned; skipping repo probe (no fallback)"
 } else {
     $effective = Resolve-EffectiveRepo $Repo $ProbeCeiling
     if ($effective -ne $Repo) {
