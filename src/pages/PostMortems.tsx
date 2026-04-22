@@ -36,7 +36,7 @@ const PostMortemsPage = () => {
           onClick={() => setActiveFilter("all")}
           className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
             activeFilter === "all"
-              ? "border-primary bg-primary/10 text-foreground dark:bg-primary/25 dark:text-background"
+              ? "border-primary bg-primary/10 text-foreground dark:bg-primary/15 dark:text-primary"
               : "border-border text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -52,7 +52,7 @@ const PostMortemsPage = () => {
               onClick={() => setActiveFilter(cat)}
               className={`text-xs font-mono px-2.5 py-1 rounded border transition-colors ${
                 activeFilter === cat
-                  ? "border-primary bg-primary/10 text-foreground dark:bg-primary/25 dark:text-background"
+                  ? "border-primary bg-primary/10 text-foreground dark:bg-primary/15 dark:text-primary"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -83,7 +83,7 @@ const PostMortemsPage = () => {
                   </span>
                   <span className="text-sm font-medium">{pm.title}</span>
                   {pm.version && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary">
                       <Tag className="h-2.5 w-2.5" />
                       {pm.version}
                     </span>

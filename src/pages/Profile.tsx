@@ -106,11 +106,11 @@ const ProfilePage = () => (
         <h2 className="text-xl font-heading font-bold text-foreground mb-4 docs-h2">Switch Behavior</h2>
         <div className="border border-border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">1. Update profiles.json</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">1. Update profiles.json</span>
             <span className="text-muted-foreground">→</span>
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">2. Resolve DB path</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">2. Resolve DB path</span>
             <span className="text-muted-foreground">→</span>
-            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/25 dark:text-background rounded text-xs font-mono">3. Open new DB</span>
+            <span className="px-2 py-1 bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary rounded text-xs font-mono">3. Open new DB</span>
           </div>
           <p className="text-sm text-muted-foreground mb-3">
             Switching sets <code className="text-primary">active</code> in <code className="text-primary">profiles.json</code>,

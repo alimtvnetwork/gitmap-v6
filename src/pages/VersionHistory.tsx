@@ -43,7 +43,7 @@ const VersionHistoryPage = () => {
         <div className="flex items-center gap-3 mb-2">
           <History className="w-8 h-8 text-primary" />
           <h1 className="text-3xl font-heading font-bold docs-h1">version-history</h1>
-          <span className="text-xs font-mono bg-primary/10 text-foreground border border-primary/20 px-2 py-0.5 rounded dark:bg-primary/25 dark:text-background">vh</span>
+          <span className="text-xs font-mono bg-primary/10 text-foreground border border-primary/20 px-2 py-0.5 rounded dark:bg-primary/15 dark:text-primary">vh</span>
         </div>
         <p className="text-muted-foreground mb-8 text-lg">
           Display all version transitions recorded for the current repository, tracked automatically
