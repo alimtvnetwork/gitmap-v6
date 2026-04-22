@@ -129,7 +129,7 @@ const (
 	HelpListVersions     = "  list-versions (lv)  Show all release tags, highest first (--limit N, --json, --source)"
 	HelpListReleases     = "  list-releases (lr)  Show releases from .gitmap/release/ files or database (--limit N, --json, --source)"
 	HelpRevert           = "  revert <version>    Revert to a specific release version"
-	HelpLFSCommon        = "  lfs-common (lfsc)   Track common binary file types with Git LFS in current repo"
+	MsgHelpLFSCommon     = "  lfs-common (lfsc)   Track common binary file types with Git LFS in current repo"
 )
 
 // Help section headers and flag-line strings (HelpScanFlags, HelpCloneFlags,
