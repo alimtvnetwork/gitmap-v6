@@ -11,24 +11,29 @@ import (
 //go:embed *.md
 var files embed.FS
 
-// envNoPretty disables ANSI rendering when set to a non-empty value.
-// Mirrors the convention of NO_COLOR but scoped to gitmap's pretty
-// markdown pipeline so users can opt out without losing other coloring.
-const envNoPretty = "GITMAP_NO_PRETTY"
-
-// Print reads and prints the help file for the given command. When
-// stdout is a TTY and pretty rendering is not disabled via env, the
-// markdown is routed through render.RenderANSI for collapsed code
-// blocks, cyan quotes, muted subtitles, and indented bodies. Otherwise
-// the raw markdown is printed unchanged so pipes / redirects stay clean.
+// Print reads and prints the help file for the given command using the
+// default PrettyAuto mode (TTY auto-detect + GITMAP_NO_PRETTY opt-out).
+// Kept as a thin wrapper for callers that don't parse a --pretty flag.
 func Print(command string) {
+	PrintWithMode(command, render.PrettyAuto)
+}
+
+// PrintWithMode reads and prints the help file for `command`, routing the
+// markdown through render.RenderANSI when render.Decide says so for the
+// caller-supplied PrettyMode. This is the preferred entry point for
+// command surfaces that parse --pretty / --no-pretty so user intent
+// flows all the way to the renderer.
+//
+// The decision is delegated to render.Decide so help, templates show,
+// and changelog all answer "should I emit ANSI?" identically.
+func PrintWithMode(command string, mode render.PrettyMode) {
 	data, err := files.ReadFile(command + ".md")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "No help available for '%s'\n", command)
 		os.Exit(1)
 	}
 
-	if shouldPretty() {
+	if render.Decide(mode, render.StdoutIsTerminal(), true) {
 		fmt.Print(render.RenderANSI(string(data)))
 
 		return
@@ -39,7 +44,9 @@ func Print(command string) {
 
 // PrintRaw bypasses the pretty renderer and prints the embedded
 // markdown verbatim. Useful for callers that pipe help into a pager
-// or other tooling that handles its own formatting.
+// or other tooling that handles its own formatting. Equivalent to
+// PrintWithMode(command, render.PrettyOff) but spelled out for clarity
+// at call sites that always want raw output regardless of TTY state.
 func PrintRaw(command string) {
 	data, err := files.ReadFile(command + ".md")
 	if err != nil {
@@ -47,27 +54,4 @@ func PrintRaw(command string) {
 		os.Exit(1)
 	}
 	fmt.Print(string(data))
-}
-
-// shouldPretty reports whether the pretty renderer should be applied
-// to help-text output. We require both a TTY on stdout and the absence
-// of an opt-out environment variable.
-func shouldPretty() bool {
-	if os.Getenv(envNoPretty) != "" {
-		return false
-	}
-
-	return stdoutIsTerminal()
-}
-
-// stdoutIsTerminal reports whether stdout is connected to a real TTY.
-// Dependency-free check using ModeCharDevice — matches the approach
-// used by gitmap/cmd/scanprogress.go for stderr.
-func stdoutIsTerminal() bool {
-	info, err := os.Stdout.Stat()
-	if err != nil {
-		return false
-	}
-
-	return (info.Mode() & os.ModeCharDevice) != 0
 }
