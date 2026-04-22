@@ -22,6 +22,19 @@ cl
 
 - Must be inside a Git repository with release metadata
 
+## Rendering
+
+Bullet text is routed through the same pretty markdown renderer used by
+`gitmap help`, so formatting stays consistent across the CLI:
+
+- `**bold**` and `` `inline code` `` render with ANSI styling.
+- `"double quotes"` highlight in cyan; single quotes / apostrophes are
+  left untouched.
+- Headers, version, and bullet markers keep their depth-based coloring
+  (green at depth 0, cyan at depth 1, dim at depth 2+).
+
+Set `GITMAP_NO_PRETTY=1` or pipe to a non-TTY to get raw markdown.
+
 ## Examples
 
 ### Example 1: Show latest changelog
