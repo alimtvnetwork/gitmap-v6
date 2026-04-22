@@ -1,28 +1,23 @@
 #!/usr/bin/env bash
 # check-constants-naming.sh
 #
-# Guards the `gitmap/constants/` package against new constants that lack a
-# domain-prefix convention. Per spec/12-consolidated-guidelines/02-go-code-style.md
-# the four canonical prefixes are:
+# Guards the `gitmap/constants/` package against newly added constants whose
+# names do not follow ordinary exported Go identifier style. Per
+# spec/12-consolidated-guidelines/02-go-code-style.md, organization should be
+# driven by package/domain ownership first; shared cross-package literals may
+# live in `constants`, while feature-local literals should stay in the owning
+# package instead of being forced behind artificial prefixes.
 #
-#   CmdXxx       -> command names and aliases (e.g. CmdScan, CmdReleaseAlias)
-#   MsgXxx       -> user-facing strings, error messages, format templates
-#                   (also covers ErrXxx — treated as a Msg sub-family)
-#   FlagXxx      -> flag names and descriptions (e.g. FlagDryRun, FlagDescBump)
-#   DefaultXxx   -> default values used when no override is provided
-#
-# Reality check: the package today contains ~2,700 constants spread across
-# ~50 historical prefixes (Doctor*, Git*, Hint*, Tool*, Term*, Choco*, ...).
-# Renaming all of them in one PR is not viable, so this guard uses a
-# grandfather baseline:
+# Reality check: the package today contains ~2,700 constants across many legacy
+# naming families (Doctor*, Git*, Hint*, Tool*, Term*, Choco*, ...). Renaming
+# all of them in one PR is not viable, so this guard uses a grandfather baseline:
 #
 #   .github/scripts/constants-baseline.txt
 #
-# Every constant present at the time the guard was introduced is listed in
-# the baseline and exempt. Only constants added AFTER the baseline must use
-# one of the four canonical prefixes. The intent is to bend the curve so the
-# package converges on Cmd/Msg/Flag/Default over time without breaking the
-# build today.
+# Every constant present at the time the guard was introduced is listed in the
+# baseline and exempt. Only constants added AFTER the baseline must match a
+# normal exported PascalCase identifier. The intent is to prevent accidental
+# naming drift without forcing fake category prefixes.
 #
 # To regenerate the baseline after an approved rename pass:
 #   bash .github/scripts/check-constants-naming.sh --regenerate-baseline
@@ -33,7 +28,7 @@ set -euo pipefail
 
 CONST_DIR="${CONST_DIR:-gitmap/constants}"
 BASELINE_FILE="${BASELINE_FILE:-.github/scripts/constants-baseline.txt}"
-ALLOWED_PREFIX_REGEX='^(Cmd|Msg|Err|Flag|Default)'
+ALLOWED_NAME_REGEX='^[A-Z][A-Za-z0-9]*$'
 
 if [ ! -d "$CONST_DIR" ]; then
   echo "::error::constants directory not found: $CONST_DIR"
@@ -146,7 +141,7 @@ while IFS= read -r name; do
 done <<< "$new_consts"
 
 if [ -n "$violations" ]; then
-  echo "::error::New constants must use one of the canonical prefixes: Cmd*, Msg*, Err*, Flag*, Default*"
+  echo "::error::New constants in gitmap/constants must use normal exported PascalCase names"
   echo "::error::See spec/12-consolidated-guidelines/02-go-code-style.md"
   echo ""
   while IFS='|' read -r name location; do
@@ -157,15 +152,15 @@ if [ -n "$violations" ]; then
     fi
   done <<< "$violations"
   echo ""
-  echo "::error::Rename to use a canonical prefix, e.g.:"
-  echo "::error::  ScanTimeout      -> DefaultScanTimeout"
-  echo "::error::  HelpReleaseFlags -> MsgHelpReleaseFlags"
-  echo "::error::  CloneVerbose     -> FlagCloneVerbose"
-  echo "::error::  GitMainBranch    -> DefaultGitMainBranch"
+  echo "::error::Rename to a clear exported PascalCase identifier, or move feature-local literals into their owning package."
+  echo "::error::Examples:"
+  echo "::error::  default_branch       -> DefaultBranch"
+  echo "::error::  template-list-header -> move to cmd/templatescli.go as file-local constant"
+  echo "::error::  ignore_ext           -> TemplateExtIgnore"
   echo ""
   echo "::error::If the constant pre-existed and the diff is a rename, also run:"
   echo "::error::  bash .github/scripts/check-constants-naming.sh --regenerate-baseline"
   exit 1
 fi
 
-echo "All new constants use a canonical Cmd/Msg/Err/Flag/Default prefix."
+echo "All new constants use acceptable exported PascalCase names."
