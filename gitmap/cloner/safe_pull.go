@@ -80,9 +80,12 @@ func safePullRepo(rec model.ScanRecord, repoDir string) model.CloneResult {
 			log.Log("diagnosis for %s: %s", rec.RepoName, diagnosis)
 		}
 		lastError = fmt.Sprintf(
-			"safe-pull failed (attempt %d/%d): %v\n%s\nDiagnosis: %s",
+			"safe-pull failed for %s (attempt %d/%d): repo=%q branch=%q: %v\n%s\nDiagnosis: %s",
+			recordTag(rec),
 			attempt,
 			constants.SafePullRetryAttempts,
+			repoDir,
+			rec.Branch,
 			err,
 			trimOutput(output),
 			diagnosis,
