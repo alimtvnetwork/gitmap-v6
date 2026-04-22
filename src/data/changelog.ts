@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.18.0",
+    date: "2026-04-22",
+    subtitle: "Pretty renderer wired into `gitmap help` — TTY-aware, opt-out via `GITMAP_NO_PRETTY`",
+    items: [
+      "`gitmap help <cmd>` and `<cmd> --help` / `-h` now route the embedded markdown through `render.RenderANSI` when stdout is a TTY: redundant fenced blocks collapse to yellow `→` lines, `\"double-quoted\"` strings render in cyan, italic subtitles directly under a heading become muted, and bodies under headings get a 2-space indent. Existing call sites in `gitmap/cmd/helpcheck.go` and `gitmap/cmd/rootutility.go` get the new behavior automatically — no flag needed, no per-command edits.",
+      "Pipes and redirects keep the raw markdown bytes unchanged: when stdout is not a character device (e.g. `gitmap help scan | less`, `gitmap help scan > scan.md`, CI capture), the file is printed verbatim so editors / pagers / file diffs aren't polluted with ANSI escape sequences. TTY detection uses the same dependency-free `os.Stat() & ModeCharDevice` check that `gitmap/cmd/scanprogress.go` uses for stderr — no `golang.org/x/term` import added.",
+      "Added an opt-out env var `GITMAP_NO_PRETTY=1`: when set to any non-empty value, the renderer is bypassed and raw markdown is printed even on a TTY. Lets users who prefer plain output (or who hit terminal-emulator quirks) disable the pipeline without losing other gitmap coloring (status glyphs, scan progress, changelog renderer all stay on).",
+      "Added `helptext.PrintRaw(command)` for callers that want to bypass the pretty pipeline unconditionally (future paginator integration, doc generators, snapshot tests). The default `helptext.Print(command)` keeps the same signature so every existing caller in `gitmap/cmd/` upgrades without modification.",
+      "Decision recorded in `.lovable/memory/plans/04-templates-ignore-attributes-plan.md`: `gitmap changelog` stays on its existing structured renderer (`renderChangelogEntry` in `gitmap/cmd/changelogprint.go`). That renderer operates on `release.ChangelogEntry` structs with depth-aware bullets, ordered-list markers, hanging indent, wrap width, and inline `**bold**` / `` `code` `` ANSI — strictly richer than what generic markdown rendering can produce. Routing it through `render.RenderANSI` would be a regression. The pretty renderer stays scoped to free-form markdown sources (helptext today; future doc commands).",
+    ],
+  },
+  {
     version: "v3.17.0",
     date: "2026-04-22",
     subtitle: "Pretty markdown renderer — collapses redundant fences, cyan-quotes, muted subtitles",
