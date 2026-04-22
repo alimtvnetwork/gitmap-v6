@@ -203,6 +203,7 @@ __gitmap_quick_install_main() {
             [ -n "$INSTALL_DIR" ]   && pass_args+=(--dir "$INSTALL_DIR")
             [ -n "$VERSION" ]       && pass_args+=(--version "$VERSION")
             pass_args+=(--probe-ceiling "$PROBE_CEILING")
+            pass_args+=(--discovery-window "$DISCOVERY_WINDOW")
 
             export INSTALLER_DELEGATED=1
 
@@ -229,7 +230,7 @@ __gitmap_quick_install_main() {
             # downstream enforces the same contract on the asset download path.
             printf '  [strict] --version %s pinned; skipping repo probe (no fallback)\n' "$VERSION" >&2
         else
-            EFFECTIVE_REPO="$(resolve_effective_repo "$REPO" "$PROBE_CEILING")"
+            EFFECTIVE_REPO="$(resolve_effective_repo "$REPO" "$DISCOVERY_WINDOW")"
             if [ "$EFFECTIVE_REPO" != "$REPO" ]; then
                 if invoke_delegated_installer "$EFFECTIVE_REPO"; then
                     return 0
