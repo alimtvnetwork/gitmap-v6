@@ -28,6 +28,7 @@ Current version: v3.50.0.
 - [Navigation Helper](mem://features/navigation-helper) — Shell wrapper using GITMAP_SHELL_HANDOFF for cd/clone-next
 - [Command Help System](mem://features/command-help-system) — 120-line limit per help file, 3-8 line realistic simulations
 - [Clone-Next Flatten](mem://features/clone-next-flatten) — Default flatten: clone into base-name folder, version tracking in DB with RepoVersionHistory table (DONE v2.75.0)
+- [CN Find-Next Bridge](mem://features/cn-find-next-bridge) — PLANNED v3.55.0: `gitmap cn` no-args detects scope, auto-probes (spec 103, depth=5, parallel), interactive TUI picker, parallel updates. `find-next` stays read-only.
 - [Clone Direct URL](mem://features/clone-direct-url) — gitmap clone accepts direct HTTPS/SSH URLs with optional folder name, auto-flattens versioned URLs
 - [Move & Merge Commands](mem://features/movemerge) — gitmap mv / merge-both / merge-left / merge-right with L/R/S/A/B/Q prompt + --prefer-* bypass + URL-side commit/push (v2.96.0)
 - [Release Alias](mem://features/release-alias) — gitmap as / release-alias (ra) / release-alias-pull (rap) with auto-stash labeled by alias-version-unixts, label-match pop for concurrent safety (v3.0.0)
