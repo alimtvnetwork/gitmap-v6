@@ -49,6 +49,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { getCurrentTheme, setTheme } from "@/lib/theme";
 
 const navItems = [
   { title: "Home", url: "/", icon: Home },
@@ -113,10 +114,10 @@ export function DocsSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [dark, setDark] = useState(() => getCurrentTheme() === "dark");
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
+    setTheme(dark ? "dark" : "light");
   }, [dark]);
 
   return (
