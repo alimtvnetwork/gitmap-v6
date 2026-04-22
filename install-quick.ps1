@@ -18,14 +18,18 @@
       ./install-quick.ps1
       ./install-quick.ps1 -InstallDir "E:\Tools\gitmap"
       ./install-quick.ps1 -NoDiscovery
-      ./install-quick.ps1 -ProbeCeiling 50
+      ./install-quick.ps1 -DiscoveryWindow 20
 #>
 
 param(
-    [string]$InstallDir    = "",
-    [string]$Version       = "",
+    [string]$InstallDir       = "",
+    [string]$Version          = "",
     [switch]$NoDiscovery,
-    [int]$ProbeCeiling     = 30
+    # Legacy fail-fast knob (retained for back-compat). The canonical knob
+    # per spec/07-generic-release/09 §6 is -DiscoveryWindow (default 20,
+    # capped at 20 anonymous / 50 with $env:GITHUB_TOKEN).
+    [int]$ProbeCeiling        = 30,
+    [int]$DiscoveryWindow     = 20
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,7 +65,11 @@ function Test-RepoExists([string]$url) {
     }
 }
 
-function Resolve-EffectiveRepo([string]$repo, [int]$ceiling) {
+# Per spec/07-generic-release/09-generic-install-script-behavior.md §4.1:
+# Probe -v<N+1>..-v<N+window> CONCURRENTLY (max 20, or 50 if
+# $env:GITHUB_TOKEN is set). Pick max(M) where HEAD returned 200.
+# Gaps are tolerated (no fail-fast on first MISS).
+function Resolve-EffectiveRepo([string]$repo, [int]$window) {
     $parts = Split-RepoSuffix $repo
     if ($null -eq $parts) {
         Write-Host "  [discovery] no -v<N> suffix on '$repo'; installing baseline as-is"
@@ -71,21 +79,73 @@ function Resolve-EffectiveRepo([string]$repo, [int]$ceiling) {
     $owner    = $parts.Owner
     $stem     = $parts.Stem
     $baseline = $parts.N
-    $effective = $baseline
+
+    # Concurrency cap: 20 anonymous, 50 if GITHUB_TOKEN supplied.
+    $maxConcurrency = 20
+    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+        $maxConcurrency = 50
+    }
+    if ($window -gt $maxConcurrency) { $window = $maxConcurrency }
 
     Write-Host "  [discovery] baseline: $owner/$stem-v$baseline"
-    Write-Host "  [discovery] probe ceiling: $ceiling"
+    Write-Host "  [discovery] window: $window (parallel HEAD, max-hit-wins, gap-tolerant)"
 
-    for ($m = $baseline + 1; $m -le $ceiling; $m++) {
-        $url = "https://github.com/$owner/$stem-v$m"
-        if (Test-RepoExists $url) {
-            Write-Host "  [discovery] HEAD $url ... HIT"
-            $effective = $m
-        } else {
-            Write-Host "  [discovery] HEAD $url ... MISS (fail-fast)"
-            break
+    # Build the candidate list.
+    $candidates = @()
+    for ($m = $baseline + 1; $m -le ($baseline + $window); $m++) {
+        $candidates += [pscustomobject]@{
+            M   = $m
+            Url = "https://github.com/$owner/$stem-v$m"
         }
     }
+
+    # Use a runspace pool so this works on Windows PowerShell 5.1 (no
+    # ForEach-Object -Parallel) AND on PowerShell 7+. Concurrency is
+    # bounded by $window which we already capped at 20 (or 50 with token).
+    $pool = [runspacefactory]::CreateRunspacePool(1, $window)
+    $pool.Open()
+
+    $jobs = @()
+    foreach ($c in $candidates) {
+        $ps = [powershell]::Create().AddScript({
+            param($url, $m)
+            try {
+                $resp = Invoke-WebRequest -Uri $url -Method Head `
+                    -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+                if ($resp.StatusCode -eq 200) {
+                    [pscustomobject]@{ M = $m; Url = $url; Hit = $true }
+                } else {
+                    [pscustomobject]@{ M = $m; Url = $url; Hit = $false }
+                }
+            } catch {
+                [pscustomobject]@{ M = $m; Url = $url; Hit = $false }
+            }
+        }).AddArgument($c.Url).AddArgument($c.M)
+        $ps.RunspacePool = $pool
+        $jobs += [pscustomobject]@{ PS = $ps; Handle = $ps.BeginInvoke(); M = $c.M; Url = $c.Url }
+    }
+
+    # Collect all results — wait for everything (no early break, gaps allowed).
+    $effective = $baseline
+    foreach ($j in $jobs) {
+        try {
+            $result = $j.PS.EndInvoke($j.Handle)
+            $r = $result | Select-Object -First 1
+            if ($r -and $r.Hit) {
+                Write-Host "  [discovery] HEAD $($r.Url) ... HIT"
+                if ($r.M -gt $effective) { $effective = $r.M }
+            } else {
+                Write-Host "  [discovery] HEAD $($j.Url) ... MISS"
+            }
+        } catch {
+            Write-Host "  [discovery] HEAD $($j.Url) ... MISS (error: $_)"
+        } finally {
+            $j.PS.Dispose()
+        }
+    }
+
+    $pool.Close()
+    $pool.Dispose()
 
     if ($effective -eq $baseline) {
         Write-Host "  [discovery] no higher version found; using baseline -v$baseline"
@@ -96,7 +156,7 @@ function Resolve-EffectiveRepo([string]$repo, [int]$ceiling) {
     return "$owner/$stem-v$effective"
 }
 
-function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, [string]$version, [int]$ceiling) {
+function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, [string]$version, [int]$ceiling, [int]$window) {
     $delegatedUrl = "https://raw.githubusercontent.com/$effectiveRepo/main/install-quick.ps1"
     Write-Host "  [discovery] delegating to $delegatedUrl"
 
@@ -112,7 +172,10 @@ function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, 
 
     $block = [ScriptBlock]::Create($script)
 
-    $passArgs = @{ ProbeCeiling = $ceiling }
+    $passArgs = @{
+        ProbeCeiling    = $ceiling
+        DiscoveryWindow = $window
+    }
     if (-not [string]::IsNullOrWhiteSpace($installDir)) { $passArgs.InstallDir = $installDir }
     if (-not [string]::IsNullOrWhiteSpace($version))    { $passArgs.Version    = $version }
 
@@ -138,9 +201,9 @@ if ($alreadyDelegated) {
     # downstream enforces the same contract on the asset download path.
     Write-Host "  [strict] -Version $Version pinned; skipping repo probe (no fallback)"
 } else {
-    $effective = Resolve-EffectiveRepo $Repo $ProbeCeiling
+    $effective = Resolve-EffectiveRepo $Repo $DiscoveryWindow
     if ($effective -ne $Repo) {
-        $delegated = Invoke-DelegatedInstaller $effective $InstallDir $Version $ProbeCeiling
+        $delegated = Invoke-DelegatedInstaller $effective $InstallDir $Version $ProbeCeiling $DiscoveryWindow
         if ($delegated) { return }
         # If delegation failed we fall through and install baseline.
     }
