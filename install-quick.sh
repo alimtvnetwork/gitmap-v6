@@ -76,14 +76,20 @@ __gitmap_quick_install_main() {
         local INSTALL_DIR=""
         local VERSION=""
         local NO_DISCOVERY=0
+        # PROBE_CEILING retained for backward compat (legacy fail-fast upper
+        # bound). The canonical knob per spec/07-generic-release/09 §6 is
+        # --discovery-window <K> (default 20, cap 20, or 50 if GITHUB_TOKEN
+        # is set).
         local PROBE_CEILING=30
+        local DISCOVERY_WINDOW=20
 
         while [ $# -gt 0 ]; do
             case "$1" in
-                --dir)            INSTALL_DIR="$2"; shift 2 ;;
-                --version)        VERSION="$2";     shift 2 ;;
-                --no-discovery)   NO_DISCOVERY=1;   shift ;;
-                --probe-ceiling)  PROBE_CEILING="$2"; shift 2 ;;
+                --dir)               INSTALL_DIR="$2"; shift 2 ;;
+                --version)           VERSION="$2";     shift 2 ;;
+                --no-discovery)      NO_DISCOVERY=1;   shift ;;
+                --probe-ceiling)     PROBE_CEILING="$2"; shift 2 ;;
+                --discovery-window)  DISCOVERY_WINDOW="$2"; shift 2 ;;
                 -h|--help)
                     sed -n '2,40p' "${BASH_SOURCE[0]:-$0}" 2>/dev/null || \
                         printf '  See https://github.com/%s for usage.\n' "${REPO}"
