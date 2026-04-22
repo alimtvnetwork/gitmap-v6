@@ -209,7 +209,7 @@ const ReleasePage = () => {
               <span className="text-muted-foreground">→ Highest priority (always wins)</span>
             </div>
             <div className="flex items-center gap-3 font-mono text-sm">
-              <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary px-3 py-1 rounded">2. config.json</span>
+              <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary px-3 py-1 rounded transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">2. config.json</span>
               <span className="text-muted-foreground">→ release.targets array</span>
             </div>
             <div className="flex items-center gap-3 font-mono text-sm">

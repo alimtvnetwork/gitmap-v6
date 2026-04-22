@@ -225,7 +225,7 @@ const GenericCLIPage = () => {
                 <span className="text-muted-foreground">→ Constants in code (lowest priority)</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary px-3 py-1 rounded">2. Config file</span>
+                <span className="bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary px-3 py-1 rounded transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">2. Config file</span>
                 <span className="text-muted-foreground">→ ./data/config.json</span>
               </div>
               <div className="flex items-center gap-3">
