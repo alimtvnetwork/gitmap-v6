@@ -1134,6 +1134,35 @@ export const commands: CommandDef[] = [
   // ═══════════════════════════════════════════
   {
     category: "tools",
+    name: "templates list", alias: "tpl tl", description: "List every available template with its KIND, LANG, SOURCE (user/embed), and PATH",
+    usage: "gitmap templates list",
+    flags: [],
+    examples: [
+      { command: "gitmap templates list", description: "Print the full table — embed entries plus any user overlays" },
+      { command: "gitmap tpl tl", description: "Same, using the short aliases" },
+    ],
+    seeAlso: [
+      { name: "templates show", description: "Print a single template's bytes to stdout" },
+      { name: "add lfs-install", description: "Use the lfs/common template to populate .gitattributes" },
+    ],
+  },
+  {
+    category: "tools",
+    name: "templates show", alias: "tpl ts", description: "Print one template (overlay > embed) to stdout, audit-trail header included",
+    usage: "gitmap templates show <kind> <lang>",
+    flags: [],
+    examples: [
+      { command: "gitmap templates show ignore go", description: "Resolve and print the Go .gitignore template" },
+      { command: "gitmap tpl ts attributes common", description: "Same, short aliases — print the common .gitattributes" },
+      { command: "gitmap templates show lfs common > .gitattributes.curated", description: "Diff your overlay against the curated embed" },
+    ],
+    seeAlso: [
+      { name: "templates list", description: "Discover what kind/lang pairs are available" },
+      { name: "add lfs-install", description: "Apply lfs/common into .gitattributes via marker block" },
+    ],
+  },
+  {
+    category: "tools",
     name: "setup", alias: undefined, description: "Configure Git global settings and install shell tab-completion scripts",
     usage: "gitmap setup [--config <path>] [--dry-run]",
     flags: [

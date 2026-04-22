@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.21.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap templates list` / `templates show` documented in helptext + docs site",
+    items: [
+      "Filled the documentation gap around `gitmap templates list` (alias `tpl tl`) and `gitmap templates show <kind> <lang>` (alias `tpl ts`). The CLI commands themselves have been live since v3.16.0 (`gitmap/cmd/templatescli.go::dispatchTemplates`) — this release adds the `gitmap/helptext/templates.md` page they were missing and registers two entries in `src/data/commands.ts` so they appear in the docs-site Commands index under **Tools & Setup**, alongside `setup` and `doctor`.",
+      "Helptext covers the SOURCE column semantics (user overlay vs embedded asset, overlay-wins resolution), a worked example showing what a forked entry looks like in the table, the `templates show ignore <lang> > /tmp/curated && diff` recipe for auditing forks against the curated embed, and the full forking workflow (`mkdir -p ~/.gitmap/templates/<kind> && gitmap templates show … > overlay.file && $EDITOR overlay.file`). Also documents the unfork path: delete the overlay file → next resolve falls back to embed.",
+      "No code changes — `dispatchTemplates`, `templates.List()`, and `templates.Resolve()` already implement the requested behaviour. This release only makes the commands discoverable from the help system and the docs site.",
+    ],
+  },
+  {
     version: "v3.20.0",
     date: "2026-04-22",
     subtitle: "`gitmap add lfs-install` — `git lfs install --local` + idempotent marker-block merge of the `lfs/common` template",
