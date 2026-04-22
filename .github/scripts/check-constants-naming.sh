@@ -133,7 +133,7 @@ fi
 violations=""
 while IFS= read -r name; do
   [ -z "$name" ] && continue
-  if ! [[ "$name" =~ $ALLOWED_PREFIX_REGEX ]]; then
+  if ! [[ "$name" =~ $ALLOWED_NAME_REGEX ]]; then
     # Locate the file:line for a helpful error pointer.
     location=$(grep -nE "^\s*${name}\s*(=|[A-Za-z0-9.]+\s*=)" "$CONST_DIR"/*.go 2>/dev/null | head -1)
     violations+="${name}|${location}"$'\n'
