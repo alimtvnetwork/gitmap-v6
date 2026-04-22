@@ -57,8 +57,19 @@ Memory: `mem://features/templates-ignore-attributes`
 
 ### Phase 6 — Wire pretty into CLI
 
-- Help output (`gitmap help <cmd>`)
-- Changelog display (`gitmap changelog`)
+- [x] Help output (`gitmap help <cmd>`, `--help`/`-h`) — `helptext.Print`
+  routes through `render.RenderANSI` when stdout is a TTY. Opt-out via
+  `GITMAP_NO_PRETTY=1`. Pipes / redirects keep raw markdown so editors
+  and `less` see the source bytes unchanged. New `helptext.PrintRaw`
+  exposed for callers that want to bypass pretty unconditionally.
+- [x] Changelog display (`gitmap changelog`) — left on the existing
+  structured renderer (`renderChangelogEntry`). It is already richer
+  than the generic markdown pipeline (depth-aware bullets, hanging
+  indent, ordered-list markers, wrap width, inline `**bold**` /
+  `` `code` ``) and operates on `release.ChangelogEntry` structs, not
+  raw markdown. Routing changelog through `render.RenderANSI` would be
+  a regression. Decision: pretty renderer stays scoped to free-form
+  markdown sources (helptext today; future doc commands).
 
 ## Non-goals
 
