@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
