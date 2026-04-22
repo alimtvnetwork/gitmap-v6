@@ -308,11 +308,22 @@ if ($activeBinary -and (Test-Path $activeBinary)) {
     Write-Host ""
     Write-Host "  Latest changelog:" -ForegroundColor Cyan
     & $activeBinary changelog --latest
-
-    Write-Host ""
-    Write-Host "  Cleaning update artifacts..." -ForegroundColor DarkGray
-    & $activeBinary update-cleanup
 }
+
+# NOTE: cleanup is intentionally NOT invoked here. The handoff copy
+# (gitmap-update-<pid>.exe) is still alive at this point because the
+# Go process that spawned this PowerShell script has not yet exited,
+# so any "& $activeBinary update-cleanup" call would race against the
+# still-locked handoff exe + freshly-renamed .old backup and emit two
+# scary "Access is denied" lines for files Windows simply cannot
+# release until our process tree winds down.
+#
+# Cleanup is handled exactly once by Phase 3 (scheduleDeployedCleanupHandoff
+# in gitmap/cmd/updatehandoff_phase3.go), which spawns a detached
+# cmd.exe that waits ~2s — long enough for the handoff copy to exit
+# and Windows to release every file lock — and THEN runs
+# "<deployed> update-cleanup". That path always succeeds. See
+# spec/08-generic-update/06-cleanup.md.
 
 Write-Host ""
 exit 0
