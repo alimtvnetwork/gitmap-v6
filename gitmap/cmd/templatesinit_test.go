@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -123,7 +124,7 @@ func TestExecuteTemplatesInitIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read .gitignore after second run: %v", err)
 	}
-	if string(before) != string(after) {
+	if !bytes.Equal(before, after) {
 		t.Fatalf("idempotent run changed bytes:\nbefore:\n%s\nafter:\n%s", before, after)
 	}
 }

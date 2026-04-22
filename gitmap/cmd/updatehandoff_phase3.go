@@ -103,10 +103,8 @@ func spawnDeployedCleanupWindows(deployed string) {
 
 	// `start "" /B` detaches without opening a new window.
 	// `ping 127.0.0.1 -n 3 >nul` sleeps ~2s using only built-in cmd.
-	cmdLine := fmt.Sprintf(
-		`ping 127.0.0.1 -n 3 >nul & start "" /B %q %s`,
-		deployed, constants.CmdUpdateCleanup,
-	)
+	const startPrefix = `ping 127.0.0.1 -n 3 >nul & start "" /B `
+	cmdLine := startPrefix + fmt.Sprintf("%q %s", deployed, constants.CmdUpdateCleanup)
 	cmd := exec.Command("cmd.exe", "/C", cmdLine)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
