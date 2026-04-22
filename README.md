@@ -229,6 +229,28 @@ cd gitmap
 
 The setup script installs the pre-commit hook (golangci-lint), verifies your Go toolchain, and downloads dependencies. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development workflow.
 
+### Install-script behavior spec (shareable with any AI)
+
+The canonical, repository-agnostic contract that every installer in this
+project (and any sibling repo) MUST follow lives at:
+
+> **[`spec/07-generic-release/09-generic-install-script-behavior.md`](spec/07-generic-release/09-generic-install-script-behavior.md)**
+
+It defines the two install modes in one place:
+
+- **Strict tag mode** — explicit `--version <tag>` installs that exact
+  release with **no** fallback to `latest`, no `-v<N+i>` sibling probe,
+  and no main-branch fallback. Missing tag → exit 1 with a canonical
+  message.
+- **Discovery mode** — no tag supplied → probe the next 20 `-v<N+i>`
+  sibling repos in **parallel** (max-hit wins) → fall back to
+  `releases/latest` → fall back to the default branch HEAD as a last
+  resort.
+
+The spec is intentionally generic (placeholders for `<owner>`, `<stem>`,
+`<binary>`, `<installerPath>`) so you can hand it to any AI working on
+any repository's installer and they will implement the same contract.
+
 ---
 
 ## What It Does
