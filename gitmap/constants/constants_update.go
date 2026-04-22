@@ -46,16 +46,20 @@ const (
 
 // Update UI messages.
 const (
-	MsgUpdateActive        = "  → Active: %s\n  → Handoff: %s\n"
-	MsgUpdateCleanStart    = "\n  Cleaning up update artifacts..."
-	MsgUpdateCleanDone     = "  ✓ Removed %d file(s)\n\n"
-	MsgUpdateCleanNone     = "  ✓ Nothing to clean up"
-	MsgUpdateTempRemoved   = "  → Removed temp copy: %s\n"
-	MsgUpdateOldRemoved    = "  → Removed backup: %s\n"
-	MsgUpdatePhase3Handoff = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
-	UpdateRunnerLogStart   = "update-runner starting, repo=%s"
-	UpdateScriptLogExec    = "executing update script: %s"
-	UpdateScriptLogExit    = "update script exited: err=%v"
+	MsgUpdateActive             = "  → Active: %s\n  → Handoff: %s\n"
+	MsgUpdateCleanStart         = "\n  Cleaning up update artifacts..."
+	MsgUpdateCleanDone          = "  ✓ Removed %d file(s)\n\n"
+	MsgUpdateCleanNone          = "  ✓ Nothing to clean up\n"
+	MsgUpdateTempRemoved        = "  → Removed temp copy: %s\n"
+	MsgUpdateOldRemoved         = "  → Removed backup: %s\n"
+	MsgUpdatePhase3Handoff      = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
+	MsgUpdateCleanLine          = "  %s [%s] %s — %s: %s\n"
+	MsgUpdateCleanSummaryHeader = "\n  ── Cleanup summary ──"
+	MsgUpdateCleanSummaryRow    = "    %-20s  %d\n"
+	MsgUpdateCleanSummaryTotal  = "    ────────────────────\n    removed=%d  failed=%d  total=%d\n\n"
+	UpdateRunnerLogStart        = "update-runner starting, repo=%s"
+	UpdateScriptLogExec         = "executing update script: %s"
+	UpdateScriptLogExit         = "update script exited: err=%v"
 )
 
 // Update error messages.
