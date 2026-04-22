@@ -100,6 +100,97 @@ only the final summary line is emitted.
     Found 7 repositories
     ✓ .gitmap/output/gitmap.csv written
 
+## End-to-End Examples
+
+These walkthroughs string `--config`, `--mode`, and `--output` together
+into the workflows users actually run. Each one starts from a clean shell
+and ends with a verifiable artifact on disk.
+
+### E2E 1: Custom config + JSON output, then re-clone elsewhere
+
+Use a project-local config to exclude vendored folders, emit JSON, then
+hand the result to `gitmap clone` to mirror the same hierarchy on a
+different machine.
+
+    # 1. Author a config that skips heavy vendored trees.
+    cat > ./gitmap.config.json <<'JSON'
+    {
+      "excludeDirs": ["node_modules", "vendor", ".next", "dist"],
+      "defaultMode": "https",
+      "outputDir": ".gitmap/output"
+    }
+    JSON
+
+    # 2. Scan with the custom config and JSON output.
+    gitmap scan ~/work \
+      --config ./gitmap.config.json \
+      --mode https \
+      --output json \
+      --output-path ./.gitmap/output
+
+    # 3. Re-clone the same tree on another host (preserves folder hierarchy).
+    gitmap clone ./.gitmap/output/gitmap.json --target-dir ~/mirror
+
+**Expected output (step 2):**
+
+    Scanning ~/work...
+    ⟳ Scanning — 4271 dirs · 58 repos
+    ✓ Walked 4271 directories · found 58 repositories
+    ✓ .gitmap/output/gitmap.json written
+    ✓ .gitmap/output/gitmap.csv written
+    ✓ Database updated (58 repos)
+
+### E2E 2: SSH mode for CI, CSV for spreadsheets
+
+Same scan, two consumers: a CI job that needs SSH clone URLs and a PM
+who wants the inventory in Excel.
+
+    # CI-friendly: SSH URLs, JSON for tooling.
+    gitmap scan /var/repos --config /etc/gitmap/ci.json --mode ssh --output json
+
+    # Human-friendly: CSV alongside, with a custom filename.
+    gitmap scan /var/repos --config /etc/gitmap/ci.json --mode ssh \
+      --output csv --output-path ./reports
+
+**What you get:**
+
+    /var/repos/.gitmap/output/gitmap.json    ← used by CI clone job
+    ./reports/gitmap.csv                     ← opens directly in Excel/Sheets
+
+Both files describe the **same repo set** (the `--mode` flag only changes
+which clone URL column is populated as the primary), so you can swap
+output formats without re-walking the tree.
+
+### E2E 3: Terminal preview before committing to a config
+
+When you don't yet know which directories to exclude, preview with the
+default `--output terminal` first, then promote a config file once the
+tree looks right.
+
+    # Step A — preview only, no files written.
+    gitmap scan D:\code --output terminal
+
+    # Step B — you noticed `node_modules` noise. Author a config:
+    echo '{"excludeDirs":["node_modules",".turbo"]}' > gitmap.config.json
+
+    # Step C — re-scan with the new config and persist JSON + CSV.
+    gitmap scan D:\code --config ./gitmap.config.json --output json
+
+The terminal preview in Step A and the JSON in Step C share the same
+record schema, so anything visible in the preview also lands in the
+written artifacts.
+
+### E2E 4: Override the config's mode at the CLI
+
+Flags beat the config file (see `config.MergeWithFlags`). Useful when one
+scan needs SSH but the team config defaults to HTTPS.
+
+    # team config says "mode: https" — override for this run only.
+    gitmap scan ~/work --config ./team.gitmap.json --mode ssh --output json
+
+The written `gitmap.json` will carry SSH URLs even though `team.gitmap.json`
+says HTTPS. The config file is **not** mutated.
+
 ## See Also
 
 - [rescan](rescan.md) — Re-scan using cached parameters
