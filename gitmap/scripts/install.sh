@@ -1,18 +1,66 @@
 #!/usr/bin/env bash
 # Re-exec under bash if invoked via sh/dash (which lack pipefail, local, etc.)
+#
+# IMPORTANT: When this script is piped through `sh` (e.g.
+# `curl ... | sh`), the script source arrives on stdin and is consumed
+# line-by-line by the POSIX shell. We cannot simply `exec bash -s` in that
+# case because bash would then read only whatever bytes the parent shell
+# had not yet consumed — producing "command not found" errors for every
+# function defined later in the file.
+#
+# The reliable fix is to materialize the full script to a temp file
+# (either by copying ourselves when invoked from disk, or by re-fetching
+# from the canonical URL when streamed from a pipe) and then exec bash
+# against that file.
 if [ -z "${BASH_VERSION:-}" ]; then
-    if command -v bash >/dev/null 2>&1; then
-        case "${0##*/}" in
-            sh|dash|ash|ksh|mksh)
-                exec bash -s -- "$@"
-                ;;
-        esac
-
-        exec bash "$0" "$@"
-    else
+    if ! command -v bash >/dev/null 2>&1; then
         printf '\033[31m  Error: bash is required but not found. Install bash first.\033[0m\n' >&2
         exit 1
     fi
+
+    # If $0 points at a real readable file on disk, just re-exec bash on it.
+    if [ -f "$0" ] && [ -r "$0" ]; then
+        exec bash "$0" "$@"
+    fi
+
+    # Otherwise we were piped from stdin (curl | sh). Capture stdin to a
+    # temp file first; if stdin is empty/exhausted, fall back to fetching
+    # the canonical install.sh from GitHub.
+    _gm_tmp="$(mktemp 2>/dev/null || echo "/tmp/gitmap-install.$$.sh")"
+    # Try draining whatever is left on stdin into the temp file.
+    if [ ! -t 0 ]; then
+        cat > "$_gm_tmp" 2>/dev/null || true
+    fi
+
+    # If the captured file is missing the shebang or is suspiciously short,
+    # the parent `sh` already consumed most of it. Re-fetch from GitHub.
+    if [ ! -s "$_gm_tmp" ] || ! head -1 "$_gm_tmp" 2>/dev/null | grep -q '^#!'; then
+        _gm_url="https://raw.githubusercontent.com/alimtvnetwork/gitmap-v6/main/gitmap/scripts/install.sh"
+        if command -v curl >/dev/null 2>&1; then
+            curl -fsSL "$_gm_url" -o "$_gm_tmp" || {
+                printf '\033[31m  Error: failed to re-fetch installer from %s\033[0m\n' "$_gm_url" >&2
+                exit 1
+            }
+        elif command -v wget >/dev/null 2>&1; then
+            wget -qO "$_gm_tmp" "$_gm_url" || {
+                printf '\033[31m  Error: failed to re-fetch installer from %s\033[0m\n' "$_gm_url" >&2
+                exit 1
+            }
+        else
+            printf '\033[31m  Error: neither curl nor wget available to re-fetch installer.\033[0m\n' >&2
+            exit 1
+        fi
+    fi
+
+    chmod +x "$_gm_tmp" 2>/dev/null || true
+    # Mark the temp file for cleanup after bash exits (best-effort).
+    export GITMAP_INSTALL_SELF_TMP="$_gm_tmp"
+    exec bash "$_gm_tmp" "$@"
+fi
+
+# If we were re-exec'd from a self-written temp file, schedule cleanup.
+if [ -n "${GITMAP_INSTALL_SELF_TMP:-}" ]; then
+    trap 'rm -f "$GITMAP_INSTALL_SELF_TMP" 2>/dev/null || true' EXIT
 fi
 # ─────────────────────────────────────────────────────────────────────
 # gitmap installer for Linux and macOS
