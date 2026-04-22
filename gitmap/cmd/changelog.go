@@ -12,6 +12,7 @@ import (
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/release"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
 )
 
 // runChangelog handles the 'changelog' command.
