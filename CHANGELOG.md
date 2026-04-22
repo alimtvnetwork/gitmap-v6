@@ -12,6 +12,7 @@
 ### Changed
 
 - **`gitmap help`** — the *Git Operations* section now lists `lfs-common (lfsc)` between `latest-branch` and the navigation block.
+- **Docs site** — version chip and command alias badges now use `text-foreground` (light mode) / `dark:text-background` (dark mode) with `dark:bg-primary/25`, ensuring black/neutral text stays readable against the green tint in both themes. Previously `text-primary` became illegible on dark backgrounds.
 - **`gitmap help lfs-common`** — new embedded help page (`gitmap/helptext/lfs-common.md`) documenting flags, the full pattern list, the post-run commit recipe, and a callout that `git lfs migrate import` is still required to convert *existing* committed binaries (this command only sets up tracking for *future* writes).
 
 ### Implementation
