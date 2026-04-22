@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/templates"
 )
 
