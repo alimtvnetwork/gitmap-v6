@@ -237,3 +237,15 @@ func shortPath(path string) string {
 
 	return filepath.Join("…", filepath.Base(filepath.Dir(path)), filepath.Base(path))
 }
+
+// logUpdateCleanupExecutableError reports os.Executable failures during
+// path resolution (before the cleanup report is built).
+func logUpdateCleanupExecutableError(err error) {
+	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupExecPath, err)
+}
+
+// logUpdateCleanupConfigReadError reports powershell.json read failures
+// during path resolution (before the cleanup report is built).
+func logUpdateCleanupConfigReadError(path string, err error) {
+	fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupConfigRead, path, err)
+}
