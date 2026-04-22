@@ -50,7 +50,7 @@ const InstallBlock = ({ command, tabs }: InstallBlockProps) => {
               onClick={() => setActive(i)}
               className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
                 i === active
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground dark:bg-primary/20 dark:text-primary dark:border dark:border-primary/40"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
