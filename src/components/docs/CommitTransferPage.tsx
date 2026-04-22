@@ -139,19 +139,24 @@ const CommitTransferPage = ({ direction }: CommitTransferPageProps) => {
           </p>
         </div>
 
-        {/* PLANNED banner */}
+        {/* PLANNED banner — high-contrast in both themes; body text uses
+            foreground (not muted) so it stays legible on the tinted bg. */}
         <div className="rounded-lg border-2 border-destructive/40 bg-destructive/5 dark:bg-destructive/10 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-semibold text-sm">Status: PLANNED — implementation deferred</p>
-            <p className="text-sm text-muted-foreground">
+          <AlertTriangle className="h-5 w-5 text-destructive dark:text-[hsl(0_85%_72%)] flex-shrink-0 mt-0.5" />
+          <div className="space-y-1.5">
+            <p className="font-semibold text-sm text-foreground">
+              Status: PLANNED — implementation deferred
+            </p>
+            <p className="text-sm text-foreground/90 dark:text-foreground/95 leading-relaxed">
               This command is fully specified but not yet shipped in the CLI. The page documents the
               contract so it can be reviewed before code lands. Track progress in spec 106 §18.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Phasing: <strong>Phase 1</strong> ships <code>commit-right</code> end-to-end first;{" "}
-              <code>commit-left</code> is a wiring flip on top; <code>commit-both</code> adds the
-              interleave-by-timestamp planner last.
+            <p className="text-xs text-foreground/80 dark:text-foreground/85 leading-relaxed">
+              Phasing: <strong className="text-foreground">Phase 1</strong> ships{" "}
+              <code className="text-primary">commit-right</code> end-to-end first;{" "}
+              <code className="text-primary">commit-left</code> is a wiring flip on top;{" "}
+              <code className="text-primary">commit-both</code> adds the interleave-by-timestamp
+              planner last.
             </p>
           </div>
         </div>
