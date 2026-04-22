@@ -9,7 +9,7 @@ the primary way developers build and deploy the CLI tool.
 
 ## Flow Diagram
 
-See [`images/build-scripts-flow.mmd`](images/build-scripts-flow.mmd)
+See [`diagrams/build-scripts-flow.mmd`](diagrams/build-scripts-flow.mmd)
 
 ---
 

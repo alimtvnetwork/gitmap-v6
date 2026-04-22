@@ -9,7 +9,7 @@ including Windows where running executables cannot be overwritten.
 
 ## Flow Diagram
 
-See [`images/rename-first-deploy-flow.mmd`](images/rename-first-deploy-flow.mmd)
+See [`diagrams/rename-first-deploy-flow.mmd`](diagrams/rename-first-deploy-flow.mmd)
 
 ---
 
