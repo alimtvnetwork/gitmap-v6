@@ -46,8 +46,7 @@ Examples:
 	errTemplatesListFail   = "templates list: %v\n"
 	errUnknownTemplatesSub = "unknown 'templates' subcommand: %s\n"
 	flagTemplatesShowRaw   = "raw"
-	flagDescTemplatesRaw   = "Print template bytes verbatim, skipping the pretty markdown renderer"
-	envTemplatesNoPretty   = "GITMAP_NO_PRETTY"
+	flagDescTemplatesRaw   = "Deprecated alias for --no-pretty (kept for v3.23.x back-compat)"
 )
 
 // dispatchTemplates routes `gitmap templates <subcommand>` calls.
