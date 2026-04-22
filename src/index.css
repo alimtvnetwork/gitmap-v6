@@ -137,7 +137,20 @@
   }
 }
 
-/* Heading hover effects */
+/* ─────────────────────────────────────────────────────────────────────────────
+   Global chip readability patch (dark mode)
+   Any element with a tinted primary background (bg-primary/10, /20, /25, etc.)
+   AND text-primary becomes hard to read in dark mode because text-primary is
+   the same green as the background tint. In dark mode, force such chips to
+   use text-background (near-black neutral) for AAA contrast against the
+   green tint, without touching solid `bg-primary` buttons (which keep
+   text-primary-foreground).
+   ───────────────────────────────────────────────────────────────────────── */
+.dark [class*="bg-primary/"].text-primary,
+.dark [class*="bg-primary/"] .text-primary {
+  color: hsl(var(--background));
+}
+
 @layer components {
   .docs-h1,
   .docs-h2 {
