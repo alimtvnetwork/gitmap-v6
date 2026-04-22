@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.28.1",
+    date: "2026-04-22",
+    subtitle: "Update / revert: drop the futile synchronous cleanup that printed two `Access is denied` lines on every Windows update",
+    items: [
+      "Removed the synchronous `& $activeBinary update-cleanup` call from both `UpdatePSPostActions` and `RevertPSPostActions` in `gitmap/constants/constants_update.go`. That call ran from inside the PowerShell script driven by the still-alive handoff copy (`gitmap-update-<pid>.exe`), so on Windows it always raced against (a) the handoff exe lock and (b) the freshly-renamed `gitmap.exe.old` backup that Windows had not yet released — producing two `Error: could not remove cleanup artifact at ... Access is denied` lines on every successful update before the misleading `✓ Nothing to clean up` summary. The 5×200ms retry loop in `cleanupRemoveMaxAttempts` was never going to win against a lock held by the current process tree.",
+      "Cleanup is now handled exactly once by Phase 3's `scheduleDeployedCleanupHandoff` (`gitmap/cmd/updatehandoff_phase3.go`), which spawns a detached `cmd.exe` that pings ~2s and **then** invokes `<deployed> update-cleanup`. By the time the delay elapses the handoff exe has exited, every lock is released, and the deployed binary deletes both the handoff copy and the `.old` backup cleanly.",
+      "Wired the same Phase 3 handoff into `runRevertRunner` (`gitmap/cmd/revertscript.go`) so revert keeps a working cleanup path now that its synchronous version is gone. Both `update` and `revert` share the identical post-handoff cleanup flow.",
+      "Added `# NOTE:` comment blocks at both deletion sites documenting **why** synchronous cleanup is absent and **where** it now happens, with a pointer to `spec/08-generic-update/06-cleanup.md` so future contributors don't 'restore' the noisy call.",
+    ],
+  },
+  {
     version: "v3.28.0",
     date: "2026-04-22",
     subtitle: "Quick installers: 20-parallel versioned-repo discovery (max-hit-wins, gap-tolerant) replaces sequential fail-fast probe",
