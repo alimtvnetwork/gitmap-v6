@@ -5,6 +5,7 @@ Updated: now
 
 ## Core
 Strict code style: <200 lines/file, <15 lines/func, positive logic, pascal case constants, 'is/has' boolean prefixes.
+Organize constants by owning package/domain; do not force artificial prefix-only naming rules.
 Zero-swallow error policy. Explicitly log errors to os.Stderr using standardized format. Use `errors.Is`.
 NEVER manually create, modify, or delete files within `.gitmap/release/` or `.gitmap/release-assets/`.
 No magic strings. Centralize in constants. All CLI IDs must be exclusively in `constants_cli.go`.
@@ -49,6 +50,7 @@ Current version: v3.50.0.
 - [Config Pattern](mem://tech/config-pattern) — Three-layer configuration merge (defaults < config.json < CLI flags)
 - [Script Generation](mem://tech/script-generation) — PowerShell text/template encoding with UTF-8 BOM
 - [Constants Structure](mem://tech/constants-structure) — Avoiding redeclaration errors with unique suffixes and domain-specific files
+- [Constants Ownership](mem://constraints/constants-ownership) — Keep constants in the owning package/domain; avoid forced prefix-only naming rules
 - [Code Red Error Mgmt](mem://tech/code-red-error-management) — Zero-swallow error policy and os.Stderr standardized format
 - [Internal Memory Standard](mem://project/internal-memory-standard) — Folder structure and file naming conventions for project planning
 - [Templates: ignore/attributes/pretty](mem://features/templates-ignore-attributes) — Embedded `.gitignore`/`.gitattributes` templates per language, idempotent marker-block merge, `~/.gitmap/templates/` overlay, `add ignore`/`add attributes`/`add lfs-install` subcommands, pretty markdown renderer with fixture corpus (Phase 0 scaffolded; spec 109, plan 04)
