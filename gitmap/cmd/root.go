@@ -81,6 +81,11 @@ func dispatch(command string) {
 
 		return
 	}
+	if dispatchTemplates(command) {
+		recordAuditEnd(auditID, auditStart, 0, "", 0)
+
+		return
+	}
 
 	fmt.Fprintf(os.Stderr, constants.ErrUnknownCommand, command)
 	printUsage()

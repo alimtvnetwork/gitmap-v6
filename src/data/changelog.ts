@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.16.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap templates list` / `templates show` — discover the embedded corpus and your overlay",
+    items: [
+      "Added `gitmap templates` subcommand router (alias `tpl`) in `gitmap/cmd/templatescli.go`, wired into `dispatch()` in `root.go` (alongside the previously-missed `dispatchAdd` hook, now also re-confirmed). Subcommands: `list` (alias `tl`) and `show <kind> <lang>` (alias `ts`).",
+      "Added `gitmap templates list` — prints a `KIND / LANG / SOURCE / PATH` table with stable kind ordering (ignore → attributes → lfs) then alphabetical lang. The `SOURCE` column reads `user` when the template comes from `~/.gitmap/templates/` and `embed` when it comes from the binary, making it obvious which entries you've customized.",
+      "Added `gitmap templates show <kind> <lang>` — writes the resolved template (overlay > embed) to stdout *with* its audit-trail header preserved, so `gitmap templates show ignore go > .gitignore.curated` round-trips cleanly and is diffable against future re-curations.",
+      "Added `gitmap/templates/list.go` (+ `dirfs.go` empty-FS fallback): walks the embedded `assets/` first, then overlays user entries from `~/.gitmap/templates/` (silent skip when the dir doesn't exist). The merge map is keyed `<kind>/<lang>` so user files always shadow embeds.",
+      "Added `gitmap/constants/constants_templates_cli.go`: `CmdTemplates`/`tpl`, sub-aliases `tl`/`ts`, format strings, error strings, and the user-facing `UsageTemplatesRoot` block.",
+      "Added `gitmap/templates/list_test.go`: locks in (1) the embedded corpus shows up with `SourceEmbed`, (2) entries are sorted by kind-rank then lang, (3) a user-overlay file flips `SourceEmbed` → `SourceUser` for the matching `<kind>/<lang>`, and (4) `parseRelTemplatePath` correctly rejects wrong-extension/unknown-kind inputs.",
+    ],
+  },
+  {
     version: "v3.15.0",
     date: "2026-04-22",
     subtitle: "`gitmap add attributes` + `gitmap add lfs-install` — completes the templates trio",
