@@ -17,11 +17,14 @@ const (
 	cmdTemplatesListAlias = "tl"
 	cmdTemplatesShow      = "show"
 	cmdTemplatesShowAlias = "ts"
+	cmdTemplatesInit      = "init"
+	cmdTemplatesInitAlias = "ti"
 	usageTemplatesRoot    = `Usage: gitmap templates <subcommand>
 
 Subcommands:
   list                       List every available template (alias: tl)
   show <kind> <lang>         Print a single template to stdout (alias: ts)
+  init <lang> [<lang>...]    Scaffold .gitignore / .gitattributes for languages (alias: ti)
 
 Kinds:
   ignore | attributes | lfs
@@ -29,12 +32,20 @@ Kinds:
 Flags (show):
   --raw                      Disable pretty markdown rendering even on a TTY
 
+Flags (init):
+  --lfs                      Also merge lfs/common.gitattributes into .gitattributes
+  --dry-run                  Preview every block; do not touch disk
+  --force                    Replace existing .gitignore/.gitattributes outright
+
 Examples:
   gitmap templates list
   gitmap tpl tl
   gitmap templates show ignore go
   gitmap tpl ts attributes node
   gitmap templates show ignore go --raw   # bypass pretty renderer
+  gitmap templates init go
+  gitmap templates init go node --lfs
+  gitmap tpl ti python --dry-run
 `
 	headerTemplatesList    = "KIND        LANG            SOURCE  PATH\n"
 	fmtTemplatesListRow    = "%-10s  %-14s  %-6s  %s\n"
@@ -65,6 +76,8 @@ func dispatchTemplates(command string) bool {
 		runTemplatesList()
 	case cmdTemplatesShow, cmdTemplatesShowAlias:
 		runTemplatesShow(rest)
+	case cmdTemplatesInit, cmdTemplatesInitAlias:
+		runTemplatesInit(rest)
 	default:
 		fmt.Fprintf(os.Stderr, errUnknownTemplatesSub, sub)
 		fmt.Fprint(os.Stderr, usageTemplatesRoot)
