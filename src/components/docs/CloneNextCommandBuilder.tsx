@@ -201,7 +201,7 @@ const CloneNextCommandBuilder = () => {
               type="number"
               min={1}
               disabled={!s.hasVersion}
-              className="w-20 rounded-md bg-background border border-border px-2 py-1 text-sm font-mono disabled:opacity-40"
+              className="w-20 rounded-md bg-background border border-border px-2 py-1 text-sm font-mono disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
               value={s.currentVersion}
               onChange={(e) => update("currentVersion", Math.max(1, Number(e.target.value) || 1))}
             />
@@ -246,7 +246,7 @@ const CloneNextCommandBuilder = () => {
             type="text"
             placeholder="work"
             disabled={s.protocol === "https"}
-            className="w-full rounded-md bg-background border border-border px-2 py-1 text-sm font-mono disabled:opacity-40"
+            className="w-full rounded-md bg-background border border-border px-2 py-1 text-sm font-mono disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
             value={s.sshKeyName}
             onChange={(e) => update("sshKeyName", e.target.value)}
           />
