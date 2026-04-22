@@ -63,7 +63,7 @@ func scheduleDeployedCleanupHandoff() {
 // gitmap binary on PATH, falling back to the active binary's expected
 // deploy location. Returns "" if it cannot be determined.
 func resolveDeployedBinaryPath() string {
-	if path, err := exec.LookPath(constants.GitmapBinName); err == nil {
+	if path, err := exec.LookPath(constants.GitMapBin); err == nil {
 		if resolved, evalErr := filepath.EvalSymlinks(path); evalErr == nil {
 			return resolved
 		}
@@ -88,10 +88,10 @@ func resolveDeployedBinaryPath() string {
 // deployedBinaryName returns the platform-specific deployed binary filename.
 func deployedBinaryName() string {
 	if runtime.GOOS == constants.OSWindows {
-		return constants.GitmapBinName + ".exe"
+		return constants.GitMapBin + ".exe"
 	}
 
-	return constants.GitmapBinName
+	return constants.GitMapBin
 }
 
 // spawnDeployedCleanupWindows launches a detached cmd.exe that waits ~1.5s
