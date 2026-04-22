@@ -105,6 +105,35 @@ that resolves `ignore/python`) will pick up your overlay automatically.
 To revert a fork, just delete the overlay file — the next resolve falls
 back to `embed`.
 
+## Pretty rendering
+
+`templates show` writes raw bytes by default — perfect for the diff and
+redirect workflows above. When the resolved template is **markdown**
+(`.md` / `.markdown`) **and** stdout is a real TTY, the output is routed
+through the same pretty markdown renderer used by `gitmap help`:
+
+- Cyan `"double quotes"` for emphasized terms.
+- Yellow `→ collapsed` lines when a fenced block restates the
+  preceding paragraph.
+- Muted subtitles under headings, indented bodies.
+
+Today the embedded corpus is `.gitignore` / `.gitattributes` only, so
+this kicks in for **markdown overlays** you drop into
+`~/.gitmap/templates/<kind>/<lang>.md` and for any future markdown
+templates added to the embed.
+
+Two opt-outs, both honored even on a TTY:
+
+- `--raw` — per-invocation flag. Use when you need byte-faithful output
+  inside a TTY session (e.g. `templates show notes intro.md --raw | sha256sum`).
+- `GITMAP_NO_PRETTY=1` — environment opt-out, shared with `gitmap help`.
+  Set it once in your shell profile to disable pretty rendering across
+  the whole CLI.
+
+Pipes and redirects automatically bypass the renderer (stdout is no
+longer a TTY), so `templates show foo bar > out.md` always writes the
+unmodified bytes.
+
 ## Notes
 
 - `templates list` and `templates show` are pure reads. They never
