@@ -70,13 +70,13 @@ const HomePage = () => {
         <div className="flex gap-4 justify-center">
           <Link
             to="/getting-started"
-            className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-mono text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="group relative px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading text-sm font-medium shadow-sm hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 hover:bg-primary/90 active:translate-y-0 active:shadow-sm transition-all duration-200 ease-out"
           >
             Get Started
           </Link>
           <Link
             to="/commands"
-            className="px-5 py-2.5 rounded-lg border border-border text-foreground font-mono text-sm font-medium hover:bg-muted transition-colors"
+            className="group relative px-6 py-2.5 rounded-lg border border-border text-foreground font-heading text-sm font-medium hover:border-primary hover:bg-muted hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-none transition-all duration-200 ease-out"
           >
             View Commands
           </Link>
