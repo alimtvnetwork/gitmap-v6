@@ -32,7 +32,7 @@ const CommandCard = ({ name, alias, description, usage, flags, examples, seeAlso
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <code className="font-sans font-semibold text-sm text-foreground">{name}</code>
           {alias && (
-            <span className="text-xs font-sans font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">{alias}</span>
+            <span className="text-xs font-sans font-medium text-foreground bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded dark:bg-primary/25 dark:text-background">{alias}</span>
           )}
         </div>
         <span className="text-sm text-muted-foreground truncate">{description}</span>
