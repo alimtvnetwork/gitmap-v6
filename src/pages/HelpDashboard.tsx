@@ -152,6 +152,7 @@ const HelpDashboardPage = () => (
 
     <h2 className="text-xl font-heading font-semibold mt-10 mb-3">See Also</h2>
     <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+      <li><a href="/help-index" className="text-primary hover:underline">help-index</a> — Curated index of diff / mv / merge / commit pages served by this dashboard</li>
       <li><code className="text-primary">docs</code> — Open the hosted documentation website</li>
       <li><code className="text-primary">dashboard</code> — Generate an HTML analytics dashboard for a repo</li>
     </ul>

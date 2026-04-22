@@ -129,7 +129,7 @@ const CommitTransferPage = ({ direction }: CommitTransferPageProps) => {
             <span className="font-mono text-xs px-2 py-1 rounded bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/15 dark:text-primary dark:border-primary/40 transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10">
               alias: {m.alias}
             </span>
-            <span className="font-mono text-xs px-2 py-1 rounded bg-destructive/10 text-foreground border border-destructive/30 dark:bg-destructive/15 dark:text-destructive dark:border-destructive/40">
+            <span className="font-mono text-xs px-2 py-1 rounded bg-destructive/10 text-foreground border border-destructive/30 transition-colors duration-300 hover:border-destructive/50 hover:shadow-sm hover:shadow-destructive/10 dark:bg-destructive/20 dark:text-destructive-foreground dark:border-destructive/50">
               {m.arrow}
             </span>
           </div>
