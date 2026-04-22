@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.14.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap add ignore` — curated, idempotent .gitignore templates with marker-block merge",
+    items: [
+      "Added `gitmap add` subcommand router (`gitmap/cmd/rootadd.go`, `gitmap/constants/constants_add.go`) wired into `dispatch()` in `root.go`. Top-level alias `ad`. Routes to `add ignore` (alias `ai`), `add attributes` (alias `aa`, Phase 3), and `add lfs-install` (alias `alfs`, Phase 3).",
+      "Added `gitmap add ignore [langs...]` — composes `common` plus each requested language template into a marker-block (`# >>> gitmap-ignore ... >>>` / `# <<< gitmap-ignore <<<`), preserves user-authored entries below `# user entries`, and writes atomically via temp file + rename.",
+      "Added `gitmap/templates/merge.go` engine: single-pass dedupe keyed on trimmed line (comments dedupe too), audit-trail headers (`# source:` / `# kind:` / `# lang:` / `# version:`) stripped before merge, blank-line collapse, idempotent — re-running with identical args yields a byte-identical file (`MergeResult.Changed=false`).",
+      "Seeded curated corpus in `gitmap/templates/assets/` (Phase 1): `ignore/{common,go,node,python,rust,csharp}.gitignore`, `attributes/{common,go,node,python,rust,csharp}.gitattributes`, and `lfs/common.gitattributes`. Common attributes normalize `*.svg` to `text eol=lf` (NOT LFS — SVG is XML and diffs cleanly); `*.bat`/`*.cmd`/`*.ps1` keep CRLF; raster/archive formats forced binary.",
+      "Added `gitmap/templates/{embed.go,resolver.go,materialize.go,paths.go}` (Phase 0): `//go:embed all:assets`, `~/.gitmap/templates/` user overlay (overlay > embed resolution order) so users on read-only install paths (e.g. `C:\\Program Files\\gitmap`) can still customize, idempotent first-run materializer that skips any already-present file.",
+      "Added tests: `merge_test.go` (creates-with-markers, idempotence, user-entry preservation, cross-lang dedupe, additive lang re-run), `resolver_test.go` (overlay-wins, missing-template error, dir creation), `corpus_test.go` (audit-header enforcement on every embedded file + locks in the no-`*.svg`-in-LFS rule).",
+    ],
+  },
+  {
     version: "v3.13.0",
     date: "2026-04-22",
     subtitle: "Three-phase self-update handoff — cleanup runs from the deployed binary, not the still-locked handoff copy",
