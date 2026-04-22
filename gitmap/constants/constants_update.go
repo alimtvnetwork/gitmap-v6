@@ -50,8 +50,6 @@ const (
 	MsgUpdateCleanStart         = "\n  Cleaning up update artifacts..."
 	MsgUpdateCleanDone          = "  ✓ Removed %d file(s)\n\n"
 	MsgUpdateCleanNone          = "  ✓ Nothing to clean up\n"
-	MsgUpdateTempRemoved        = "  → Removed temp copy: %s\n"
-	MsgUpdateOldRemoved         = "  → Removed backup: %s\n"
 	MsgUpdatePhase3Handoff      = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
 	MsgUpdateCleanLine          = "  %s [%s] %s — %s: %s\n"
 	MsgUpdateCleanSummaryHeader = "\n  ── Cleanup summary ──"
