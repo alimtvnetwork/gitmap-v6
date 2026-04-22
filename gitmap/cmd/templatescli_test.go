@@ -1,21 +1,28 @@
 package cmd
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
+)
 
 // TestIsMarkdownTemplatePathRecognizesMarkdownExtensions locks the file-
 // extension allow-list. Adding a new markdown extension is a deliberate
 // choice — this test will scream if someone broadens it accidentally.
+// The non-markdown rows are the load-bearing assertions: they protect
+// every existing `templates show ignore go > .gitignore` redirect on
+// disk in users' repos from suddenly gaining ANSI bytes.
 func TestIsMarkdownTemplatePathRecognizesMarkdownExtensions(t *testing.T) {
 	cases := map[string]bool{
-		"assets/notes/intro.md":           true,
-		"assets/notes/intro.MD":           true,
-		"assets/notes/intro.markdown":     true,
-		"assets/notes/intro.MARKDOWN":     true,
-		"assets/ignore/go.gitignore":      false,
+		"assets/notes/intro.md":              true,
+		"assets/notes/intro.MD":              true,
+		"assets/notes/intro.markdown":        true,
+		"assets/notes/intro.MARKDOWN":        true,
+		"assets/ignore/go.gitignore":         false,
 		"assets/attributes/go.gitattributes": false,
-		"assets/lfs/common.gitattributes": false,
-		"plain":                           false,
-		"":                                false,
+		"assets/lfs/common.gitattributes":    false,
+		"plain":                              false,
+		"":                                   false,
 	}
 	for path, want := range cases {
 		if got := isMarkdownTemplatePath(path); got != want {
@@ -24,65 +31,53 @@ func TestIsMarkdownTemplatePathRecognizesMarkdownExtensions(t *testing.T) {
 	}
 }
 
-// TestShouldPrettyRenderTemplateRespectsRawFlag verifies that --raw
-// short-circuits the pretty pipeline regardless of file extension or env.
-// This is the primary user-facing escape hatch for diff-against-curated
-// workflows ('templates show … --raw > /tmp/x && diff …').
-func TestShouldPrettyRenderTemplateRespectsRawFlag(t *testing.T) {
-	t.Setenv(envTemplatesNoPretty, "")
-	if shouldPrettyRenderTemplate("notes/intro.md", true) {
-		t.Fatal("--raw must disable pretty rendering for markdown templates")
-	}
-}
-
-// TestShouldPrettyRenderTemplateRespectsEnvOptOut verifies the shared
-// GITMAP_NO_PRETTY env var also short-circuits this code path, keeping
-// the opt-out contract consistent with `gitmap help`.
-func TestShouldPrettyRenderTemplateRespectsEnvOptOut(t *testing.T) {
-	t.Setenv(envTemplatesNoPretty, "1")
-	if shouldPrettyRenderTemplate("notes/intro.md", false) {
-		t.Fatal("GITMAP_NO_PRETTY must disable pretty rendering")
-	}
-}
-
-// TestShouldPrettyRenderTemplateSkipsNonMarkdown is the safety guard for
-// the dominant case today: .gitignore / .gitattributes templates must
-// always be byte-faithful so users can pipe them straight into a file.
-func TestShouldPrettyRenderTemplateSkipsNonMarkdown(t *testing.T) {
-	t.Setenv(envTemplatesNoPretty, "")
-	if shouldPrettyRenderTemplate("ignore/go.gitignore", false) {
-		t.Fatal(".gitignore templates must never be pretty-rendered")
-	}
-	if shouldPrettyRenderTemplate("attributes/go.gitattributes", false) {
-		t.Fatal(".gitattributes templates must never be pretty-rendered")
-	}
-	if shouldPrettyRenderTemplate("lfs/common.gitattributes", false) {
-		t.Fatal("lfs templates must never be pretty-rendered")
-	}
-}
-
-// TestParseTemplatesShowFlagsExtractsRaw verifies the flag splitter
-// correctly separates the boolean from the positional <kind> <lang>,
-// regardless of argument order (relies on reorderFlagsBeforeArgs).
-func TestParseTemplatesShowFlagsExtractsRaw(t *testing.T) {
+// TestParseTemplatesShowFlagsPrefersPretty checks the new --pretty path:
+// positional <kind> <lang> survive intact and the flag maps to the
+// correct render.PrettyMode regardless of arg order.
+func TestParseTemplatesShowFlagsPrefersPretty(t *testing.T) {
 	cases := []struct {
 		name string
 		args []string
-		want bool
+		want render.PrettyMode
 	}{
-		{"flag after positionals", []string{"ignore", "go", "--raw"}, true},
-		{"flag before positionals", []string{"--raw", "ignore", "go"}, true},
-		{"no flag", []string{"ignore", "go"}, false},
+		{"no flag → auto", []string{"ignore", "go"}, render.PrettyAuto},
+		{"--pretty → on", []string{"ignore", "go", "--pretty"}, render.PrettyOn},
+		{"--no-pretty → off", []string{"--no-pretty", "ignore", "go"}, render.PrettyOff},
+		{"--pretty=false → off", []string{"ignore", "--pretty=false", "go"}, render.PrettyOff},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rest, raw := parseTemplatesShowFlags(tc.args)
-			if raw != tc.want {
-				t.Errorf("raw = %v, want %v", raw, tc.want)
+			rest, mode := parseTemplatesShowFlags(tc.args)
+			if mode != tc.want {
+				t.Errorf("mode = %v, want %v", mode, tc.want)
 			}
 			if len(rest) != 2 || rest[0] != "ignore" || rest[1] != "go" {
 				t.Errorf("rest = %v, want [ignore go]", rest)
 			}
 		})
+	}
+}
+
+// TestParseTemplatesShowFlagsRawAliases is the back-compat guard: the
+// legacy --raw flag from v3.23.x must still downgrade to PrettyOff so
+// scripts that already use it keep working without modification.
+func TestParseTemplatesShowFlagsRawAliases(t *testing.T) {
+	rest, mode := parseTemplatesShowFlags([]string{"ignore", "go", "--raw"})
+	if mode != render.PrettyOff {
+		t.Errorf("--raw → %v, want PrettyOff (back-compat alias)", mode)
+	}
+	if len(rest) != 2 || rest[0] != "ignore" || rest[1] != "go" {
+		t.Errorf("rest = %v, want [ignore go]", rest)
+	}
+}
+
+// TestParseTemplatesShowFlagsPrettyBeatsRaw guards the conflict-resolution
+// rule: when a user passes both --pretty and the deprecated --raw, the
+// preferred new flag wins. Otherwise --raw could silently override an
+// explicit --pretty in shell aliases that bake one of them in.
+func TestParseTemplatesShowFlagsPrettyBeatsRaw(t *testing.T) {
+	_, mode := parseTemplatesShowFlags([]string{"--raw", "--pretty", "ignore", "go"})
+	if mode != render.PrettyOn {
+		t.Fatalf("--pretty must beat --raw: got %v, want PrettyOn", mode)
 	}
 }
