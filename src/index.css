@@ -138,6 +138,43 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   Reduced motion
+   Respect the user's OS-level "Reduce motion" preference. We keep color and
+   opacity fades (these aid orientation, not motion) but cut their duration
+   to a near-instant 10ms, disable transforms/animations entirely, and zero
+   out the button "press" translate. Specific opt-outs can be added with the
+   `motion-safe:` Tailwind variant on individual elements if ever needed.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 10ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 10ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Kill movement-based effects (button press, hover lift, scale) */
+  .active\:translate-y-px:active,
+  [class*="hover:translate"],
+  [class*="hover:scale"],
+  .hover-scale,
+  .btn-hover-lift:hover,
+  .docs-blockquote:hover,
+  .docs-inline-code:hover {
+    transform: none !important;
+  }
+
+  /* docs-h3 padding shift on hover */
+  .docs-h3:hover {
+    padding-left: 0.65rem !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Shared interaction utilities
    Use these helpers on buttons, chips, badges, and any tappable surface so
    hover shadow, border treatment, and the canonical 300ms transition stay
