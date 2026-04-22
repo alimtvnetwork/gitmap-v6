@@ -16,7 +16,7 @@ func emitBlock(out *strings.Builder, b block) {
 		out.WriteByte('\n')
 	case bkParagraph:
 		out.WriteString(bodyIndent)
-		out.WriteString(highlightQuotes(b.text))
+		out.WriteString(HighlightQuotes(b.text))
 		out.WriteByte('\n')
 	case bkFence:
 		for _, l := range b.lines {
@@ -29,9 +29,16 @@ func emitBlock(out *strings.Builder, b block) {
 	}
 }
 
-// highlightQuotes wraps every "double-quoted span" in cyan tokens.
-// Single quotes are left untouched (they're usually apostrophes).
-func highlightQuotes(s string) string {
+// HighlightQuotes wraps every "double-quoted span" in cyan tokens
+// (TokCyanOpen/TokCyanClose). Single quotes are left untouched (they're
+// usually apostrophes). The output uses sentinel tokens — call
+// HighlightQuotesANSI to get a string with real ANSI escape codes, or
+// run the result through RenderANSI's swap layer.
+//
+// Exported so other CLI surfaces (e.g. the changelog pretty-printer) can
+// share the exact same quote-rendering rule that the help-text renderer
+// applies, keeping formatting consistent across commands.
+func HighlightQuotes(s string) string {
 	var b strings.Builder
 	inQuote := false
 	for i := 0; i < len(s); i++ {

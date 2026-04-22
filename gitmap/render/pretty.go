@@ -50,7 +50,23 @@ func Render(md string) string {
 
 // RenderANSI is Render with ANSI codes substituted for the token sentinels.
 func RenderANSI(md string) string {
-	r := strings.NewReplacer(
+	return tokenToANSI().Replace(Render(md))
+}
+
+// HighlightQuotesANSI applies the cyan double-quote rule (rule 2 of the
+// pretty renderer) to a single string and returns it with real ANSI escape
+// codes already substituted. Useful for callers that have their own
+// block-level layout (e.g. the changelog bullet renderer) but still want
+// quote highlighting consistent with the help-text pretty renderer.
+func HighlightQuotesANSI(s string) string {
+	return tokenToANSI().Replace(HighlightQuotes(s))
+}
+
+// tokenToANSI builds the shared sentinel→ANSI replacer used by
+// RenderANSI and HighlightQuotesANSI. Centralized so the mapping stays
+// in lockstep across pretty-render entry points.
+func tokenToANSI() *strings.Replacer {
+	return strings.NewReplacer(
 		TokYellowOpen, constants.ColorYellow,
 		TokYellowClose, constants.ColorReset,
 		TokCyanOpen, constants.ColorCyan,
@@ -58,8 +74,6 @@ func RenderANSI(md string) string {
 		TokMutedOpen, constants.ColorDim,
 		TokMutedClose, constants.ColorReset,
 	)
-
-	return r.Replace(Render(md))
 }
 
 // splitLines splits on \n and drops the trailing empty token from a final

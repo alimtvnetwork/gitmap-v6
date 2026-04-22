@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.22.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap changelog` bullets now share the pretty markdown renderer (cyan `\"quotes\"` consistent with `gitmap help`)",
+    items: [
+      "Routed `gitmap changelog` bullet bodies through the shared `gitmap/render` pretty markdown renderer so the output rules stay in lockstep with the help-text pipeline. Concretely, `gitmap/cmd/changelogwrap.go::renderInlineMarkdown` now applies the cyan double-quote rule (rule 2 of the pretty renderer) on top of the existing `**bold**` and `` `inline code` `` ANSI conversion. Single quotes / apostrophes are intentionally untouched — `user's repo` stays plain text, `\"refactor\"` lights up cyan. Previously bullets ignored quotes entirely, which made `gitmap cl --latest` and `gitmap help <cmd>` render the same prose differently — confusing when the changelog literally describes help-text changes.",
+      "Exported `render.HighlightQuotes` (was `highlightQuotes`) and added `render.HighlightQuotesANSI` in `gitmap/render/pretty.go` so other CLI surfaces with their own block-level layout can opt into the rule without re-implementing it. Refactored `RenderANSI` to share a `tokenToANSI()` `strings.Replacer` builder with `HighlightQuotesANSI` — single source of truth for the sentinel→ANSI mapping, so adding a new token (e.g. a future green-for-paths span) only updates one function. The existing token sentinels (`TokCyanOpen`/`TokCyanClose`, etc.) keep their public names, so `pretty_test.go` and downstream consumers are unaffected.",
+      "Added `gitmap/cmd/changelogwrap_test.go` with three regression guards: (1) `\"double quotes\"` produce `ColorCyan`+`ColorReset` and never leak `[C]` / `[/C]` sentinels into terminal output, (2) apostrophes in `user's repo` do **not** trigger cyan styling (rule-2 single-quote passthrough), (3) the pre-existing `**bold**` / `` `code` `` markers (`ChangelogPrettyBoldOpen`, `ChangelogPrettyCodeOpen`) still appear after the quote pass — proving the wiring order didn't break the established conversion.",
+      "Documented the rendering contract in `gitmap/helptext/changelog.md` under a new **Rendering** section: which markdown subset is honored (`**bold**`, `` `code` ``, `\"quotes\"`), the depth-based bullet color scheme (green/cyan/dim at depth 0/1/2+), and the `GITMAP_NO_PRETTY=1` opt-out + non-TTY pipe behavior — same env contract as `helptext/print.go::shouldPretty()`, so users who already disable pretty help also disable pretty changelog with no extra config.",
+      "No changes to `release.ChangelogEntry`, `release.ChangelogBullet`, the structured-bullet parser, or the wrapping math in `wrapWithHangingIndent` — the visible diff is purely additive ANSI inside bullet bodies. `visibleLen` already strips ANSI escape sequences when computing wrap widths, so the new cyan spans don't push lines past `ChangelogPrettyWrapMax` or break the hanging-indent alignment.",
+    ],
+  },
+  {
     version: "v3.21.0",
     date: "2026-04-22",
     subtitle: "`gitmap templates list` / `templates show` documented in helptext + docs site",
