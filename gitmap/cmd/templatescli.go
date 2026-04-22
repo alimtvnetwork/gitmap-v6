@@ -26,21 +26,28 @@ Subcommands:
 Kinds:
   ignore | attributes | lfs
 
+Flags (show):
+  --raw                      Disable pretty markdown rendering even on a TTY
+
 Examples:
   gitmap templates list
   gitmap tpl tl
   gitmap templates show ignore go
   gitmap tpl ts attributes node
+  gitmap templates show ignore go --raw   # bypass pretty renderer
 `
-	headerTemplatesList  = "KIND        LANG            SOURCE  PATH\n"
-	fmtTemplatesListRow  = "%-10s  %-14s  %-6s  %s\n"
-	labelTemplatesUser   = "user"
-	labelTemplatesEmbed  = "embed"
-	msgTemplatesEmpty    = "(no templates registered — embedded corpus is empty)\n"
-	errTemplatesShowArgs = "templates show requires <kind> <lang>; e.g. 'templates show ignore go'\n"
-	errTemplatesShowFail = "templates show: %v\n"
-	errTemplatesListFail = "templates list: %v\n"
+	headerTemplatesList    = "KIND        LANG            SOURCE  PATH\n"
+	fmtTemplatesListRow    = "%-10s  %-14s  %-6s  %s\n"
+	labelTemplatesUser     = "user"
+	labelTemplatesEmbed    = "embed"
+	msgTemplatesEmpty      = "(no templates registered — embedded corpus is empty)\n"
+	errTemplatesShowArgs   = "templates show requires <kind> <lang>; e.g. 'templates show ignore go'\n"
+	errTemplatesShowFail   = "templates show: %v\n"
+	errTemplatesListFail   = "templates list: %v\n"
 	errUnknownTemplatesSub = "unknown 'templates' subcommand: %s\n"
+	flagTemplatesShowRaw   = "raw"
+	flagDescTemplatesRaw   = "Print template bytes verbatim, skipping the pretty markdown renderer"
+	envTemplatesNoPretty   = "GITMAP_NO_PRETTY"
 )
 
 // dispatchTemplates routes `gitmap templates <subcommand>` calls.
