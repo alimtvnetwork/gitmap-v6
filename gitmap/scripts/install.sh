@@ -314,6 +314,22 @@ download() {
     fi
 }
 
+# ── Strict-tag failure (spec/07-generic-release/09 §3) ─────────────
+# Print the canonical no-fallback message and exit 1. Called from
+# download_asset whenever VERSION was supplied explicitly and the
+# requested release asset cannot be downloaded or verified.
+strict_fail() {
+    local detail="$1"
+    err ""
+    err "Error: requested release ${VERSION} not found in ${REPO};"
+    err "       refusing to fall back per strict-tag contract."
+    err "       See spec/07-generic-release/09-generic-install-script-behavior.md §3."
+    if [ -n "${detail}" ]; then
+        err "       Detail: ${detail}"
+    fi
+    exit 1
+}
+
 # ── Download and verify asset ──────────────────────────────────────
 
 download_asset() {
@@ -323,20 +339,47 @@ download_asset() {
     local asset_url="${base_url}/${asset_name}"
     local checksum_url="${base_url}/checksums.txt"
 
+    # Strict mode: VERSION was supplied explicitly via --version.
+    # On any failure below we MUST exit 1, not fall through to a .zip
+    # probe or anything else that could mask a missing-tag situation.
+    local strict=0
+    if [ -n "${VERSION}" ]; then
+        strict=1
+        printf '  [strict] download: %s\n' "${asset_url}" >&2
+    fi
+
     # TMP_DIR is set by the caller (main).
 
     local archive_path="${TMP_DIR}/${asset_name}"
     local checksum_path="${TMP_DIR}/checksums.txt"
 
     step "Downloading ${asset_name} (${version})..."
-    download "${asset_url}" "${archive_path}"
-    download "${checksum_url}" "${checksum_path}"
+    if ! download "${asset_url}" "${archive_path}"; then
+        if [ "${strict}" = "1" ]; then
+            strict_fail "asset ${asset_name} not downloadable from ${base_url}"
+        fi
+        err "Download failed: ${asset_url}"
+        exit 1
+    fi
+    if ! download "${checksum_url}" "${checksum_path}"; then
+        if [ "${strict}" = "1" ]; then
+            strict_fail "checksums.txt missing at ${checksum_url}"
+        fi
+        err "Download failed: ${checksum_url}"
+        exit 1
+    fi
 
     # Verify checksum
     step "Verifying checksum..."
     local expected_line
     expected_line="$(grep "${asset_name}" "${checksum_path}" || true)"
     if [ -z "${expected_line}" ]; then
+        if [ "${strict}" = "1" ]; then
+            # Strict mode: do NOT probe an alternate asset name. The
+            # tag's own checksums.txt is the source of truth.
+            strict_fail "asset ${asset_name} not listed in checksums.txt for ${version}"
+        fi
+
         # Try .zip variant (some releases may only have zip)
         asset_name="${BINARY_NAME}-${version}-${os}-${arch}.zip"
         asset_url="${base_url}/${asset_name}"
@@ -368,6 +411,9 @@ download_asset() {
     fi
 
     if [ "${actual_hash}" != "${expected_hash}" ]; then
+        if [ "${strict}" = "1" ]; then
+            strict_fail "checksum mismatch for ${asset_name} (expected ${expected_hash}, got ${actual_hash})"
+        fi
         err "Checksum mismatch!"
         err "  Expected: ${expected_hash}"
         err "  Got:      ${actual_hash}"

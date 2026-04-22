@@ -177,6 +177,13 @@ __gitmap_quick_install_main() {
             printf '  [discovery] INSTALLER_DELEGATED=1; skipping discovery (loop guard)\n' >&2
         elif [ "$NO_DISCOVERY" = "1" ]; then
             printf '  [discovery] --no-discovery set; skipping probe\n' >&2
+        elif [ -n "$VERSION" ]; then
+            # Strict-tag contract (spec/07-generic-release/09-generic-install-script-behavior.md §3):
+            # An explicit --version pins the install to that exact release.
+            # MUST NOT probe -v<N+i> sibling repos. MUST NOT call releases/latest.
+            # MUST NOT fall back to main on failure. The canonical installer
+            # downstream enforces the same contract on the asset download path.
+            printf '  [strict] --version %s pinned; skipping repo probe (no fallback)\n' "$VERSION" >&2
         else
             EFFECTIVE_REPO="$(resolve_effective_repo "$REPO" "$PROBE_CEILING")"
             if [ "$EFFECTIVE_REPO" != "$REPO" ]; then

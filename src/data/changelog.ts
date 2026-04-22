@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.27.0",
+    date: "2026-04-22",
+    subtitle: "Installer strict-tag contract: explicit `--version` / `-Version` now hard-fails with no fallback to main or sibling -v<N> repos",
+    items: [
+      "Implemented Phase 2 of `spec/07-generic-release/09-generic-install-script-behavior.md` §3 across all four install scripts (`install-quick.sh`, `install-quick.ps1`, `gitmap/scripts/install.sh`, `gitmap/scripts/install.ps1`). When the user supplies `--version <tag>` (or `-Version <tag>`), the installer now MUST install that exact release and MUST NOT fall back to anything: no `releases/latest` API call, no `-v<N+1>..-v<N+30>` sibling repo probe, no main-branch HEAD fallback, no `.zip` alternate-asset probe. On any failure (missing tag, missing asset, missing checksum line, checksum mismatch) the installer exits with code 1 and the canonical message `Error: requested release <tag> not found in <owner>/<repo>; refusing to fall back per strict-tag contract.` plus a one-line failure detail.",
+      "`install-quick.sh` and `install-quick.ps1` previously ran the versioned-repo discovery probe (`-v<N+i>` HEAD requests) BEFORE checking `--version`, which meant a snippet like `--version v3.11.1` copied from the v3 release page could still get bumped to a `-v6` sibling at the quick-installer layer (the canonical installer downstream caught it, but the quick layer leaked). Both quick installers now short-circuit with a `[strict] --version <tag> pinned; skipping repo probe (no fallback)` log line as the THIRD arm of the discovery decision (after the `INSTALLER_DELEGATED` loop guard and `--no-discovery` opt-out, before the `Resolve-EffectiveRepo` probe). The decision is mutually exclusive with discovery — once strict mode is active, the probe never runs.",
+      "`gitmap/scripts/install.sh` `download_asset()` now tracks a `strict=1` flag whenever `${VERSION}` is non-empty and routes every failure path through a new `strict_fail()` helper that prints the canonical message and exits 1. The `.zip` alternate-asset fallback (which previously kicked in when the requested `.tar.gz` wasn't listed in `checksums.txt`) is now SKIPPED in strict mode — the tag's own `checksums.txt` is treated as the source of truth for what assets the user asked for. Same logic mirrored in `gitmap/scripts/install.ps1` `Get-Asset` via a new `Stop-Strict` function. Non-strict installs (no `--version` supplied) keep the existing fallback behavior unchanged so brand-new releases that only ship a `.zip` continue to work.",
+      "Added a `[strict]` log prefix (matching the `[strict]` / `[discovery]` / `[warn]` taxonomy mandated by spec 09 §7) so install logs are now grep-friendly for post-mortem auditing: `grep '\\[strict\\]'` shows every step the strict-mode path took, `grep '\\[discovery\\]'` shows every probe in non-strict mode. The two prefixes are mutually exclusive in any single install run by construction.",
+      "Acceptance criteria from spec 09 §10 now hold for the four scripts: `--version v0.0.0-nope` exits 1 with zero `[discovery]` lines and the canonical message; `--version v3.11.1` against a real release downloads only `releases/download/v3.11.1/...` (verified by the `[strict] download:` log line) and never touches `releases/latest` or any `-v<M>` sibling URL.",
+    ],
+  },
+  {
     version: "v3.26.0",
     date: "2026-04-22",
     subtitle: "Templates corpus expanded to 11 languages: added `java`, `ruby`, `php`, `swift`, `kotlin` (ignore + attributes)",

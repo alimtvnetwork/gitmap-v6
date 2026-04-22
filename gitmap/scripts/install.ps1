@@ -228,6 +228,19 @@ function Resolve-Version([string]$version) {
     }
 }
 
+# --- Strict-tag failure (spec/07-generic-release/09 §3) ---
+# Print the canonical no-fallback message and exit 1. Called from
+# Get-Asset whenever -Version was supplied explicitly and the
+# requested release asset cannot be downloaded or verified.
+function Stop-Strict([string]$detail) {
+    Write-Err ""
+    Write-Err "Error: requested release $Version not found in $Repo;"
+    Write-Err "       refusing to fall back per strict-tag contract."
+    Write-Err "       See spec/07-generic-release/09-generic-install-script-behavior.md `$3."
+    if ($detail) { Write-Err "       Detail: $detail" }
+    exit 1
+}
+
 # --- Download asset ---
 
 function Get-Asset([string]$version, [string]$arch) {
@@ -235,6 +248,13 @@ function Get-Asset([string]$version, [string]$arch) {
     $baseUrl = "https://github.com/$Repo/releases/download/$version"
     $assetUrl = "$baseUrl/$assetName"
     $checksumUrl = "$baseUrl/checksums.txt"
+
+    # Strict mode: -Version was supplied explicitly. Any failure here
+    # MUST exit 1 with the canonical message and MUST NOT fall back.
+    $strict = -not [string]::IsNullOrWhiteSpace($Version)
+    if ($strict) {
+        Write-Step "  [strict] download: $assetUrl"
+    }
 
     $tmpDir = Join-Path $env:TEMP "gitmap-install-$(Get-Random)"
     New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
@@ -249,8 +269,11 @@ function Get-Asset([string]$version, [string]$arch) {
         Invoke-WebRequest -Uri $checksumUrl -OutFile $checksumPath -UseBasicParsing
     }
     catch {
-        Write-Err "Download failed: $_"
         Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        if ($strict) {
+            Stop-Strict "download failed: $($_.Exception.Message)"
+        }
+        Write-Err "Download failed: $_"
         exit 1
     }
 
@@ -258,8 +281,11 @@ function Get-Asset([string]$version, [string]$arch) {
     Write-Step "Verifying checksum..."
     $expectedLine = (Get-Content $checksumPath | Where-Object { $_ -match $assetName })
     if (-not $expectedLine) {
-        Write-Err "Asset not found in checksums.txt"
         Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        if ($strict) {
+            Stop-Strict "asset $assetName not listed in checksums.txt for $version"
+        }
+        Write-Err "Asset not found in checksums.txt"
         exit 1
     }
 
@@ -267,10 +293,13 @@ function Get-Asset([string]$version, [string]$arch) {
     $actualHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLower()
 
     if ($actualHash -ne $expectedHash) {
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        if ($strict) {
+            Stop-Strict "checksum mismatch for $assetName (expected $expectedHash, got $actualHash)"
+        }
         Write-Err "Checksum mismatch!"
         Write-Err "  Expected: $expectedHash"
         Write-Err "  Got:      $actualHash"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         exit 1
     }
 
