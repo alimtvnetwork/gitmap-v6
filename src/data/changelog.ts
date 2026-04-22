@@ -13,6 +13,7 @@ export const changelog: ChangelogEntry[] = [
       "Added pinned-version short-circuit in `install.ps1` and `install.sh`: when `-Version <tag>` (PowerShell) or `--version <tag>` (bash) is supplied, the installer skips both the `releases/latest` API call **and** the versioned-repo `-v<N>` discovery probe, downloading `…/releases/download/<tag>/…` directly. Closes the gap where a snippet copied from a v3.x release page could silently jump to the v4 repo's latest tag.",
       "Added spec doc `spec/07-generic-release/08-pinned-version-install-snippet.md` — full NEA/AI handoff contract: rendered snippets, installer-side flag matrix, release-cutting checklist, and a CI test contract for future work.",
       "Renamed `gitmap-v3` → `gitmap-v6` across the entire codebase: every Go constant (`SourceRepoCloneURL`, `SelfInstallRemotePwsh/Bash`, `GitmapRepoPrefix`, install hint URLs), every install/uninstall script (`install.ps1`, `install.sh`, `install-quick.*`, `uninstall-quick.*`), every spec doc under `spec/01-app/` and `spec/07-generic-release/`, every helptext markdown, the README, the React `src/data/*.ts` files, GitHub workflows, and historical CHANGELOG entries. Only `.gitmap/` artifacts retain v3 references (immutable per project policy).",
+      "Docs site UI: version chip and command alias badges now use `text-foreground` with `dark:text-background` and `dark:bg-primary/25`, keeping text black/neutral and readable against the green tinted background in both light and dark themes.",
     ],
   },
   {
