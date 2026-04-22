@@ -31,7 +31,7 @@ worker still holds a lock on its own handoff copy and cannot remove it.
 
 ### Flow
 
-![Handoff Mechanism Flow](diagrams/handoff-mechanism-flow.mmd)
+![Handoff Mechanism Flow](images/handoff-mechanism-flow.mmd)
 
 ```
 <binary>.exe update

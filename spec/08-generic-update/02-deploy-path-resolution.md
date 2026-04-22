@@ -10,7 +10,7 @@ installs, and explicit overrides.
 
 ## Flow Diagram
 
-See [`diagrams/deploy-path-resolution-flow.mmd`](diagrams/deploy-path-resolution-flow.mmd)
+See [`images/deploy-path-resolution-flow.mmd`](images/deploy-path-resolution-flow.mmd)
 
 ---
 

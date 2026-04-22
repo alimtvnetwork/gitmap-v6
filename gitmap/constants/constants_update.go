@@ -46,31 +46,27 @@ const (
 
 // Update UI messages.
 const (
-	MsgUpdateActive             = "  → Active: %s\n  → Handoff: %s\n"
-	MsgUpdateCleanStart         = "\n  Cleaning up update artifacts..."
-	MsgUpdateCleanNone          = "  ✓ Nothing to clean up\n"
-	MsgUpdatePhase3Handoff      = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
-	MsgUpdateCleanLine          = "  %s [%s] %s — %s: %s\n"
-	MsgUpdateCleanSummaryHeader = "\n  ── Cleanup summary ──"
-	MsgUpdateCleanSummaryRow    = "    %-20s  %d\n"
-	MsgUpdateCleanSummaryTotal  = "    ────────────────────\n    removed=%d  failed=%d  total=%d\n\n"
-	UpdateRunnerLogStart        = "update-runner starting, repo=%s"
-	UpdateScriptLogExec         = "executing update script: %s"
-	UpdateScriptLogExit         = "update script exited: err=%v"
+	MsgUpdateActive        = "  → Active: %s\n  → Handoff: %s\n"
+	MsgUpdateCleanStart    = "\n  Cleaning up update artifacts..."
+	MsgUpdateCleanDone     = "  ✓ Removed %d file(s)\n\n"
+	MsgUpdateCleanNone     = "  ✓ Nothing to clean up"
+	MsgUpdateTempRemoved   = "  → Removed temp copy: %s\n"
+	MsgUpdateOldRemoved    = "  → Removed backup: %s\n"
+	MsgUpdatePhase3Handoff = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
+	UpdateRunnerLogStart   = "update-runner starting, repo=%s"
+	UpdateScriptLogExec    = "executing update script: %s"
+	UpdateScriptLogExit    = "update script exited: err=%v"
 )
 
 // Update error messages.
-//
-// Cleanup glob/remove errors are now embedded in the per-artifact
-// cleanupReport (see gitmap/cmd/updatecleanup_report.go) with stable
-// status codes ("locked", "glob-error"), so dedicated message constants
-// are no longer needed for those two cases.
 const (
 	ErrUpdateExecFind          = "Error finding executable: %v\n"
 	ErrUpdateCopyFail          = "Error creating update copy: %v\n"
 	ErrUpdateNoRunSH           = "  ✗ run.sh not found at %s — cannot update on this platform without it.\n"
 	ErrUpdateCleanupExecPath   = "Error: could not resolve executable path at active-binary: %v (operation: resolve executable, reason: os.Executable failed)\n"
 	ErrUpdateCleanupConfigRead = "Error: could not read cleanup config at %s: %v (operation: read config, reason: cleanup path resolution unavailable)\n"
+	ErrUpdateCleanupGlob       = "Error: could not enumerate cleanup matches at %s: %v (operation: glob, reason: invalid cleanup pattern)\n"
+	ErrUpdateCleanupRemove     = "Error: could not remove cleanup artifact at %s: %v (operation: remove, reason: file may be locked or missing)\n"
 )
 
 // Unix update messages.

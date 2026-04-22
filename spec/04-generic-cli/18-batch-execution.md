@@ -16,7 +16,7 @@ success/failure across the entire batch.
 > - [17-progress-tracking.md](17-progress-tracking.md) — progress counter pattern
 >   (`[current/total]`) used by batch operations.
 > - Rendering pipeline diagram:
->   [`diagrams/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
+>   [`images/terminal-output-pipeline.mmd`](images/terminal-output-pipeline.mmd)
 
 ---
 

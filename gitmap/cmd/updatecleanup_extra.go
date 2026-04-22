@@ -2,14 +2,13 @@
 //
 // These complement the pattern-based pass in updatecleanup_remove.go by
 // targeting two artifact classes that don't fit the simple-glob model:
-//  1. The obsolete v2.90.0 drive-root forwarding shim
-//     (e.g. E:\gitmap.exe sitting at the literal drive root, NOT
-//     inside a gitmap\ subfolder).
-//  2. *.gitmap-tmp-* swap directories left by interrupted clones.
+//   1. The obsolete v2.90.0 drive-root forwarding shim
+//      (e.g. E:\gitmap.exe sitting at the literal drive root, NOT
+//      inside a gitmap\ subfolder).
+//   2. *.gitmap-tmp-* swap directories left by interrupted clones.
 //
-// Both passes record per-artifact results into the shared cleanupReport so
-// users see the same structured "[<kind>] <path> — <status>: <reason>"
-// output as the temp/backup passes.
+// Both passes follow the spec/04-generic-cli/22-data-folder-deploy-and-cleanup.md
+// contract (DFD-6, DFD-7).
 package cmd
 
 import (
@@ -18,6 +17,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 const (
@@ -27,65 +28,22 @@ const (
 
 // cleanupDriveRootShim removes the obsolete drive-root forwarding shim if present.
 // Safe-by-default: only deletes when the candidate sits at the literal drive root
-// AND is under the size cap AND is not the active binary.
-func cleanupDriveRootShim(ctx updateCleanupContext, report *cleanupReport) {
+// AND is under the size cap AND is not inside a gitmap/ folder.
+func cleanupDriveRootShim(ctx updateCleanupContext) int {
 	if runtime.GOOS != "windows" {
-		return
+		return 0
 	}
 
 	shimPath := resolveDriveRootShimPath(ctx.selfPath)
 	if len(shimPath) == 0 {
-		return
+		return 0
 	}
 
-	res, ok := evaluateDriveRootShim(shimPath, ctx.selfPath)
-	if !ok {
-		return
-	}
-	if res.Status != "" {
-		report.record(res)
-
-		return
+	if !isRemovableDriveRootShim(shimPath, ctx.selfPath) {
+		return 0
 	}
 
-	report.record(removeCleanupCandidate(shimPath, filepath.Clean(shimPath), cleanupKindDriveShim))
-}
-
-// evaluateDriveRootShim runs the safety checks. Returns (result, true) when
-// the candidate exists and warrants a recorded outcome (skipped or pending
-// removal). Returns (zero, false) when the candidate doesn't exist at all
-// — nothing to record because nothing to clean.
-func evaluateDriveRootShim(shimPath, selfPath string) (cleanupResult, bool) {
-	if normalizeCleanupPath(shimPath) == normalizeCleanupPath(selfPath) {
-		return cleanupResult{}, false
-	}
-
-	parent := filepath.Dir(shimPath)
-	if !isLiteralDriveRoot(parent) {
-		return cleanupResult{
-			Path:   shimPath,
-			Kind:   cleanupKindDriveShim,
-			Status: cleanupStatusSkippedNotInRoot,
-			Reason: fmt.Sprintf("parent %q is not a literal drive root", parent),
-		}, true
-	}
-
-	info, err := os.Stat(shimPath)
-	if err != nil || info.IsDir() {
-		return cleanupResult{}, false
-	}
-
-	if info.Size() > driveRootShimMaxBytes {
-		return cleanupResult{
-			Path:   shimPath,
-			Kind:   cleanupKindDriveShim,
-			Status: cleanupStatusSkippedTooLarge,
-			Reason: fmt.Sprintf("size %d bytes exceeds %d-byte safety cap", info.Size(), driveRootShimMaxBytes),
-		}, true
-	}
-
-	// Caller will perform the removal so the result reflects real OS state.
-	return cleanupResult{}, true
+	return removeDriveRootShim(shimPath)
 }
 
 // resolveDriveRootShimPath returns <drive>:\<binaryName> derived from selfPath.
@@ -104,6 +62,30 @@ func resolveDriveRootShimPath(selfPath string) string {
 	return filepath.Join(drive+`\`, binaryName)
 }
 
+// isRemovableDriveRootShim returns true only when the candidate is safe to delete.
+func isRemovableDriveRootShim(shimPath, selfPath string) bool {
+	if normalizeCleanupPath(shimPath) == normalizeCleanupPath(selfPath) {
+		return false
+	}
+
+	parent := filepath.Dir(shimPath)
+	if !isLiteralDriveRoot(parent) {
+		return false
+	}
+
+	info, err := os.Stat(shimPath)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	if info.Size() > driveRootShimMaxBytes {
+		fmt.Fprintf(os.Stderr, "  !! [cleanup] skipping drive-root shim %s (size %d > 5MB)\n", shimPath, info.Size())
+
+		return false
+	}
+
+	return true
+}
+
 // isLiteralDriveRoot returns true when path is the literal drive root (e.g. "E:\").
 func isLiteralDriveRoot(path string) bool {
 	clean := strings.TrimRight(path, `\/`)
@@ -111,13 +93,29 @@ func isLiteralDriveRoot(path string) bool {
 	return len(clean) == 2 && clean[1] == ':'
 }
 
+// removeDriveRootShim deletes the candidate and logs the outcome.
+func removeDriveRootShim(shimPath string) int {
+	if err := os.Remove(shimPath); err != nil {
+		fmt.Fprintf(os.Stderr, "  !! [cleanup] could not remove drive-root shim %s: %v\n", shimPath, err)
+
+		return 0
+	}
+
+	fmt.Printf("  → Removed obsolete drive-root shim: %s\n", shimPath)
+
+	return 1
+}
+
 // cleanupCloneSwapDirs removes *.gitmap-tmp-* directories left by interrupted clones.
 // Scans every cleanup directory we already resolved.
-func cleanupCloneSwapDirs(ctx updateCleanupContext, report *cleanupReport) {
+func cleanupCloneSwapDirs(ctx updateCleanupContext) int {
 	dirs := uniqueParentDirs(ctx.tempPatterns, ctx.backupPatterns)
+	removed := 0
 	for _, dir := range dirs {
-		removeCloneSwapDirsIn(dir, report)
+		removed += removeCloneSwapDirsIn(dir)
 	}
+
+	return removed
 }
 
 // uniqueParentDirs extracts the unique parent directories from glob patterns.
@@ -139,55 +137,29 @@ func uniqueParentDirs(patternGroups ...[]string) []string {
 	return out
 }
 
-// removeCloneSwapDirsIn removes every *.gitmap-tmp-* dir directly under base
-// and records each outcome. Glob errors and per-dir RemoveAll failures are
-// classified the same way regular cleanup candidates are.
-func removeCloneSwapDirsIn(base string, report *cleanupReport) {
-	pattern := filepath.Join(base, cloneSwapDirGlob)
-	matches, err := filepath.Glob(pattern)
+// removeCloneSwapDirsIn removes every *.gitmap-tmp-* dir directly under base.
+func removeCloneSwapDirsIn(base string) int {
+	matches, err := filepath.Glob(filepath.Join(base, cloneSwapDirGlob))
 	if err != nil {
-		report.record(cleanupResult{
-			Path:   pattern,
-			Kind:   cleanupKindSwapDir,
-			Status: cleanupStatusGlobError,
-			Reason: "invalid swap-dir glob pattern",
-			Err:    err,
-		})
+		fmt.Fprintf(os.Stderr, constants.ErrUpdateCleanupGlob, base, err)
 
-		return
+		return 0
 	}
 
+	removed := 0
 	for _, match := range matches {
-		recordSwapDirAttempt(match, report)
-	}
-}
+		info, statErr := os.Stat(match)
+		if statErr != nil || !info.IsDir() {
+			continue
+		}
+		if err := os.RemoveAll(match); err != nil {
+			fmt.Fprintf(os.Stderr, "  !! [cleanup] could not remove swap dir %s: %v\n", match, err)
 
-// recordSwapDirAttempt stats the candidate, attempts RemoveAll, and records
-// the result in the shared report.
-func recordSwapDirAttempt(match string, report *cleanupReport) {
-	info, statErr := os.Stat(match)
-	if statErr != nil || !info.IsDir() {
-		return
-	}
-
-	cleanPath := filepath.Clean(match)
-	if err := os.RemoveAll(match); err != nil {
-		status, reason := classifyRemoveError(err)
-		report.record(cleanupResult{
-			Path:   cleanPath,
-			Kind:   cleanupKindSwapDir,
-			Status: status,
-			Reason: reason,
-			Err:    err,
-		})
-
-		return
+			continue
+		}
+		fmt.Printf("  → Removed swap dir: %s\n", match)
+		removed++
 	}
 
-	report.record(cleanupResult{
-		Path:   cleanPath,
-		Kind:   cleanupKindSwapDir,
-		Status: cleanupStatusRemoved,
-		Reason: "directory tree deleted successfully",
-	})
+	return removed
 }
