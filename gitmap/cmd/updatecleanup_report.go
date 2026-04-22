@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"sort"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
@@ -224,18 +223,6 @@ func classifyRemoveError(err error) (cleanupArtifactStatus, string) {
 	// real-world cause on Windows (sharing violation surfaces as a
 	// generic *PathError, not fs.ErrPermission).
 	return cleanupStatusLocked, fmt.Sprintf("OS refused removal: %v", err)
-}
-
-// shortPath returns a path suitable for log lines. It collapses overly
-// long absolute paths to "<dir>/<base>" when they would dominate the line,
-// while preserving the full path in the structured Path field of the
-// cleanupResult so verbose consumers still see everything.
-func shortPath(path string) string {
-	if len(path) <= 80 {
-		return path
-	}
-
-	return filepath.Join("…", filepath.Base(filepath.Dir(path)), filepath.Base(path))
 }
 
 // logUpdateCleanupExecutableError reports os.Executable failures during
