@@ -237,6 +237,8 @@ CmdInstalledDir
 CmdInstalledDirAlias
 CmdInteractive
 CmdInteractiveAlias
+CmdLFSCommon
+CmdLFSCommonAlias
 CmdLLMDocs
 CmdLLMDocsAlias
 CmdLatestBranch
@@ -407,6 +409,7 @@ DefaultProfileName
 DefaultSSHHost
 DefaultSSHKeyName
 DefaultScanCacheFile
+DefaultScanWorkers
 DefaultSetupConfigPath
 DefaultStructureFile
 DefaultTextFile
@@ -1136,6 +1139,7 @@ FlagDescSEOService
 FlagDescSEOTemplate
 FlagDescSEOURL
 FlagDescSafePull
+FlagDescScanWorkers
 FlagDescSelfConfirm
 FlagDescSelfDir
 FlagDescSelfDualShell
@@ -1270,6 +1274,7 @@ FlagSSHName
 FlagSSHNameS
 FlagSSHPath
 FlagSSHPathS
+FlagScanWorkers
 FlagSelfConfirm
 FlagSelfDir
 FlagSelfDualShell
@@ -1908,6 +1913,7 @@ MsgHDRunningNPM
 MsgHDServingStatic
 MsgHDStartingDev
 MsgHDStopped
+MsgHelpLFSCommon
 MsgHintHeader
 MsgHintRowFmt
 MsgHistoryColumnsBasic
@@ -2382,6 +2388,7 @@ ProgressBeginFmt
 ProgressDetailFmt
 ProgressDoneFmt
 ProgressFailFmt
+ProgressSkipFmt
 ProgressSummaryFmt
 ProjectKeyCpp
 ProjectKeyCsharp
@@ -2568,6 +2575,10 @@ SSHKeyType
 SSHKeygenBin
 SafePullRetryAttempts
 SafePullRetryDelayMS
+ScanProgressClearLine
+ScanProgressDoneFmt
+ScanProgressLineFmt
+ScanProgressPrefix
 SchemaVersionCurrent
 ScriptReleaseVersionPS1
 ScriptReleaseVersionSh
