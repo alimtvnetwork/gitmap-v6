@@ -22,10 +22,14 @@
 #>
 
 param(
-    [string]$InstallDir    = "",
-    [string]$Version       = "",
+    [string]$InstallDir       = "",
+    [string]$Version          = "",
     [switch]$NoDiscovery,
-    [int]$ProbeCeiling     = 30
+    # Legacy fail-fast knob (retained for back-compat). The canonical knob
+    # per spec/07-generic-release/09 §6 is -DiscoveryWindow (default 20,
+    # capped at 20 anonymous / 50 with $env:GITHUB_TOKEN).
+    [int]$ProbeCeiling        = 30,
+    [int]$DiscoveryWindow     = 20
 )
 
 $ErrorActionPreference = "Stop"
