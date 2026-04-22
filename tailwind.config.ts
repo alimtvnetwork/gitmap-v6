@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Poppins", "system-ui", "sans-serif"],
+        sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "Segoe UI", "system-ui", "sans-serif"],
         heading: ["Ubuntu", "system-ui", "sans-serif"],
         mono: ["Ubuntu Mono", "monospace"],
       },
