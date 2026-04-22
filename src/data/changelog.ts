@@ -8,6 +8,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.19.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap help scan` — four end-to-end workflows for `--config` / `--mode` / `--output`",
+    items: [
+      "Added an **End-to-End Examples** section to `gitmap/helptext/scan.md` with four complete workflows that string the three most-asked-about flags together: (E2E 1) custom config + JSON output + re-clone on another host via `gitmap clone <file> --target-dir`, exercising hierarchy preservation across machines; (E2E 2) one scan, two consumers — SSH-mode JSON for CI plus CSV for spreadsheets, with a custom `--output-path`; (E2E 3) terminal preview → author config → re-scan with `--output json`, the recommended onboarding flow when you don't yet know what to exclude; (E2E 4) CLI flag overrides config file, demonstrating `config.MergeWithFlags` precedence without mutating the file on disk.",
+      "Each example is copy-pasteable: shell-prompt-free commands, real artifact paths under `.gitmap/output/`, and an **Expected output** block where the result isn't obvious. Cross-references to `gitmap clone` make the scan→clone round-trip discoverable from the scan page alone — users no longer need to read two helptext files to understand the full pipeline.",
+      "No code changes — the underlying `parseScanFlags` / `config.LoadFromFile` / `config.MergeWithFlags` behaviour was already correct. This release only fills the documentation gap that made the four workflows look like separate features instead of one composable pipeline.",
+    ],
+  },
+  {
     version: "v3.18.0",
     date: "2026-04-22",
     subtitle: "Pretty renderer wired into `gitmap help` — TTY-aware, opt-out via `GITMAP_NO_PRETTY`",
