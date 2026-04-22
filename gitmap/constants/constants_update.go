@@ -48,7 +48,6 @@ const (
 const (
 	MsgUpdateActive             = "  → Active: %s\n  → Handoff: %s\n"
 	MsgUpdateCleanStart         = "\n  Cleaning up update artifacts..."
-	MsgUpdateCleanDone          = "  ✓ Removed %d file(s)\n\n"
 	MsgUpdateCleanNone          = "  ✓ Nothing to clean up\n"
 	MsgUpdatePhase3Handoff      = "\n  → Handing off cleanup to deployed binary: %s update-cleanup\n"
 	MsgUpdateCleanLine          = "  %s [%s] %s — %s: %s\n"
