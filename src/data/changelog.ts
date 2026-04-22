@@ -1,6 +1,8 @@
 export interface ChangelogEntry {
   version: string;
   date?: string;
+  /** Optional one-line release tagline shown under the version row. */
+  subtitle?: string;
   items: string[];
 }
 
