@@ -18,6 +18,17 @@
   </head>
 
   <body>
+    <script>
+      // Restore persisted theme before paint to avoid flash-of-wrong-theme.
+      (function () {
+        try {
+          var saved = localStorage.getItem('gitmap-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var useDark = saved ? saved === 'dark' : prefersDark;
+          if (useDark) document.documentElement.classList.add('dark');
+        } catch (e) { /* localStorage may be blocked; fall back to default */ }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
