@@ -11,6 +11,13 @@ import (
 )
 
 // runRevertRunner is the hidden command that performs the revert build.
+//
+// Phase 3 of the handoff chain runs at the end via scheduleDeployedCleanupHandoff
+// so the freshly-deployed binary can remove the still-locked handoff copy
+// and the just-renamed *.exe.old (the same flow used by runUpdateRunner).
+// The PS template (RevertPSPostActions) intentionally does NOT call
+// `update-cleanup` synchronously — that would race against this still-alive
+// handoff process and emit two scary "Access is denied" lines.
 func runRevertRunner() {
 	repoPath := constants.RepoPath
 	if len(repoPath) == 0 {
@@ -21,6 +28,7 @@ func runRevertRunner() {
 	initRunnerVerbose()
 	fmt.Printf(constants.MsgRevertStarting)
 	executeRevert(repoPath)
+	scheduleDeployedCleanupHandoff()
 }
 
 // executeRevert writes a temp PS1 script and runs it.

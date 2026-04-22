@@ -349,11 +349,14 @@ $cmdAfter = Get-Command gitmap -ErrorAction SilentlyContinue | Select-Object -Fi
 if ($cmdAfter -and (Test-Path $cmdAfter.Source)) {
     $activeAfter = & $cmdAfter.Source version 2>&1
     Write-Host "  Active version: $activeAfter" -ForegroundColor DarkGray
-
-    Write-Host ""
-    Write-Host "  Cleaning artifacts..." -ForegroundColor DarkGray
-    & $cmdAfter.Source update-cleanup
 }
+
+# NOTE: cleanup is intentionally NOT invoked here, mirroring the same
+# decision in UpdatePSPostActions. Phase 3 (scheduleDeployedCleanupHandoff
+# in runRevertRunner) handles cleanup after this PowerShell script and
+# the surrounding handoff process exit, so the deployed binary can
+# safely remove the still-locked handoff exe + .old backup. See
+# spec/08-generic-update/06-cleanup.md.
 
 Write-Host ""
 exit 0
