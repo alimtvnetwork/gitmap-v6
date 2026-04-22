@@ -5,6 +5,7 @@
 // keep the v3.31.0 surface area easy to audit and unwind.
 package constants
 
+// gitmap:cmd top-level
 // New CLI commands.
 const (
 	CmdHasChange      = "has-change"
