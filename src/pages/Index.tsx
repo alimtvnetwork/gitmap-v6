@@ -13,7 +13,7 @@ const HomePage = () => {
           <h1 className="text-4xl md:text-5xl font-heading font-bold docs-h1">
             gitmap
           </h1>
-          <span className="px-2 py-0.5 rounded text-xs font-mono bg-primary/10 text-foreground border border-primary/20 dark:bg-primary/20 dark:text-primary dark:border-primary/40">
+          <span className="px-2 py-0.5 rounded text-xs font-mono bg-primary/10 text-foreground border border-primary/20 transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10 dark:bg-primary/20 dark:text-primary dark:border-primary/40 dark:hover:border-primary/60">
             {VERSION}
           </span>
         </div>
@@ -70,13 +70,13 @@ const HomePage = () => {
         <div className="flex gap-4 justify-center">
           <Link
             to="/getting-started"
-            className="group relative px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading text-sm font-medium shadow-sm hover:shadow-lg hover:shadow-primary/10 hover:bg-primary/90 transition-colors duration-300"
+            className="group relative px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading text-sm font-medium shadow-sm hover:shadow-lg hover:shadow-primary/10 hover:bg-primary/90 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors duration-300"
           >
             Get Started
           </Link>
           <Link
             to="/commands"
-            className="group relative px-6 py-2.5 rounded-lg border border-border text-foreground font-heading text-sm font-medium hover:border-primary/40 hover:bg-muted hover:shadow-lg hover:shadow-primary/5 transition-colors duration-300"
+            className="group relative px-6 py-2.5 rounded-lg border border-border text-foreground font-heading text-sm font-medium hover:border-primary/40 hover:bg-muted hover:shadow-lg hover:shadow-primary/5 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors duration-300"
           >
             View Commands
           </Link>
