@@ -6,7 +6,7 @@
 > - [15-constants-reference.md](15-constants-reference.md) — format string constants used by output renderers
 > - [14-date-formatting.md](14-date-formatting.md) — date display rules applied within formatted output
 > - Rendering pipeline diagram:
->   [`images/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
+>   [`diagrams/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
 
 ## Multi-Format Output Strategy
 
@@ -41,7 +41,7 @@ target-dir/
 > reference for banners, item lists, tree views, emoji, color system, spacing
 > rules, `NO_COLOR` support, and multi-domain examples (repos, movies, servers).
 > The rendering pipeline diagram is at
-> [`images/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd).
+> [`diagrams/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd).
 
 This section summarizes the key patterns. See the full spec for implementation
 details, constants, and generic examples.

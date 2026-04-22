@@ -9,7 +9,7 @@
 
 ![Release ↔ Repo ER diagram](diagrams/release-repo-er.png)
 
-> Source: [`images/release-repo-er.mmd`](diagrams/release-repo-er.mmd)
+> Source: [`diagrams/release-repo-er.mmd`](diagrams/release-repo-er.mmd)
 
 ## Problem
 

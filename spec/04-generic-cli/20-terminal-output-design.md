@@ -22,7 +22,7 @@ terminal.
 
 ## Rendering Pipeline
 
-> **Diagram:** [`images/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
+> **Diagram:** [`diagrams/terminal-output-pipeline.mmd`](diagrams/terminal-output-pipeline.mmd)
 
 Data flows through three layers: the **data model** (records, tree nodes,
 metadata) feeds into **section renderers** (one per report section), which

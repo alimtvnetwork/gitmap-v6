@@ -8,7 +8,7 @@ and removed after a successful update.
 
 ## Flow Diagram
 
-See [`images/cleanup-flow.mmd`](diagrams/cleanup-flow.mmd)
+See [`diagrams/cleanup-flow.mmd`](diagrams/cleanup-flow.mmd)
 
 ---
 
