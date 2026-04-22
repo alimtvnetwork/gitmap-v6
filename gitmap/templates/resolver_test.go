@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -64,7 +65,7 @@ func TestResolveUserOverlayWinsOverEmbed(t *testing.T) {
 	if r.Source != SourceUser {
 		t.Fatalf("Source = %v, want SourceUser", r.Source)
 	}
-	if string(r.Content) != string(body) {
+	if !bytes.Equal(r.Content, body) {
 		t.Fatalf("Content mismatch: got %q", r.Content)
 	}
 }
