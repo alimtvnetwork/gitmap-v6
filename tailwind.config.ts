@@ -73,6 +73,14 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        chip: "0 1px 2px 0 hsl(var(--primary) / 0.08)",
+        "chip-hover": "0 4px 12px -2px hsl(var(--primary) / 0.18)",
+        "btn-lift": "0 8px 24px -8px hsl(var(--primary) / 0.25)",
+      },
+      transitionDuration: {
+        chip: "300ms",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
