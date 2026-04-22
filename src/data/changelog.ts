@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.23.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap templates show` optionally pretty-renders markdown templates on a TTY (`--raw` + `GITMAP_NO_PRETTY` opt-outs)",
+    items: [
+      "Updated `gitmap/cmd/templatescli.go::runTemplatesShow` to route resolved template bytes through `render.RenderANSI` when **all** of the following are true: (1) the resolved template path has a markdown extension (`.md` or `.markdown`, case-insensitive), (2) stdout is a real TTY (`os.ModeCharDevice` check, same dependency-free pattern as `helptext/print.go::stdoutIsTerminal`), (3) the user did not pass `--raw`, and (4) the shared `GITMAP_NO_PRETTY` env var is unset. Non-markdown templates (`.gitignore`, `.gitattributes`, `lfs/common.gitattributes`) are **always** written byte-for-byte — the dominant `templates show ignore go > .gitignore` redirect workflow stays untouched and diff-safe.",
+      "Added `--raw` flag (`flagTemplatesShowRaw` / `flagDescTemplatesRaw`) parsed via a dedicated `flag.NewFlagSet` in `parseTemplatesShowFlags`. Uses the project's `reorderFlagsBeforeArgs` helper (per `mem://tech/flag-parsing-logic`) so `templates show ignore go --raw` and `templates show --raw ignore go` both work. The flag is the per-invocation escape hatch for byte-faithful output inside a TTY session — e.g. `gitmap templates show notes intro.md --raw | sha256sum` — without having to set `GITMAP_NO_PRETTY` globally.",
+      "Added the gating helper `shouldPrettyRenderTemplate(path, raw)` plus `isMarkdownTemplatePath(path)` so the four-condition decision is one named, testable function instead of a boolean soup inside `runTemplatesShow`. Pipes and redirects automatically bypass the renderer because `os.Stdout.Stat()` reports a non-character device — same TTY contract as `gitmap help`, so users only need to learn one mental model.",
+      "Added `gitmap/cmd/templatescli_test.go` with five regression guards covering the gate matrix: (1) markdown extensions are recognized in both cases (`.md`, `.MD`, `.markdown`, `.MARKDOWN`); (2) `.gitignore` / `.gitattributes` / `lfs/common.gitattributes` paths are **never** pretty-rendered (the load-bearing test — protects every existing pipe-to-file workflow on disk in users' repos); (3) `--raw` short-circuits regardless of extension; (4) `GITMAP_NO_PRETTY=1` short-circuits regardless of `--raw`; (5) `parseTemplatesShowFlags` correctly extracts `--raw` whether it appears before or after the `<kind> <lang>` positionals (relies on `reorderFlagsBeforeArgs`).",
+      "Documented the new behavior in `gitmap/helptext/templates.md` under a new **Pretty rendering** section: which markdown subset gets ANSI styling (cyan `\"quotes\"`, yellow collapsed code, muted subtitles, indented bodies — same four rules as `render.Render`), the four-condition gate, and both opt-outs (per-invocation `--raw` and shell-wide `GITMAP_NO_PRETTY`). Also notes that today's embed corpus is `.gitignore`/`.gitattributes` only, so this primarily benefits **markdown overlays** users drop into `~/.gitmap/templates/<kind>/<lang>.md` and any future markdown templates added to the embed. Updated the `usageTemplatesRoot` block to surface the `--raw` flag and a new example line.",
+      "No changes to `templates.Resolve`, `templates.List`, the embed FS, or the user-overlay resolution order — the diff is purely additive in the `cmd` layer. `runTemplatesList` and the `templates list` output format are untouched (no markdown there to render).",
+    ],
+  },
+  {
     version: "v3.22.0",
     date: "2026-04-22",
     subtitle: "`gitmap changelog` bullets now share the pretty markdown renderer (cyan `\"quotes\"` consistent with `gitmap help`)",
