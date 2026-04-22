@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // Materialize copies every embedded asset into the user-overlay directory,
@@ -22,7 +20,7 @@ func Materialize() (string, []string, error) {
 	}
 
 	var written []string
-	walkErr := fs.WalkDir(FS, constants.EmbedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
+	walkErr := fs.WalkDir(FS, embedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -41,7 +39,7 @@ func Materialize() (string, []string, error) {
 		return nil
 	})
 	if walkErr != nil {
-		return dir, written, fmt.Errorf(constants.ErrTemplateMaterialize, dir, walkErr)
+		return dir, written, fmt.Errorf(errTemplateMaterialize, dir, walkErr)
 	}
 
 	return dir, written, nil
@@ -50,22 +48,22 @@ func Materialize() (string, []string, error) {
 // materializeOne copies a single embedded file to the overlay if missing.
 // Returns the destination path on a fresh write, "" when skipped.
 func materializeOne(overlayDir, embedPath string) (string, error) {
-	rel := strings.TrimPrefix(embedPath, constants.EmbedAssetsRoot+"/")
+	rel := strings.TrimPrefix(embedPath, embedAssetsRoot+"/")
 	dst := filepath.Join(overlayDir, filepath.FromSlash(rel))
 
 	if _, err := os.Stat(dst); err == nil {
 		return "", nil
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return "", fmt.Errorf(constants.ErrTemplateMaterialize, dst, err)
+		return "", fmt.Errorf(errTemplateMaterialize, dst, err)
 	}
 
 	data, err := FS.ReadFile(embedPath)
 	if err != nil {
-		return "", fmt.Errorf(constants.ErrTemplateRead, embedPath, err)
+		return "", fmt.Errorf(errTemplateRead, embedPath, err)
 	}
 	if err := os.WriteFile(dst, data, 0o644); err != nil {
-		return "", fmt.Errorf(constants.ErrTemplateMaterialize, dst, err)
+		return "", fmt.Errorf(errTemplateMaterialize, dst, err)
 	}
 
 	return dst, nil

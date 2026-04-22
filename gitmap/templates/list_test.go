@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 func TestListIncludesEmbeddedCorpus(t *testing.T) {
@@ -19,7 +17,7 @@ func TestListIncludesEmbeddedCorpus(t *testing.T) {
 	}
 	hasGoIgnore := false
 	for _, e := range entries {
-		if e.Kind == constants.TemplateKindIgnore && e.Lang == "go" {
+		if e.Kind == kindIgnore && e.Lang == "go" {
 			hasGoIgnore = true
 			if e.Source != SourceEmbed {
 				t.Errorf("ignore/go should be SourceEmbed, got %v", e.Source)
@@ -55,7 +53,7 @@ func TestListUserOverlayShadowsEmbed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnsureUserDir: %v", err)
 	}
-	overridePath := filepath.Join(dir, constants.TemplateKindIgnore, "go"+constants.TemplateExtIgnore)
+	overridePath := filepath.Join(dir, kindIgnore, "go"+templateExtIgnore)
 	if mkErr := os.MkdirAll(filepath.Dir(overridePath), 0o755); mkErr != nil {
 		t.Fatalf("mkdir: %v", mkErr)
 	}
@@ -68,7 +66,7 @@ func TestListUserOverlayShadowsEmbed(t *testing.T) {
 		t.Fatalf("List: %v", err)
 	}
 	for _, e := range entries {
-		if e.Kind == constants.TemplateKindIgnore && e.Lang == "go" {
+		if e.Kind == kindIgnore && e.Lang == "go" {
 			if e.Source != SourceUser {
 				t.Fatalf("ignore/go should be SourceUser after overlay, got %v", e.Source)
 			}

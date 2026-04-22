@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // withTempHome points os.UserHomeDir at a temp dir for the duration of a test.
@@ -24,7 +22,7 @@ func TestUserDirUnderHome(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UserDir error: %v", err)
 	}
-	want := filepath.Join(home, constants.UserTemplatesDirName, constants.UserTemplatesSubdir)
+	want := filepath.Join(home, userTemplatesDirName, userTemplatesSubdir)
 	if got != want {
 		t.Fatalf("UserDir = %q, want %q", got, want)
 	}
@@ -50,7 +48,7 @@ func TestResolveUserOverlayWinsOverEmbed(t *testing.T) {
 	}
 
 	// Place a fake user-overlay template.
-	overlay := filepath.Join(dir, constants.TemplateKindIgnore, "overlay-only"+constants.TemplateExtIgnore)
+	overlay := filepath.Join(dir, kindIgnore, "overlay-only"+templateExtIgnore)
 	if mkErr := os.MkdirAll(filepath.Dir(overlay), 0o755); mkErr != nil {
 		t.Fatalf("mkdir: %v", mkErr)
 	}
@@ -59,7 +57,7 @@ func TestResolveUserOverlayWinsOverEmbed(t *testing.T) {
 		t.Fatalf("write: %v", wErr)
 	}
 
-	r, err := Resolve(constants.TemplateKindIgnore, "overlay-only")
+	r, err := Resolve(kindIgnore, "overlay-only")
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -73,7 +71,7 @@ func TestResolveUserOverlayWinsOverEmbed(t *testing.T) {
 
 func TestResolveMissingReturnsNotFound(t *testing.T) {
 	withTempHome(t)
-	_, err := Resolve(constants.TemplateKindIgnore, "definitely-not-a-language")
+	_, err := Resolve(kindIgnore, "definitely-not-a-language")
 	if err == nil {
 		t.Fatal("expected error for missing template, got nil")
 	}
