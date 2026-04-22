@@ -120,8 +120,12 @@ __gitmap_quick_install_main() {
             curl -sfI --max-time 5 "$url" >/dev/null 2>&1
         }
 
+        # Per spec/07-generic-release/09-generic-install-script-behavior.md §4.1:
+        # Probe -v<N+1>..-v<N+window> CONCURRENTLY (max 20, or 50 if
+        # GITHUB_TOKEN is set). Pick max(M) where HEAD returned 200.
+        # Gaps are tolerated (no fail-fast on first MISS).
         resolve_effective_repo() {
-            local repo="$1" ceiling="$2"
+            local repo="$1" window="$2"
 
             if ! parse_repo_suffix "$repo"; then
                 printf '  [discovery] no -v<N> suffix on '"'"'%s'"'"'; installing baseline as-is\n' "$repo" >&2
@@ -130,19 +134,53 @@ __gitmap_quick_install_main() {
             fi
 
             local owner="$SUFFIX_OWNER" stem="$SUFFIX_STEM" baseline="$SUFFIX_N"
-            local effective="$baseline" m url
+
+            # Concurrency cap: 20 anonymous, 50 if GITHUB_TOKEN supplied.
+            local max_concurrency=20
+            if [ -n "${GITHUB_TOKEN:-}" ]; then
+                max_concurrency=50
+            fi
+            if [ "$window" -gt "$max_concurrency" ]; then
+                window="$max_concurrency"
+            fi
 
             printf '  [discovery] baseline: %s/%s-v%s\n' "$owner" "$stem" "$baseline" >&2
-            printf '  [discovery] probe ceiling: %s\n' "$ceiling" >&2
+            printf '  [discovery] window: %d (parallel HEAD, max-hit-wins, gap-tolerant)\n' "$window" >&2
 
-            for (( m = baseline + 1; m <= ceiling; m++ )); do
+            local tmpdir
+            tmpdir="$(mktemp -d 2>/dev/null || mktemp -d -t gmprobe)"
+            # shellcheck disable=SC2064
+            trap "rm -rf '$tmpdir'" RETURN
+
+            local m url pids=()
+            for (( m = baseline + 1; m <= baseline + window; m++ )); do
                 url="https://github.com/${owner}/${stem}-v${m}"
-                if repo_exists "$url"; then
-                    printf '  [discovery] HEAD %s ... HIT\n' "$url" >&2
-                    effective=$m
-                else
-                    printf '  [discovery] HEAD %s ... MISS (fail-fast)\n' "$url" >&2
-                    break
+                # Each probe runs in background, writes its M to a hit-file
+                # on success. 5s connect+total timeout per spec §4.1.
+                (
+                    if curl -sfI --max-time 5 --connect-timeout 5 "$url" >/dev/null 2>&1; then
+                        printf '  [discovery] HEAD %s ... HIT\n' "$url" >&2
+                        printf '%d\n' "$m" > "$tmpdir/hit.$m"
+                    else
+                        printf '  [discovery] HEAD %s ... MISS\n' "$url" >&2
+                    fi
+                ) &
+                pids+=($!)
+            done
+
+            # Wait for ALL probes (no early exit — gaps allowed).
+            local pid
+            for pid in "${pids[@]}"; do
+                wait "$pid" 2>/dev/null || true
+            done
+
+            # Pick max(M) across hit files.
+            local effective="$baseline" hit_m
+            for f in "$tmpdir"/hit.*; do
+                [ -e "$f" ] || continue
+                hit_m="$(cat "$f" 2>/dev/null || echo 0)"
+                if [ "$hit_m" -gt "$effective" ]; then
+                    effective="$hit_m"
                 fi
             done
 
