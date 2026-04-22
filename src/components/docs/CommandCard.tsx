@@ -29,13 +29,13 @@ const CommandCard = ({ name, alias, description, usage, flags, examples, seeAlso
         ) : (
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         )}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <code className="font-sans font-semibold text-sm text-foreground">{name}</code>
+        <div className="flex items-center gap-2 shrink-0">
+          <code className="font-sans font-semibold text-sm text-foreground whitespace-nowrap">{name}</code>
           {alias && (
-            <span className="text-xs font-sans font-medium text-foreground bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded dark:bg-primary/15 dark:text-primary">{alias}</span>
+            <span className="text-xs font-sans font-medium text-foreground bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded whitespace-nowrap dark:bg-primary/15 dark:text-primary">{alias}</span>
           )}
         </div>
-        <span className="text-sm text-muted-foreground truncate">{description}</span>
+        <span className="text-sm text-muted-foreground truncate min-w-0 flex-1">{description}</span>
       </button>
 
       {open && (
