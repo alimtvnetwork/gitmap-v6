@@ -25,7 +25,7 @@ const DocsLayout = ({ children }: DocsLayoutProps) => {
           <header className="h-12 flex items-center border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
             <SidebarTrigger className="ml-3" />
             <span className="ml-3 text-sm font-mono text-muted-foreground">gitmap documentation</span>
-            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-foreground border border-primary/20 rounded dark:bg-primary/20 dark:text-primary dark:border-primary/40">
+            <span className="ml-2 px-2 py-0.5 text-xs font-mono bg-primary/10 text-foreground border border-primary/20 rounded transition-colors duration-300 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10 dark:bg-primary/20 dark:text-primary dark:border-primary/40 dark:hover:border-primary/60">
               {VERSION}
             </span>
             <button
