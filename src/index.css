@@ -254,6 +254,24 @@
   color: hsl(var(--background));
 }
 
+/* Same problem for destructive: dark `--destructive` is a very dark red
+   (hsl 0 62% 30%), so `text-destructive` on `bg-destructive/*` becomes
+   illegible. Force such chips to use the bright `--destructive-foreground`
+   in dark mode for AAA contrast. Solid `bg-destructive` buttons already
+   pair correctly with `text-destructive-foreground` and are unaffected —
+   this rule only targets the *tinted* `bg-destructive/N` variant. */
+.dark [class*="bg-destructive/"].text-destructive,
+.dark [class*="bg-destructive/"] .text-destructive {
+  color: hsl(var(--destructive-foreground));
+}
+
+/* AlertTriangle / spec-status icons placed inside a tinted destructive
+   panel use bare `text-destructive` for color. Same readability fix. */
+.dark [class*="bg-destructive/"] svg.text-destructive,
+.dark [class*="border-destructive/"] svg.text-destructive {
+  color: hsl(0 80% 70%);
+}
+
 @layer components {
   .docs-h1,
   .docs-h2 {
