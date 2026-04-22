@@ -33,7 +33,7 @@ const DocsLayout = ({ children }: DocsLayoutProps) => {
               onClick={() => setDark((d) => !d)}
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
               title={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded border border-primary/20 bg-primary/10 text-foreground hover:bg-primary/20 dark:bg-primary/25 dark:text-background dark:hover:bg-primary/40 transition-colors"
+              className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded border border-primary/20 bg-primary/10 text-foreground hover:bg-primary/20 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/10 dark:bg-primary/25 dark:text-background dark:hover:bg-primary/40 transition-colors duration-300"
             >
               {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>
