@@ -641,7 +641,7 @@ const DiagnosticChecklist = () => {
             <li key={step.title} className="flex gap-3">
               <span
                 aria-hidden="true"
-                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/15 text-primary font-mono text-sm font-semibold"
+                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary/15 text-foreground border border-primary/25 dark:bg-primary/30 dark:text-background font-mono text-sm font-semibold"
               >
                 {idx + 1}
               </span>

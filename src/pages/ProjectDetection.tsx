@@ -95,7 +95,7 @@ const ProjectDetectionPage = () => (
           <Card key={s.step} className="border-border bg-card">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="font-mono text-xs font-bold text-primary bg-primary/10 rounded-full w-6 h-6 flex items-center justify-center">{s.step}</span>
+                <span className="font-mono text-xs font-bold text-foreground bg-primary/10 border border-primary/20 dark:bg-primary/25 dark:text-background rounded-full w-6 h-6 flex items-center justify-center">{s.step}</span>
                 <s.icon className="h-4 w-4 text-muted-foreground" />
               </div>
               <h3 className="font-mono font-semibold text-sm mb-1">{s.title}</h3>

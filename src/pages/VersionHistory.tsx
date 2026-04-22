@@ -248,7 +248,7 @@ const VersionHistoryPage = () => {
               <a
                 key={label}
                 href={href}
-                className="px-3 py-1.5 rounded-md border border-border bg-card text-xs font-mono hover:bg-primary/10 hover:text-primary transition-colors"
+                className="px-3 py-1.5 rounded-md border border-border bg-card text-xs font-mono hover:bg-primary/10 hover:text-foreground hover:border-primary/30 dark:hover:bg-primary/25 dark:hover:text-background transition-colors"
               >
                 {label}
               </a>
