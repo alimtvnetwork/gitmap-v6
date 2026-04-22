@@ -156,7 +156,7 @@ function Resolve-EffectiveRepo([string]$repo, [int]$window) {
     return "$owner/$stem-v$effective"
 }
 
-function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, [string]$version, [int]$ceiling) {
+function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, [string]$version, [int]$ceiling, [int]$window) {
     $delegatedUrl = "https://raw.githubusercontent.com/$effectiveRepo/main/install-quick.ps1"
     Write-Host "  [discovery] delegating to $delegatedUrl"
 
@@ -172,7 +172,10 @@ function Invoke-DelegatedInstaller([string]$effectiveRepo, [string]$installDir, 
 
     $block = [ScriptBlock]::Create($script)
 
-    $passArgs = @{ ProbeCeiling = $ceiling }
+    $passArgs = @{
+        ProbeCeiling    = $ceiling
+        DiscoveryWindow = $window
+    }
     if (-not [string]::IsNullOrWhiteSpace($installDir)) { $passArgs.InstallDir = $installDir }
     if (-not [string]::IsNullOrWhiteSpace($version))    { $passArgs.Version    = $version }
 
@@ -198,9 +201,9 @@ if ($alreadyDelegated) {
     # downstream enforces the same contract on the asset download path.
     Write-Host "  [strict] -Version $Version pinned; skipping repo probe (no fallback)"
 } else {
-    $effective = Resolve-EffectiveRepo $Repo $ProbeCeiling
+    $effective = Resolve-EffectiveRepo $Repo $DiscoveryWindow
     if ($effective -ne $Repo) {
-        $delegated = Invoke-DelegatedInstaller $effective $InstallDir $Version $ProbeCeiling
+        $delegated = Invoke-DelegatedInstaller $effective $InstallDir $Version $ProbeCeiling $DiscoveryWindow
         if ($delegated) { return }
         # If delegation failed we fall through and install baseline.
     }
