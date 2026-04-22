@@ -236,7 +236,7 @@ function Stop-Strict([string]$detail) {
     Write-Err ""
     Write-Err "Error: requested release $Version not found in $Repo;"
     Write-Err "       refusing to fall back per strict-tag contract."
-    Write-Err "       See spec/07-generic-release/09-generic-install-script-behavior.md ${'$'}3."
+    Write-Err "       See spec/07-generic-release/09-generic-install-script-behavior.md `$3."
     if ($detail) { Write-Err "       Detail: $detail" }
     exit 1
 }
