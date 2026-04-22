@@ -181,11 +181,11 @@ func cloneOne(rec model.ScanRecord, targetDir string) model.CloneResult {
 // the remote's default HEAD decides the checkout.
 func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	url := pickURL(rec)
-	strat := pickCloneStrategy(rec)
+	strategy := pickCloneStrategy(rec)
 
 	args := []string{constants.GitClone}
-	if strat.useBranch {
-		args = append(args, constants.GitBranchFlag, strat.branch)
+	if strategy.useBranch {
+		args = append(args, constants.GitBranchFlag, strategy.branch)
 	}
 	args = append(args, url, dest)
 
@@ -194,10 +194,10 @@ func runClone(rec model.ScanRecord, dest string) model.CloneResult {
 	if err != nil {
 		msg := fmt.Sprintf("%s: %s", err.Error(), string(out))
 
-		return model.CloneResult{Record: rec, Success: false, Error: msg, Notes: strat.reason}
+		return model.CloneResult{Record: rec, Success: false, Error: msg, Notes: strategy.reason}
 	}
 
-	return model.CloneResult{Record: rec, Success: true, Notes: strat.reason}
+	return model.CloneResult{Record: rec, Success: true, Notes: strategy.reason}
 }
 
 // pickURL selects the best available URL from a record.
