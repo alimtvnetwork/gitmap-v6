@@ -7,25 +7,22 @@ import (
 )
 
 // runUpdateCleanup handles the "update-cleanup" subcommand.
-// Removes leftover temp binaries and .old backup files.
+//
+// Output is structured into two layers:
+//  1. A per-artifact line for every candidate, of the form
+//     "<symbol> [<kind>] <path> — <status>: <reason>".
+//  2. A summary table grouped by status with totals.
+//
+// Status codes ("removed", "locked", "missing", "skipped-active", ...) are
+// stable so logs are grep-able and CI consumers can parse them.
 func runUpdateCleanup() {
 	fmt.Println(constants.MsgUpdateCleanStart)
 
 	ctx := loadUpdateCleanupContext()
-	total := cleanupTempArtifacts(ctx)
-	total += cleanupBackupArtifacts(ctx)
-	total += cleanupDriveRootShim(ctx)
-	total += cleanupCloneSwapDirs(ctx)
-	printUpdateCleanupResult(total)
-}
-
-// printUpdateCleanupResult reports the cleanup result summary.
-func printUpdateCleanupResult(total int) {
-	if total > 0 {
-		fmt.Printf(constants.MsgUpdateCleanDone, total)
-
-		return
-	}
-
-	fmt.Println(constants.MsgUpdateCleanNone)
+	report := newCleanupReport()
+	cleanupTempArtifacts(ctx, report)
+	cleanupBackupArtifacts(ctx, report)
+	cleanupDriveRootShim(ctx, report)
+	cleanupCloneSwapDirs(ctx, report)
+	report.printSummary()
 }
