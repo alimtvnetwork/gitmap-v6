@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/render"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/templates"
 )
 
@@ -22,21 +26,28 @@ Subcommands:
 Kinds:
   ignore | attributes | lfs
 
+Flags (show):
+  --raw                      Disable pretty markdown rendering even on a TTY
+
 Examples:
   gitmap templates list
   gitmap tpl tl
   gitmap templates show ignore go
   gitmap tpl ts attributes node
+  gitmap templates show ignore go --raw   # bypass pretty renderer
 `
-	headerTemplatesList  = "KIND        LANG            SOURCE  PATH\n"
-	fmtTemplatesListRow  = "%-10s  %-14s  %-6s  %s\n"
-	labelTemplatesUser   = "user"
-	labelTemplatesEmbed  = "embed"
-	msgTemplatesEmpty    = "(no templates registered — embedded corpus is empty)\n"
-	errTemplatesShowArgs = "templates show requires <kind> <lang>; e.g. 'templates show ignore go'\n"
-	errTemplatesShowFail = "templates show: %v\n"
-	errTemplatesListFail = "templates list: %v\n"
+	headerTemplatesList    = "KIND        LANG            SOURCE  PATH\n"
+	fmtTemplatesListRow    = "%-10s  %-14s  %-6s  %s\n"
+	labelTemplatesUser     = "user"
+	labelTemplatesEmbed    = "embed"
+	msgTemplatesEmpty      = "(no templates registered — embedded corpus is empty)\n"
+	errTemplatesShowArgs   = "templates show requires <kind> <lang>; e.g. 'templates show ignore go'\n"
+	errTemplatesShowFail   = "templates show: %v\n"
+	errTemplatesListFail   = "templates list: %v\n"
 	errUnknownTemplatesSub = "unknown 'templates' subcommand: %s\n"
+	flagTemplatesShowRaw   = "raw"
+	flagDescTemplatesRaw   = "Print template bytes verbatim, skipping the pretty markdown renderer"
+	envTemplatesNoPretty   = "GITMAP_NO_PRETTY"
 )
 
 // dispatchTemplates routes `gitmap templates <subcommand>` calls.
@@ -83,23 +94,88 @@ func runTemplatesList() {
 	}
 }
 
-// runTemplatesShow prints one template's raw bytes (audit header included)
-// to stdout. Useful for diff-against-curated workflows.
+// runTemplatesShow prints one template to stdout. Markdown templates
+// (.md / .markdown) are routed through render.RenderANSI when the user
+// is on a real TTY and hasn't opted out via --raw or GITMAP_NO_PRETTY,
+// matching the help-text rendering contract. Non-markdown templates
+// (.gitignore, .gitattributes, …) are always written byte-for-byte so
+// the output stays diff-friendly and safe to redirect into a file.
 func runTemplatesShow(args []string) {
-	if len(args) < 2 {
+	rest, raw := parseTemplatesShowFlags(args)
+	if len(rest) < 2 {
 		fmt.Fprint(os.Stderr, errTemplatesShowArgs)
 		os.Exit(1)
 	}
-	kind, lang := args[0], args[1]
+	kind, lang := rest[0], rest[1]
 	r, err := templates.Resolve(kind, lang)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, errTemplatesShowFail, err)
 		os.Exit(1)
 	}
-	if _, err := os.Stdout.Write(r.Content); err != nil {
+
+	out := r.Content
+	if shouldPrettyRenderTemplate(r.Path, raw) {
+		out = []byte(render.RenderANSI(string(r.Content)))
+	}
+
+	if _, err := os.Stdout.Write(out); err != nil {
 		fmt.Fprintf(os.Stderr, errTemplatesShowFail, err)
 		os.Exit(1)
 	}
+}
+
+// parseTemplatesShowFlags pulls --raw out of the arg list and returns the
+// remaining positional args + the flag value. Uses a dedicated FlagSet so
+// flags can appear before or after the <kind> <lang> positionals.
+func parseTemplatesShowFlags(args []string) ([]string, bool) {
+	fs := flag.NewFlagSet(cmdTemplatesShow, flag.ExitOnError)
+	rawFlag := fs.Bool(flagTemplatesShowRaw, false, flagDescTemplatesRaw)
+	reordered := reorderFlagsBeforeArgs(args)
+	_ = fs.Parse(reordered)
+
+	return fs.Args(), *rawFlag
+}
+
+// shouldPrettyRenderTemplate decides whether to route template bytes
+// through the pretty markdown renderer. All gates must pass:
+//
+//   - the template path has a markdown extension (.md / .markdown);
+//   - the user did not pass --raw;
+//   - GITMAP_NO_PRETTY is unset (shared opt-out env, mirrors helptext);
+//   - stdout is connected to a real TTY (so pipes / redirects stay clean).
+func shouldPrettyRenderTemplate(path string, raw bool) bool {
+	if raw {
+		return false
+	}
+	if !isMarkdownTemplatePath(path) {
+		return false
+	}
+	if os.Getenv(envTemplatesNoPretty) != "" {
+		return false
+	}
+
+	return templatesStdoutIsTerminal()
+}
+
+// isMarkdownTemplatePath returns true for .md / .markdown files
+// (case-insensitive). Templates today are .gitignore / .gitattributes —
+// this guard future-proofs the renderer for markdown overlays
+// (e.g. ~/.gitmap/templates/notes/*.md) without changing existing UX.
+func isMarkdownTemplatePath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+
+	return ext == ".md" || ext == ".markdown"
+}
+
+// templatesStdoutIsTerminal mirrors helptext.stdoutIsTerminal — kept
+// local to avoid exporting helptext internals just for one caller.
+func templatesStdoutIsTerminal() bool {
+	info, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+
+	return (info.Mode() & os.ModeCharDevice) != 0
 }
 
 // sourceLabel maps a templates.Source to the user-facing column value.
