@@ -51,6 +51,99 @@ func TestTopLevelCmdRegistryMatchesAST(t *testing.T) {
 	}
 }
 
+// TestNoUnmarkedTopLevelCmdBlocks mirrors the gencommands missed-marker
+// guard inside the standard test suite. Any const block declaring one or
+// more Cmd* string constants without `// gitmap:cmd top-level` on its doc
+// comment is rejected here, so `go test ./...` catches the drift even when
+// nobody runs `go generate`. This is what would have caught the v3.31.0
+// `has-change` / `hc` regression at PR time.
+func TestNoUnmarkedTopLevelCmdBlocks(t *testing.T) {
+	dir := constantsDirForParityTest(t)
+	files, err := filepath.Glob(filepath.Join(dir, "constants_*.go"))
+	if err != nil {
+		t.Fatalf("glob constants dir: %v", err)
+	}
+
+	var violations []string
+
+	for _, path := range files {
+		violations = append(violations, findUnmarkedCmdBlocksForTest(t, path)...)
+	}
+
+	if len(violations) == 0 {
+		return
+	}
+
+	t.Errorf("found %d Cmd* constant(s) in const block(s) lacking `// %s`:\n  %s\n"+
+		"Add `// %s` to the block's doc comment, or mark individual specs with `// %s` inside an opted-in block.",
+		len(violations), parityMarkerTopLevel,
+		strings.Join(violations, "\n  "),
+		parityMarkerTopLevel, parityMarkerSkip)
+}
+
+func findUnmarkedCmdBlocksForTest(t *testing.T, path string) []string {
+	t.Helper()
+
+	fset := token.NewFileSet()
+
+	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+
+	var out []string
+
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		if parityCommentHas(gen.Doc, parityMarkerTopLevel) {
+			continue
+		}
+
+		names := unmarkedCmdNamesForTest(gen)
+		if len(names) == 0 {
+			continue
+		}
+
+		pos := fset.Position(gen.Pos())
+		out = append(out, filepath.Base(path)+":"+strconv.Itoa(pos.Line)+"  "+strings.Join(names, ", "))
+	}
+
+	return out
+}
+
+func unmarkedCmdNamesForTest(gen *ast.GenDecl) []string {
+	var names []string
+
+	for _, spec := range gen.Specs {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		if parityCommentHas(vs.Comment, parityMarkerSkip) || parityCommentHas(vs.Doc, parityMarkerSkip) {
+			continue
+		}
+		for i, name := range vs.Names {
+			if !strings.HasPrefix(name.Name, "Cmd") || i >= len(vs.Values) {
+				continue
+			}
+			lit, ok := vs.Values[i].(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				continue
+			}
+			val, err := strconv.Unquote(lit.Value)
+			if err != nil || val == "" {
+				continue
+			}
+			names = append(names, name.Name)
+		}
+	}
+
+	return names
+}
+
 // collectTopLevelCmdNamesFromAST returns the set of Cmd* constant names
 // declared in any opted-in const block across the constants package.
 func collectTopLevelCmdNamesFromAST(t *testing.T) map[string]struct{} {

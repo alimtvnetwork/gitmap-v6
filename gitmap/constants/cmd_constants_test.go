@@ -119,6 +119,8 @@ func topLevelCmds() map[string]string {
 		"CmdHasAnyChangesAlias":       CmdHasAnyChangesAlias,
 		"CmdHasAnyUpdates":            CmdHasAnyUpdates,
 		"CmdHasAnyUpdatesAlias":       CmdHasAnyUpdatesAlias,
+		"CmdHasChange":                CmdHasChange,
+		"CmdHasChangeAlias":           CmdHasChangeAlias,
 		"CmdHistory":                  CmdHistory,
 		"CmdHistoryAlias":             CmdHistoryAlias,
 		"CmdHistoryReset":             CmdHistoryReset,
