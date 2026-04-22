@@ -18,7 +18,7 @@
       ./install-quick.ps1
       ./install-quick.ps1 -InstallDir "E:\Tools\gitmap"
       ./install-quick.ps1 -NoDiscovery
-      ./install-quick.ps1 -ProbeCeiling 50
+      ./install-quick.ps1 -DiscoveryWindow 20
 #>
 
 param(
