@@ -8,6 +8,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.20.0",
+    date: "2026-04-22",
+    subtitle: "`gitmap add lfs-install` — `git lfs install --local` + idempotent marker-block merge of the `lfs/common` template",
+    items: [
+      "Added `gitmap/templates/merge.go` — a marker-block merge primitive that wraps incoming template bytes in `# >>> gitmap:<tag> >>>` / `# <<< gitmap:<tag> <<<` sentinel comments and writes them into a target file (`.gitattributes` here, `.gitignore` in upcoming siblings). On re-run, the existing block is located by regex and replaced byte-for-byte; bytes outside the block survive untouched. Returns a `MergeResult{Outcome, Changed, Path, BlockTag}` so callers can render an honest summary (`created` / `inserted block into` / `updated block in` / `unchanged`). The whole primitive is pure I/O around `os.ReadFile` / `os.WriteFile` — no shell-out, no git dependency, fully unit-testable.",
+      "Added `gitmap/templates/merge_test.go` covering the four states that matter: cold-start (file missing → `MergeCreated`), warm append (file exists with no markers → `MergeInserted`), update in place (markers present, body changed → `MergeUpdated`, with explicit assertions that hand-written preamble and postamble survive), and the **idempotency contract** (second identical run → `Changed=false` and `bytes.Equal(first, second)`). The idempotency test is the load-bearing one — it's what keeps `gitmap add lfs-install` safe to bake into pre-commit hooks and CI bootstrap scripts.",
+      "Added `gitmap/cmd/rootadd.go` — the `dispatchAdd` router previously declared in `root.go` but never implemented (silent build break waiting to happen). Currently routes `add lfs-install`; ignore / attributes will slot in alongside it. Unknown subcommands print the umbrella usage block and exit 1.",
+      "Added `gitmap/cmd/addlfsinstall.go` — the command itself. Pipeline: `insideGitRepo()` gate → `lfsAvailable()` gate → `templates.Resolve(\"lfs\", \"common\")` (overlay > embed) → `runGitLFSInstall()` (the existing `git lfs install --local` shim from `lfscommon.go`, reused so the two LFS commands stay in lockstep) → `templates.Merge(<repoRoot>/.gitattributes, \"lfs/common\", body)`. The template source label (`embed` vs `user`) and resolved path are surfaced in the banner so users always know whose bytes are landing on disk. `--dry-run` short-circuits before both `git lfs install` and the file write, printing the full block (with markers) to stdout for review.",
+      "Added `gitmap/cmd/addlfsinstall_test.go`: defaults parse (`--dry-run` false), `--dry-run` flips the bool, and a guard test that locks the `addLFSInstallTag = \"lfs/common\"` marker string so a future rename can't silently orphan blocks already on disk in users' repos.",
+      "Added `gitmap/helptext/add-lfs-install.md` documenting the idempotency table (run 1 vs run 2+ × pre-state matrix), four worked examples (first install, template bump, no-op re-run, dry-run preview), and the explicit contract that hand edits **outside** the marker block survive but edits **inside** are intentionally overwritten — fork to `~/.gitmap/templates/lfs/common.gitattributes` if you want custom bytes to stick. Cross-references `lfs-common` (per-pattern `git lfs track` flow) so users can pick the right tool: gitmap-templated bytes vs. Git-LFS-authored bytes.",
+      "This unblocks Plan 04 Phase 3. `add ignore` and `add attributes` now plug into the same `dispatchAdd` router with the same `templates.Resolve` + `templates.Merge` pipeline — only the target filename and tag change.",
+    ],
+  },
+  {
     version: "v3.19.0",
     date: "2026-04-22",
     subtitle: "`gitmap help scan` — four end-to-end workflows for `--config` / `--mode` / `--output`",
