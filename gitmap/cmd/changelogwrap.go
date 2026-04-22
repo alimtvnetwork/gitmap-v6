@@ -39,14 +39,28 @@ func changelogWrapWidth() int {
 //   - "double quote"  → cyan span (delegated to render.HighlightQuotesANSI
 //     so the rule stays in lockstep with the help-text pretty renderer)
 //
-// Other markdown is passed through unchanged. Single quotes / apostrophes
-// are intentionally left alone. Depth is reserved for future depth-aware
-// tweaks (e.g. dimming nested code spans); currently unused.
-func renderInlineMarkdown(text string, _ int) string {
+// When pretty is false, the matched markdown delimiters are stripped
+// (so plain-mode readers don't see literal `**` or backticks) but no
+// ANSI escape codes are emitted. Single quotes / apostrophes are left
+// alone in both modes. Depth is reserved for future depth-aware tweaks.
+func renderInlineMarkdown(text string, _ int, pretty bool) string {
+	if !pretty {
+		return stripInlineMarkdown(text)
+	}
 	out := convertInlineSpans(text, "**", constants.ChangelogPrettyBoldOpen, constants.ChangelogPrettyBoldClose)
 	out = convertInlineSpans(out, "`", constants.ChangelogPrettyCodeOpen, constants.ChangelogPrettyCodeClose)
 
 	return render.HighlightQuotesANSI(out)
+}
+
+// stripInlineMarkdown removes the matched **bold** and `code` delimiters
+// so the plain-mode output reads naturally instead of leaking literal
+// markdown punctuation. Quote characters are left untouched — they're
+// part of the prose, not formatting.
+func stripInlineMarkdown(text string) string {
+	out := convertInlineSpans(text, "**", "", "")
+
+	return convertInlineSpans(out, "`", "", "")
 }
 
 // convertInlineSpans replaces matched delim pairs with ANSI open/close.
