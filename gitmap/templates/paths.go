@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // UserDir returns the absolute path to the user-overlay templates directory,
@@ -15,10 +13,10 @@ import (
 func UserDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf(constants.ErrTemplateUserDirResolve, err)
+		return "", fmt.Errorf(errTemplateUserDir, err)
 	}
 
-	return filepath.Join(home, constants.UserTemplatesDirName, constants.UserTemplatesSubdir), nil
+	return filepath.Join(home, userTemplatesDirName, userTemplatesSubdir), nil
 }
 
 // EnsureUserDir creates the user-overlay templates directory if it is
@@ -29,7 +27,7 @@ func EnsureUserDir() (string, error) {
 		return "", err
 	}
 	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
-		return "", fmt.Errorf(constants.ErrTemplateMaterialize, dir, mkErr)
+		return "", fmt.Errorf(errTemplateMaterialize, dir, mkErr)
 	}
 
 	return dir, nil
