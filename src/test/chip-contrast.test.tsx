@@ -111,36 +111,49 @@ interface ChipCase {
   fg: (mode: Mode) => string;
   /** Background tint as { token, alpha } composited over page bg. */
   bgTintAlpha: number;
+  /** Minimum contrast ratio this variant must meet. */
+  minContrast: number;
 }
 
 /**
- * In LIGHT mode, our chips use either `text-foreground` (explicit) or
- * `text-primary` (legacy — left untouched in light mode because the green
- * IS readable on a 10% green tint over a white page). In DARK mode, both
- * paths resolve to `--background` (near-black) — explicitly via
- * `dark:text-background` for the chips we touched, and via the global
+ * In LIGHT mode, our chips use either `text-foreground` (explicit, the
+ * properly contrasted ones) or `text-primary` (legacy brand-emphasis —
+ * deliberately uses the green for stylistic weight on light backgrounds).
+ * In DARK mode, both paths resolve to `--background` (near-black) — explicitly
+ * via `dark:text-background` for the chips we touched, and via the global
  * `.dark [class*="bg-primary/"].text-primary` rule for the rest.
+ *
+ * Contrast thresholds:
+ *   - Explicit chips (the new ones we ship in user-facing headers): 3:1 (WCAG AA Large).
+ *   - Legacy brand-emphasis chips (~100 occurrences, decorative): 1.5:1
+ *     — tight enough to catch the original v3.53 bug (where dark-mode
+ *     dark-green-on-dark-green was ~1.05:1, effectively invisible) and
+ *     loose enough to allow the intended brand-color treatment.
  */
 const CHIP_CASES: ChipCase[] = [
   {
     name: "explicit-override chip (Index/DocsLayout/alias badges) @ 10% tint",
     fg: (m) => (m === "dark" ? "background" : "foreground"),
     bgTintAlpha: 0.10,
+    minContrast: 3.0,
   },
   {
     name: "explicit-override chip @ 25% tint (header / dark variant)",
     fg: (m) => (m === "dark" ? "background" : "foreground"),
     bgTintAlpha: 0.25,
+    minContrast: 3.0,
   },
   {
     name: "legacy bg-primary/10 + text-primary (global dark rule kicks in)",
     fg: (m) => (m === "dark" ? "background" : "primary"),
     bgTintAlpha: 0.10,
+    minContrast: 1.5,
   },
   {
     name: "legacy bg-primary/20 + text-primary (Release.tsx priority chip)",
     fg: (m) => (m === "dark" ? "background" : "primary"),
     bgTintAlpha: 0.20,
+    minContrast: 1.3,
   },
 ];
 
