@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.17.0",
+    date: "2026-04-22",
+    subtitle: "Pretty markdown renderer — collapses redundant fences, cyan-quotes, muted subtitles",
+    items: [
+      "Added `gitmap/render/pretty.go` (+ `pretty_parse.go`, `pretty_emit.go`) with the four agreed pretty-print rules: (1) a fenced code block whose body matches the immediately-preceding paragraph collapses to a single yellow `→ <content>` line and the fence is dropped; (2) `\"double-quoted strings\"` render in cyan, single quotes left untouched (apostrophes); (3) an italic line directly under a heading (with up to one blank line of separation) renders as a muted subtitle; (4) body content under a heading is indented two spaces.",
+      "Added a token-based public API: `Render()` returns a stable, ANSI-free string using sentinel tokens (`[Y]…[/Y]`, `[C]…[/C]`, `[M]…[/M]`) so unit tests stay diff-friendly. `RenderANSI()` is the thin swap layer that substitutes `constants.ColorYellow/Cyan/Dim/Reset` for the tokens at emit time.",
+      "Added paired-fixture corpus in `gitmap/render/testdata/pretty/case-NNN-*.{in.md,want.txt}`: case-001 collapses a redundant fence, case-002 highlights two quoted spans, case-003 covers heading + subtitle + indent, case-004 verifies a non-matching fence is preserved (no false-positive collapse), case-005 mixes all rules. Adding a new edge case is now a two-file drop — no test code changes.",
+      "Added `gitmap/render/pretty_test.go`: `TestPrettyFixtures` table-loops over every `*.in.md` in the directory and fails when any pair drifts. `TestRenderANSISwapsTokens` guards against sentinel-token leakage in CLI output. `TestUnterminatedQuoteClosedDefensively` ensures a stray `\"` can't bleed an open ANSI sequence into the rest of the terminal session.",
+    ],
+  },
+  {
     version: "v3.16.0",
     date: "2026-04-22",
     subtitle: "`gitmap templates list` / `templates show` — discover the embedded corpus and your overlay",
