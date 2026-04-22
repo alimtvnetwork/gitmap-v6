@@ -7,14 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // TestEmbeddedCorpusHeaders enforces the audit-trail header contract on
 // every embedded template file: source, kind, lang, version must be set.
 func TestEmbeddedCorpusHeaders(t *testing.T) {
-	walkErr := fs.WalkDir(FS, constants.EmbedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
+	walkErr := fs.WalkDir(FS, embedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -37,10 +35,10 @@ func TestEmbeddedCorpusHeaders(t *testing.T) {
 func assertHeader(t *testing.T, path string, data []byte) {
 	t.Helper()
 	required := []string{
-		constants.TemplateHeaderSource,
-		constants.TemplateHeaderKind,
-		constants.TemplateHeaderLang,
-		constants.TemplateHeaderVersion,
+		templateHeaderSource,
+		templateHeaderKind,
+		templateHeaderLang,
+		templateHeaderVersion,
 	}
 	seen := make(map[string]bool, len(required))
 
@@ -63,7 +61,7 @@ func assertHeader(t *testing.T, path string, data []byte) {
 // TestSVGNotInLFSCommon locks in the deliberate exclusion: SVG is text and
 // must NOT be marked as LFS in the curated lfs/common template.
 func TestSVGNotInLFSCommon(t *testing.T) {
-	r, err := Resolve(constants.TemplateKindLFS, "common")
+	r, err := Resolve(kindLFS, "common")
 	if err != nil {
 		t.Fatalf("Resolve lfs/common: %v", err)
 	}

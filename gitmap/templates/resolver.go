@@ -6,8 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // Source describes where a resolved template came from.
@@ -49,11 +47,11 @@ func relPath(kind, lang string) string {
 
 // extFor returns the file extension for a given template kind.
 func extFor(kind string) string {
-	if kind == constants.TemplateKindAttributes || kind == constants.TemplateKindLFS {
-		return constants.TemplateExtAttributes
+	if kind == kindAttributes || kind == kindLFS {
+		return templateExtAttributes
 	}
 
-	return constants.TemplateExtIgnore
+	return templateExtIgnore
 }
 
 // resolveUser checks the overlay directory.
@@ -68,7 +66,7 @@ func resolveUser(kind, lang, rel string) (Resolved, bool, error) {
 		return Resolved{}, false, nil
 	}
 	if err != nil {
-		return Resolved{}, false, fmt.Errorf(constants.ErrTemplateRead, full, err)
+		return Resolved{}, false, fmt.Errorf(errTemplateRead, full, err)
 	}
 
 	return Resolved{Kind: kind, Lang: lang, Path: full, Source: SourceUser, Content: data}, true, nil
@@ -76,13 +74,13 @@ func resolveUser(kind, lang, rel string) (Resolved, bool, error) {
 
 // resolveEmbed reads from the embedded FS.
 func resolveEmbed(kind, lang, rel string) (Resolved, error) {
-	full := filepath.ToSlash(filepath.Join(constants.EmbedAssetsRoot, rel))
+	full := filepath.ToSlash(filepath.Join(embedAssetsRoot, rel))
 	data, err := FS.ReadFile(full)
 	if errors.Is(err, fs.ErrNotExist) {
-		return Resolved{}, fmt.Errorf(constants.ErrTemplateNotFound, kind, lang)
+		return Resolved{}, fmt.Errorf(errTemplateNotFound, kind, lang)
 	}
 	if err != nil {
-		return Resolved{}, fmt.Errorf(constants.ErrTemplateRead, full, err)
+		return Resolved{}, fmt.Errorf(errTemplateRead, full, err)
 	}
 
 	return Resolved{Kind: kind, Lang: lang, Path: full, Source: SourceEmbed, Content: data}, nil

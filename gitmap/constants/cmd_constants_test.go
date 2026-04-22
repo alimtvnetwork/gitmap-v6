@@ -74,6 +74,8 @@ func topLevelCmds() map[string]string {
 		"CmdLLMDocsAlias":          CmdLLMDocsAlias,
 		"CmdSelfInstall":           CmdSelfInstall,
 		"CmdSelfUninstall":         CmdSelfUninstall,
+		"CmdTemplates":             CmdTemplates,
+		"CmdTemplatesAlias":        CmdTemplatesAlias,
 		"CmdSf":                    CmdSf,
 		"CmdProbe":                 CmdProbe,
 		"CmdCode":                  CmdCode,

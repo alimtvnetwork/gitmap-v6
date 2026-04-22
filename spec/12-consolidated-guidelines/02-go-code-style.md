@@ -52,23 +52,25 @@ Every literal used for comparison, defaults, or messages goes in `constants`.
 | Constants | PascalCase | `DefaultBranch` |
 | Files | Lowercase, single word | `terminal.go` |
 
-## `constants/` Naming — Domain Prefix Required
+## Constant Ownership — Organize by Package/Domain
 
-Every **new** constant in `gitmap/constants/` must start with one of five canonical prefixes. Enforced by `.github/scripts/check-constants-naming.sh` against a grandfathered baseline (`.github/scripts/constants-baseline.txt`); legacy prefixes (`Doctor*`, `Git*`, `Tool*`, `Term*`, `Choco*`, `Brew*`, `Apt*`, `Hint*`, …) are exempt only because they pre-date the rule.
+Do **not** force artificial naming prefixes just to compensate for poor ownership.
+Put constants in the package that owns the behavior:
 
-| Prefix | Use for | Example |
-|--------|---------|---------|
-| `CmdXxx` | Command names and aliases | `CmdScan`, `CmdReleaseAlias` |
-| `MsgXxx` | User-facing strings, format templates, prompts | `MsgReleaseScanHeader`, `MsgPullDone` |
-| `ErrXxx` | Error messages and Go-idiomatic sentinel errors | `ErrNoDatabase`, `ErrLatestBranchNoRefs` |
-| `FlagXxx` | Flag names and descriptions | `FlagDryRun`, `FlagDescBump` |
-| `DefaultXxx` | Default values used when no override is provided | `DefaultBranch`, `DefaultReleaseDir` |
+| Owns the behavior | Put constants in | Examples |
+|-------------------|------------------|----------|
+| CLI routing / top-level commands | `gitmap/constants/` when shared across dispatcher, completion, tests | `CmdScan`, `CmdReleaseAlias` |
+| A single feature package | That feature package | template file extensions in `templates`, merge prompts in `movemerge` |
+| A single cmd flow | `cmd` package/file-local constants | subcommand verbs, usage text, table headers |
 
-After an approved rename pass, regenerate the baseline:
+Rules:
 
-```bash
-bash .github/scripts/check-constants-naming.sh --regenerate-baseline
-```
+1. Use `gitmap/constants/` only for literals shared across packages.
+2. Keep package-private literals in the owning package instead of exporting them from `constants`.
+3. Use clear PascalCase for exported constants and clear lowerCamelCase for unexported file/package-local constants.
+4. Prefixes like `Cmd`, `Err`, `Flag`, and `Default` are allowed when they describe real semantics, but they are **not** mandatory for every new constant.
+
+`.github/scripts/check-constants-naming.sh` enforces this at a lightweight level by rejecting newly added `gitmap/constants/` names that are not ordinary PascalCase identifiers.
 
 ## Error Handling
 

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // Entry describes one discoverable template.
@@ -47,11 +45,11 @@ func List() ([]Entry, error) {
 // kindRank gives a stable display order: ignore, attributes, lfs.
 func kindRank(kind string) int {
 	switch kind {
-	case constants.TemplateKindIgnore:
+	case kindIgnore:
 		return 0
-	case constants.TemplateKindAttributes:
+	case kindAttributes:
 		return 1
-	case constants.TemplateKindLFS:
+	case kindLFS:
 		return 2
 	}
 
@@ -60,7 +58,7 @@ func kindRank(kind string) int {
 
 // collectEmbed walks the embedded FS and adds every template.
 func collectEmbed(out map[string]Entry) error {
-	return fs.WalkDir(FS, constants.EmbedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
+	return fs.WalkDir(FS, embedAssetsRoot, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -105,7 +103,7 @@ func collectUser(out map[string]Entry) error {
 
 // parseEmbedPath turns "assets/ignore/go.gitignore" into ("ignore", "go").
 func parseEmbedPath(p string) (string, string, bool) {
-	rel := strings.TrimPrefix(p, constants.EmbedAssetsRoot+"/")
+	rel := strings.TrimPrefix(p, embedAssetsRoot+"/")
 
 	return parseRelTemplatePath(rel)
 }
@@ -120,18 +118,18 @@ func parseRelTemplatePath(rel string) (string, string, bool) {
 	kind := parts[0]
 	base := parts[1]
 	switch kind {
-	case constants.TemplateKindIgnore:
-		if !strings.HasSuffix(base, constants.TemplateExtIgnore) {
+	case kindIgnore:
+		if !strings.HasSuffix(base, templateExtIgnore) {
 			return "", "", false
 		}
 
-		return kind, strings.TrimSuffix(base, constants.TemplateExtIgnore), true
-	case constants.TemplateKindAttributes, constants.TemplateKindLFS:
-		if !strings.HasSuffix(base, constants.TemplateExtAttributes) {
+		return kind, strings.TrimSuffix(base, templateExtIgnore), true
+	case kindAttributes, kindLFS:
+		if !strings.HasSuffix(base, templateExtAttributes) {
 			return "", "", false
 		}
 
-		return kind, strings.TrimSuffix(base, constants.TemplateExtAttributes), true
+		return kind, strings.TrimSuffix(base, templateExtAttributes), true
 	}
 
 	return "", "", false
