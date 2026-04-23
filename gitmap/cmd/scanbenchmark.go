@@ -73,13 +73,13 @@ func (b *scanBenchmark) Record(name string, d time.Duration) {
 // Failures are reported to stderr but never fail the scan — benchmarking
 // is observability, not a feature the user explicitly asked to gate on.
 func (b *scanBenchmark) WriteLog(outputDir string) {
-	if err := os.MkdirAll(outputDir, constants.DirModeStandard); err != nil {
+	if err := os.MkdirAll(outputDir, constants.DirPermission); err != nil {
 		fmt.Fprintf(os.Stderr, "  ⚠ Could not create benchmark dir: %v\n", err)
 
 		return
 	}
 	path := filepath.Join(outputDir, scanBenchmarkFile)
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, constants.FileModeStandard)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, constants.FilePermission)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  ⚠ Could not open benchmark log: %v\n", err)
 
