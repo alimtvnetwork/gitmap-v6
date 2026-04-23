@@ -1,5 +1,5 @@
 {
-  "deployPath": "E:\\bin-run",
+  "deployPath": "E:",
   "buildOutput": "./bin",
   "binaryName": "gitmap.exe",
   "goSource": "./gitmap",
