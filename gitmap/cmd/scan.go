@@ -10,6 +10,7 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/config"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/desktop"
+	"github.com/alimtvnetwork/gitmap-v6/gitmap/detector"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/mapper"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/model"
