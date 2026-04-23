@@ -163,6 +163,12 @@ var CsharpKeyFilePatterns = []string{
 }
 
 // Project detection exclusion directories.
+//
+// These directories are skipped during in-repo project detection walks.
+// Skipping noisy/generated trees (especially node_modules, .git, vendored
+// caches, and CMS upload trees) is the single most important factor in
+// keeping `gitmap scan` fast on real-world projects — a WordPress repo
+// can easily contain 100k+ files under wp-content alone.
 var ProjectExcludeDirs = []string{
 	"node_modules",
 	"vendor",
@@ -177,4 +183,32 @@ var ProjectExcludeDirs = []string{
 	"packages",
 	".venv",
 	".cache",
+	".next",
+	".nuxt",
+	".svelte-kit",
+	".turbo",
+	".parcel-cache",
+	".angular",
+	"coverage",
+	".nyc_output",
+	"__pycache__",
+	".pytest_cache",
+	".mypy_cache",
+	".ruff_cache",
+	".tox",
+	".gradle",
+	".idea",
+	".vs",
+	".vscode-test",
+	".terraform",
+	".serverless",
+	"tmp",
+	"temp",
+	"logs",
+	"Pods",
+	"DerivedData",
+	"wp-content",
+	"wp-admin",
+	"wp-includes",
+	"uploads",
 }

@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "v3.28.2",
+    date: "2026-04-23",
+    subtitle: "Scan: single-walk detector, parallel per-repo detection, expanded exclude list, and per-phase benchmark log",
+    items: [
+      "Root cause of multi-minute scans on WordPress / monorepos: `detector.DetectProjects` was walking each repo's tree TWICE — first via `collectSlnDirs` (full `filepath.Walk` to pre-collect `.sln` parent dirs for C# precedence), then again via `walkRepo` for actual classification. On a WordPress project where `wp-content/uploads`, `cache`, and similar trees were not in `ProjectExcludeDirs`, each walk traversed 100k+ files. With detection running SEQUENTIALLY across 24 repos, the whole project-detection phase blocked the scan for 20+ minutes after the scanner itself had already finished its 392-dir walk in seconds.",
+      "Refactored `gitmap/detector/detector.go` to walk each repo exactly once: `walkRepoOnce` now collects every interesting file hit (go.mod, package.json, CMakeLists.txt, meson.build, *.vcxproj, *.sln, *.csproj) AND the set of `.sln` parent directories in a single `filepath.Walk` pass, then `classifyHits` feeds the collected hits through the per-language classifiers in memory. The C# `.sln`-precedence rule (a standalone `.csproj` is suppressed when it lives under a `.sln` directory) still holds because `slnDirs` is fully populated before classification runs.",
+      "`gitmap/cmd/scanprojects.go` now runs detection across repos with a bounded worker pool (`detectionWorkerCap = 8`, clamped by `runtime.NumCPU()` and `repoCount`). On a 24-repo project this collapses what used to be 24 sequential walks into 3 batches of 8. Each repo's detector call is independent so the only shared state is the channel buffer.",
+      "Expanded `constants.ProjectExcludeDirs` (gitmap/constants/constants_project.go) with `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `.parcel-cache`, `.angular`, `coverage`, `.nyc_output`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `.tox`, `.gradle`, `.idea`, `.vs`, `.vscode-test`, `.terraform`, `.serverless`, `tmp`, `temp`, `logs`, `Pods`, `DerivedData`, `wp-content`, `wp-admin`, `wp-includes`, `uploads`. These are PROJECT-DETECTION exclusions only (the top-level `scanner.ScanDir` walk is unaffected and still uses `cfg.ExcludeDirs`); they prevent the detector from descending into trees that cannot legitimately contain a project manifest like `go.mod` or `package.json`.",
+      "New `gitmap/cmd/scanbenchmark.go` captures wall-clock timings for every scan phase and appends a timestamped block to `<scanDir>/.gitmap/output/scan-benchmark.log` with the binary version (`gitmap scan v<X.Y.Z> @ <RFC3339>`), GOOS/GOARCH/CPU count, and one line per phase: `scan.walk`, `scan.buildRecords`, `scan.writeOutputs`, `scan.saveCache`, `scan.dbUpsertRepos`, `scan.tagScanFolder`, `scan.alignDBIDs`, `scan.detectProjects`, `scan.writeProjectJSON`, `scan.dbUpsertProjects`, `scan.importReleases`, `scan.addToDesktop`, `scan.vscodePMSync`, `TOTAL`. Users reporting slow scans can now attach this log instead of guessing — the offending phase is named explicitly.",
+      "`executeScan` in `gitmap/cmd/scan.go` now prints `▶ gitmap scan v<X.Y.Z> — <absDir>` at the top of every run (suppressed under `--quiet`) so the version that produced any subsequent output / benchmark block is unambiguous. The benchmark log path is echoed at the end (`📊 Benchmark log: ...`) so the file is discoverable without having to know the convention.",
+    ],
+  },
+  {
     version: "v3.28.1",
     date: "2026-04-22",
     subtitle: "Update / revert: drop the futile synchronous cleanup that printed two `Access is denied` lines on every Windows update",
