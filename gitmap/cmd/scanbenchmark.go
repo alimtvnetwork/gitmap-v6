@@ -104,15 +104,16 @@ func (b *scanBenchmark) writeBlock(f *os.File) {
 		runtime.GOOS, runtime.GOARCH, runtime.NumCPU())
 
 	for _, p := range b.phases {
-		fmt.Fprintf(f, "  %-28s %10s\n", p.name, formatDuration(p.duration))
+		fmt.Fprintf(f, "  %-28s %10s\n", p.name, formatBenchDuration(p.duration))
 	}
-	fmt.Fprintf(f, "  %-28s %10s\n", "TOTAL", formatDuration(total))
+	fmt.Fprintf(f, "  %-28s %10s\n", "TOTAL", formatBenchDuration(total))
 	fmt.Fprintln(f)
 }
 
-// formatDuration prints a duration with consistent precision. time.Duration's
-// default formatter switches units, which makes columns hard to align.
-func formatDuration(d time.Duration) string {
+// formatBenchDuration prints a duration with consistent precision.
+// time.Duration's default formatter switches units, which makes columns
+// hard to align in the benchmark log.
+func formatBenchDuration(d time.Duration) string {
 	if d < time.Millisecond {
 		return fmt.Sprintf("%dµs", d.Microseconds())
 	}
