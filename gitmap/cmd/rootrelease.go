@@ -1,63 +1,29 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // dispatchRelease routes release-related commands.
 func dispatchRelease(command string) bool {
-	if command == constants.CmdRelease || command == constants.CmdReleaseShort {
-		runRelease(os.Args[2:])
+	return runDispatchTable(command, releaseDispatchEntries())
+}
 
-		return true
+// releaseDispatchEntries returns the routing table for release commands.
+func releaseDispatchEntries() []dispatchEntry {
+	return []dispatchEntry{
+		{[]string{constants.CmdRelease, constants.CmdReleaseShort}, func() { runRelease(argsTail()) }},
+		{
+			[]string{constants.CmdReleaseSelf, constants.CmdReleaseSelfAlias, constants.CmdReleaseSelfAlias2},
+			func() { runReleaseSelf(argsTail()) },
+		},
+		{[]string{constants.CmdReleaseBranch, constants.CmdReleaseBranchAlias}, func() { runReleaseBranch(argsTail()) }},
+		{[]string{constants.CmdReleasePending, constants.CmdReleasePendingAlias}, func() { runReleasePending(argsTail()) }},
+		{[]string{constants.CmdChangelog, constants.CmdChangelogAlias}, func() { runChangelog(argsTail()) }},
+		{[]string{constants.CmdChangelogMD}, func() { runChangelog([]string{constants.FlagOpenValue}) }},
+		{[]string{constants.CmdClearReleaseJSON, constants.CmdClearReleaseJSONAlias}, func() { runClearReleaseJSON(argsTail()) }},
+		{[]string{constants.CmdChangelogGen, constants.CmdChangelogGenAlias}, func() { runChangelogGen(argsTail()) }},
+		{[]string{constants.CmdReleaseAlias, constants.CmdReleaseAliasShort}, func() { runReleaseAlias(argsTail(), false) }},
+		{[]string{constants.CmdReleaseAliasPull, constants.CmdReleaseAliasPullShort}, func() { runReleaseAlias(argsTail(), true) }},
 	}
-	if command == constants.CmdReleaseSelf || command == constants.CmdReleaseSelfAlias || command == constants.CmdReleaseSelfAlias2 {
-		runReleaseSelf(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdReleaseBranch || command == constants.CmdReleaseBranchAlias {
-		runReleaseBranch(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdReleasePending || command == constants.CmdReleasePendingAlias {
-		runReleasePending(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdChangelog || command == constants.CmdChangelogAlias {
-		runChangelog(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdChangelogMD {
-		runChangelog([]string{constants.FlagOpenValue})
-
-		return true
-	}
-	if command == constants.CmdClearReleaseJSON || command == constants.CmdClearReleaseJSONAlias {
-		runClearReleaseJSON(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdChangelogGen || command == constants.CmdChangelogGenAlias {
-		runChangelogGen(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdReleaseAlias || command == constants.CmdReleaseAliasShort {
-		runReleaseAlias(os.Args[2:], false)
-
-		return true
-	}
-	if command == constants.CmdReleaseAliasPull || command == constants.CmdReleaseAliasPullShort {
-		runReleaseAlias(os.Args[2:], true)
-
-		return true
-	}
-
-	return false
 }

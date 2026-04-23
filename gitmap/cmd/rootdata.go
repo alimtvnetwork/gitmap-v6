@@ -1,118 +1,37 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // dispatchData routes data management, history, profiles, and TUI commands.
 func dispatchData(command string) bool {
-	if command == constants.CmdList || command == constants.CmdListAlias {
-		runList(os.Args[2:])
+	return runDispatchTable(command, dataDispatchEntries())
+}
 
-		return true
+// dataDispatchEntries returns the routing table for data commands.
+func dataDispatchEntries() []dispatchEntry {
+	return []dispatchEntry{
+		{[]string{constants.CmdList, constants.CmdListAlias}, func() { runList(argsTail()) }},
+		{[]string{constants.CmdGroup, constants.CmdGroupAlias}, func() { runGroup(argsTail()) }},
+		{[]string{constants.CmdMultiGroup, constants.CmdMultiGroupAlias}, func() { runMultiGroup(argsTail()) }},
+		{[]string{constants.CmdHistory, constants.CmdHistoryAlias}, func() { runHistory(argsTail()) }},
+		{[]string{constants.CmdHistoryReset, constants.CmdHistoryResetAlias}, func() { runHistoryReset(argsTail()) }},
+		{[]string{constants.CmdStats, constants.CmdStatsAlias}, func() { runStats(argsTail()) }},
+		{[]string{constants.CmdBookmark, constants.CmdBookmarkAlias}, func() { runBookmark(argsTail()) }},
+		{[]string{constants.CmdExport, constants.CmdExportAlias}, func() { runExport(argsTail()) }},
+		{[]string{constants.CmdImport, constants.CmdImportAlias}, func() { runImport(argsTail()) }},
+		{[]string{constants.CmdProfile, constants.CmdProfileAlias}, func() { runProfile(argsTail()) }},
+		{[]string{constants.CmdDiffProfiles, constants.CmdDiffProfilesAlias}, func() { runDiffProfiles(argsTail()) }},
+		{[]string{constants.CmdCD, constants.CmdCDAlias}, func() { runCD(argsTail()) }},
+		{[]string{constants.CmdWatch, constants.CmdWatchAlias}, func() { runWatch(argsTail()) }},
+		{[]string{constants.CmdInteractive, constants.CmdInteractiveAlias}, func() { runInteractive() }},
+		{[]string{constants.CmdDBReset}, func() { runDBReset(argsTail()) }},
+		{[]string{constants.CmdReset}, func() { runReset(argsTail()) }},
+		{[]string{constants.CmdDBMigrate, constants.CmdDBMigrateAlias}, func() { runDBMigrate(argsTail()) }},
+		{[]string{constants.CmdAmend, constants.CmdAmendAlias}, func() { runAmend(argsTail()) }},
+		{[]string{constants.CmdAmendList, constants.CmdAmendListAlias}, func() { runAmendList(argsTail()) }},
+		{[]string{constants.CmdDashboard, constants.CmdDashboardAlias}, func() { runDashboard(argsTail()) }},
+		{[]string{constants.CmdVersionHistory, constants.CmdVersionHistoryAlias}, func() { runVersionHistory(argsTail()) }},
 	}
-	if command == constants.CmdGroup || command == constants.CmdGroupAlias {
-		runGroup(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdMultiGroup || command == constants.CmdMultiGroupAlias {
-		runMultiGroup(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdHistory || command == constants.CmdHistoryAlias {
-		runHistory(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdHistoryReset || command == constants.CmdHistoryResetAlias {
-		runHistoryReset(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdStats || command == constants.CmdStatsAlias {
-		runStats(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdBookmark || command == constants.CmdBookmarkAlias {
-		runBookmark(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdExport || command == constants.CmdExportAlias {
-		runExport(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdImport || command == constants.CmdImportAlias {
-		runImport(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdProfile || command == constants.CmdProfileAlias {
-		runProfile(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdDiffProfiles || command == constants.CmdDiffProfilesAlias {
-		runDiffProfiles(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdCD || command == constants.CmdCDAlias {
-		runCD(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdWatch || command == constants.CmdWatchAlias {
-		runWatch(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdInteractive || command == constants.CmdInteractiveAlias {
-		runInteractive()
-
-		return true
-	}
-	if command == constants.CmdDBReset {
-		runDBReset(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdReset {
-		runReset(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdDBMigrate || command == constants.CmdDBMigrateAlias {
-		runDBMigrate(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdAmend || command == constants.CmdAmendAlias {
-		runAmend(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdAmendList || command == constants.CmdAmendListAlias {
-		runAmendList(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdDashboard || command == constants.CmdDashboardAlias {
-		runDashboard(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdVersionHistory || command == constants.CmdVersionHistoryAlias {
-		runVersionHistory(os.Args[2:])
-
-		return true
-	}
-
-	return false
 }

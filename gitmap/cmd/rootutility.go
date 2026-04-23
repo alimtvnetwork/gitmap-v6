@@ -16,110 +16,56 @@ func isFlagToken(arg string) bool {
 
 // dispatchUtility routes setup, update, doctor, and other utility commands.
 func dispatchUtility(command string) bool {
-	if command == constants.CmdUpdate {
-		checkHelp("update", os.Args[2:])
-		runUpdate()
+	return runDispatchTable(command, utilityDispatchEntries())
+}
 
-		return true
+// utilityDispatchEntries returns the routing table for utility commands.
+func utilityDispatchEntries() []dispatchEntry {
+	return []dispatchEntry{
+		{[]string{constants.CmdUpdate}, func() { checkHelp("update", argsTail()); runUpdate() }},
+		{[]string{constants.CmdUpdateRunner}, func() { runUpdateRunner() }},
+		{[]string{constants.CmdUpdateCleanup}, func() { runUpdateCleanup() }},
+		{
+			[]string{constants.CmdInstalledDir, constants.CmdInstalledDirAlias},
+			func() { checkHelp("installed-dir", argsTail()); runInstalledDir() },
+		},
+		{[]string{constants.CmdRevert}, func() { runRevert(argsTail()) }},
+		{[]string{constants.CmdRevertRunner}, func() { runRevertRunner() }},
+		{
+			[]string{constants.CmdVersion, constants.CmdVersionAlias},
+			func() { checkHelp("version", argsTail()); fmt.Printf(constants.MsgVersionFmt, constants.Version) },
+		},
+		{[]string{constants.CmdHelp}, runHelpDispatch},
+		{[]string{constants.CmdDocs, constants.CmdDocsAlias}, func() { runDocs(argsTail()) }},
+		{[]string{constants.CmdHelpDashboard, constants.CmdHelpDashboardAlias}, func() { runHelpDashboard(argsTail()) }},
+		{[]string{constants.CmdLLMDocs, constants.CmdLLMDocsAlias}, func() { runLLMDocs(argsTail()) }},
+		{[]string{constants.CmdSetSourceRepo}, func() { runSetSourceRepo() }},
+		{[]string{constants.CmdSf}, func() { runSf(argsTail()) }},
+		{[]string{constants.CmdProbe}, func() { runProbe(argsTail()) }},
+		{[]string{constants.CmdFindNext, constants.CmdFindNextAlias}, func() { runFindNext(argsTail()) }},
+		{[]string{constants.CmdVSCodePMPath, constants.CmdVSCodePMPathAlias}, func() { runVSCodePMPath(argsTail()) }},
+		{[]string{constants.CmdLFSCommon, constants.CmdLFSCommonAlias}, func() { runLFSCommon(argsTail()) }},
 	}
-	if command == constants.CmdUpdateRunner {
-		runUpdateRunner()
+}
 
-		return true
+// runHelpDispatch handles the `help` subcommand including topic
+// help, --groups, --compact, and the default usage screen.
+func runHelpDispatch() {
+	if len(os.Args) >= 3 && !isFlagToken(os.Args[2]) {
+		_, mode := ParsePrettyFlag(os.Args[3:])
+		helptext.PrintWithMode(os.Args[2], mode)
+
+		return
 	}
-	if command == constants.CmdUpdateCleanup {
-		runUpdateCleanup()
+	if hasFlag(constants.FlagGroups) {
+		printHelpGroups()
 
-		return true
+		return
 	}
-	if command == constants.CmdInstalledDir || command == constants.CmdInstalledDirAlias {
-		checkHelp("installed-dir", os.Args[2:])
-		runInstalledDir()
+	if hasFlag(constants.FlagCompact) {
+		printUsageCompact()
 
-		return true
+		return
 	}
-	if command == constants.CmdRevert {
-		runRevert(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdRevertRunner {
-		runRevertRunner()
-
-		return true
-	}
-	if command == constants.CmdVersion || command == constants.CmdVersionAlias {
-		checkHelp("version", os.Args[2:])
-		fmt.Printf(constants.MsgVersionFmt, constants.Version)
-
-		return true
-	}
-	if command == constants.CmdHelp {
-		if len(os.Args) >= 3 && !isFlagToken(os.Args[2]) {
-			_, mode := ParsePrettyFlag(os.Args[3:])
-			helptext.PrintWithMode(os.Args[2], mode)
-
-			return true
-		}
-		if hasFlag(constants.FlagGroups) {
-			printHelpGroups()
-
-			return true
-		}
-		if hasFlag(constants.FlagCompact) {
-			printUsageCompact()
-
-			return true
-		}
-		printUsage()
-
-		return true
-	}
-	if command == constants.CmdDocs || command == constants.CmdDocsAlias {
-		runDocs(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdHelpDashboard || command == constants.CmdHelpDashboardAlias {
-		runHelpDashboard(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdLLMDocs || command == constants.CmdLLMDocsAlias {
-		runLLMDocs(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSetSourceRepo {
-		runSetSourceRepo()
-
-		return true
-	}
-	if command == constants.CmdSf {
-		runSf(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdProbe {
-		runProbe(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdFindNext || command == constants.CmdFindNextAlias {
-		runFindNext(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdVSCodePMPath || command == constants.CmdVSCodePMPathAlias {
-		runVSCodePMPath(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdLFSCommon || command == constants.CmdLFSCommonAlias {
-		runLFSCommon(os.Args[2:])
-
-		return true
-	}
-
-	return false
+	printUsage()
 }

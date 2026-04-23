@@ -1,141 +1,50 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // dispatchTooling routes dev tooling and maintenance commands.
 func dispatchTooling(command string) bool {
-	if command == constants.CmdDesktopSync || command == constants.CmdDesktopSyncAlias {
-		checkHelp("desktop-sync", os.Args[2:])
-		runDesktopSync()
+	return runDispatchTable(command, toolingDispatchEntries())
+}
 
-		return true
+// toolingDispatchEntries returns the routing table for tooling commands.
+func toolingDispatchEntries() []dispatchEntry {
+	return []dispatchEntry{
+		{
+			[]string{constants.CmdDesktopSync, constants.CmdDesktopSyncAlias},
+			func() { checkHelp("desktop-sync", argsTail()); runDesktopSync() },
+		},
+		{[]string{constants.CmdGitHubDesktop, constants.CmdGitHubDesktopAlias}, func() { runGitHubDesktop(argsTail()) }},
+		{
+			[]string{constants.CmdRescan, constants.CmdRescanAlias},
+			func() { checkHelp("rescan", argsTail()); runRescan() },
+		},
+		{[]string{constants.CmdSetup}, func() { runSetup(argsTail()) }},
+		{[]string{constants.CmdDoctor}, func() { checkHelp("doctor", argsTail()); runDoctor() }},
+		{[]string{constants.CmdLatestBranch, constants.CmdLatestBranchAlias}, func() { runLatestBranch(argsTail()) }},
+		{[]string{constants.CmdListVersions, constants.CmdListVersionsAlias}, func() { runListVersions(argsTail()) }},
+		{
+			[]string{constants.CmdListReleases, constants.CmdListReleasesAlias, constants.CmdReleases},
+			func() { runListReleases(argsTail()) },
+		},
+		{[]string{constants.CmdSEOWrite, constants.CmdSEOWriteAlias}, func() { runSEOWrite(argsTail()) }},
+		{[]string{constants.CmdGoMod, constants.CmdGoModAlias}, func() { runGoMod(argsTail()) }},
+		{[]string{constants.CmdCompletion, constants.CmdCompletionAlias}, func() { runCompletion(argsTail()) }},
+		{[]string{constants.CmdZipGroup, constants.CmdZipGroupShort}, func() { runZipGroup(argsTail()) }},
+		{[]string{constants.CmdAlias, constants.CmdAliasShort}, func() { runAlias(argsTail()) }},
+		{[]string{constants.CmdSSH}, func() { runSSH(argsTail()) }},
+		{[]string{constants.CmdPrune, constants.CmdPruneAlias}, func() { runPrune(argsTail()) }},
+		{[]string{constants.CmdTempRelease, constants.CmdTempReleaseShort}, func() { runTempRelease(argsTail()) }},
+		{[]string{constants.CmdTask, constants.CmdTaskAlias}, func() { runTask(argsTail()) }},
+		{[]string{constants.CmdEnv, constants.CmdEnvAlias}, func() { runEnv(argsTail()) }},
+		{[]string{constants.CmdInstall, constants.CmdInstallAlias}, func() { runInstall(argsTail()) }},
+		{[]string{constants.CmdUninstall, constants.CmdUninstallAlias}, func() { runUninstall(argsTail()) }},
+		{[]string{constants.CmdSelfInstall}, func() { runSelfInstall(argsTail()) }},
+		{[]string{constants.CmdSelfUninstall}, func() { runSelfUninstall(argsTail()) }},
+		{[]string{constants.CmdSelfUninstallRunner}, func() { runSelfUninstallRunner() }},
+		{[]string{constants.CmdPending}, func() { runPending() }},
+		{[]string{constants.CmdDoPending, constants.CmdDoPendingAlias}, func() { runDoPending(argsTail()) }},
 	}
-	if command == constants.CmdGitHubDesktop || command == constants.CmdGitHubDesktopAlias {
-		runGitHubDesktop(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdRescan || command == constants.CmdRescanAlias {
-		checkHelp("rescan", os.Args[2:])
-		runRescan()
-
-		return true
-	}
-	if command == constants.CmdSetup {
-		runSetup(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdDoctor {
-		checkHelp("doctor", os.Args[2:])
-		runDoctor()
-
-		return true
-	}
-	if command == constants.CmdLatestBranch || command == constants.CmdLatestBranchAlias {
-		runLatestBranch(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdListVersions || command == constants.CmdListVersionsAlias {
-		runListVersions(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdListReleases || command == constants.CmdListReleasesAlias || command == constants.CmdReleases {
-		runListReleases(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSEOWrite || command == constants.CmdSEOWriteAlias {
-		runSEOWrite(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdGoMod || command == constants.CmdGoModAlias {
-		runGoMod(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdCompletion || command == constants.CmdCompletionAlias {
-		runCompletion(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdZipGroup || command == constants.CmdZipGroupShort {
-		runZipGroup(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdAlias || command == constants.CmdAliasShort {
-		runAlias(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSSH {
-		runSSH(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdPrune || command == constants.CmdPruneAlias {
-		runPrune(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdTempRelease || command == constants.CmdTempReleaseShort {
-		runTempRelease(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdTask || command == constants.CmdTaskAlias {
-		runTask(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdEnv || command == constants.CmdEnvAlias {
-		runEnv(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdInstall || command == constants.CmdInstallAlias {
-		runInstall(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdUninstall || command == constants.CmdUninstallAlias {
-		runUninstall(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSelfInstall {
-		runSelfInstall(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSelfUninstall {
-		runSelfUninstall(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdSelfUninstallRunner {
-		runSelfUninstallRunner()
-
-		return true
-	}
-	if command == constants.CmdPending {
-		runPending()
-
-		return true
-	}
-	if command == constants.CmdDoPending || command == constants.CmdDoPendingAlias {
-		runDoPending(os.Args[2:])
-
-		return true
-	}
-
-	return false
 }

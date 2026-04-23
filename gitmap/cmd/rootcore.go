@@ -1,64 +1,32 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 )
 
 // dispatchCore routes scan, clone, pull, and status commands.
 func dispatchCore(command string) bool {
-	if command == constants.CmdScan || command == constants.CmdScanAlias {
-		runScan(os.Args[2:])
+	return runDispatchTable(command, coreDispatchEntries())
+}
 
-		return true
+// coreDispatchEntries returns the routing table for core commands.
+func coreDispatchEntries() []dispatchEntry {
+	return []dispatchEntry{
+		{[]string{constants.CmdScan, constants.CmdScanAlias}, func() { runScan(argsTail()) }},
+		{[]string{constants.CmdClone, constants.CmdCloneAlias}, func() { runClone(argsTail()) }},
+		{[]string{constants.CmdPull, constants.CmdPullAlias}, func() { runPull(argsTail()) }},
+		{[]string{constants.CmdStatus, constants.CmdStatusAlias}, func() { runStatus(argsTail()) }},
+		{[]string{constants.CmdExec, constants.CmdExecAlias}, func() { runExec(argsTail()) }},
+		{
+			[]string{
+				constants.CmdHasAnyUpdates, constants.CmdHasAnyUpdatesAlias,
+				constants.CmdHasAnyChanges, constants.CmdHasAnyChangesAlias,
+			},
+			func() { runHasAnyUpdates(argsTail()) },
+		},
+		{[]string{constants.CmdHasChange, constants.CmdHasChangeAlias}, func() { runHasChange(argsTail()) }},
+		{[]string{constants.CmdCloneNext, constants.CmdCloneNextAlias}, func() { runCloneNext(argsTail()) }},
+		{[]string{constants.CmdAs, constants.CmdAsAlias}, func() { runAs(argsTail()) }},
+		{[]string{constants.CmdCode}, func() { runCode(argsTail()) }},
 	}
-	if command == constants.CmdClone || command == constants.CmdCloneAlias {
-		runClone(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdPull || command == constants.CmdPullAlias {
-		runPull(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdStatus || command == constants.CmdStatusAlias {
-		runStatus(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdExec || command == constants.CmdExecAlias {
-		runExec(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdHasAnyUpdates || command == constants.CmdHasAnyUpdatesAlias ||
-		command == constants.CmdHasAnyChanges || command == constants.CmdHasAnyChangesAlias {
-		runHasAnyUpdates(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdHasChange || command == constants.CmdHasChangeAlias {
-		runHasChange(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdCloneNext || command == constants.CmdCloneNextAlias {
-		runCloneNext(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdAs || command == constants.CmdAsAlias {
-		runAs(os.Args[2:])
-
-		return true
-	}
-	if command == constants.CmdCode {
-		runCode(os.Args[2:])
-
-		return true
-	}
-
-	return false
 }
