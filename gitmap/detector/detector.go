@@ -11,14 +11,15 @@ import (
 )
 
 // DetectProjects scans a repo directory for all supported project types.
+//
+// Performance contract: the repo tree is walked exactly ONCE. The previous
+// implementation did a full pre-walk to collect .sln directories followed
+// by a second full walk for detection — doubling I/O on every repo. We now
+// collect raw hits in a single pass and resolve .sln precedence in memory.
 func DetectProjects(repoPath string, repoID int64, repoName string) []DetectionResult {
-	var results []DetectionResult
-	slnDirs := map[string]bool{}
+	hits := walkRepoOnce(repoPath)
 
-	collectSlnDirs(repoPath, slnDirs)
-	walkRepo(repoPath, repoID, repoName, slnDirs, &results)
-
-	return results
+	return classifyHits(repoPath, repoID, repoName, hits)
 }
 
 // DetectionResult holds a detected project and optional metadata.
@@ -28,22 +29,77 @@ type DetectionResult struct {
 	Csharp  *model.CsharpProjectMetadata
 }
 
-// walkRepo walks the directory tree and detects projects.
-func walkRepo(repoPath string, repoID int64, repoName string, slnDirs map[string]bool, results *[]DetectionResult) {
+// fileHit captures a single interesting file found during the walk.
+type fileHit struct {
+	path string // absolute file path
+	dir  string // absolute parent directory
+	name string // base name
+}
+
+// repoHits is the raw output of a single tree walk.
+type repoHits struct {
+	files   []fileHit
+	slnDirs map[string]bool
+}
+
+// walkRepoOnce walks the repo tree exactly once, collecting every file
+// that any classifier might care about plus the set of directories that
+// directly contain a .sln file (used for C# precedence rules).
+func walkRepoOnce(repoPath string) repoHits {
+	out := repoHits{slnDirs: map[string]bool{}}
 	_ = filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() && shouldExcludeDir(info.Name()) {
-			return filepath.SkipDir
-		}
 		if info.IsDir() {
+			if shouldExcludeDir(info.Name()) {
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
-		detectFile(path, repoPath, repoID, repoName, slnDirs, results)
+		name := info.Name()
+		if !isInterestingFile(name) {
+			return nil
+		}
+		out.files = append(out.files, fileHit{path: path, dir: filepath.Dir(path), name: name})
+		if strings.HasSuffix(name, constants.ExtSln) {
+			out.slnDirs[filepath.Dir(path)] = true
+		}
 
 		return nil
 	})
+
+	return out
+}
+
+// isInterestingFile returns true when a file name matters to any classifier.
+// Cheap O(1) prefix/suffix checks keep the hot path tight.
+func isInterestingFile(name string) bool {
+	if name == constants.IndicatorGoMod || name == constants.IndicatorPackageJSON {
+		return true
+	}
+	if name == constants.IndicatorCMakeLists || name == constants.IndicatorMesonBuild {
+		return true
+	}
+	if strings.HasSuffix(name, constants.ExtVcxproj) {
+		return true
+	}
+	if strings.HasSuffix(name, constants.ExtSln) || strings.HasSuffix(name, constants.ExtCsproj) {
+		return true
+	}
+
+	return false
+}
+
+// classifyHits feeds collected file hits through the per-language detectors.
+func classifyHits(repoPath string, repoID int64, repoName string, hits repoHits) []DetectionResult {
+	var results []DetectionResult
+	for _, h := range hits.files {
+		detectFile(h.path, repoPath, repoID, repoName, hits.slnDirs, &results)
+	}
+
+	return results
 }
 
 // detectFile checks a single file against all detection rules.
@@ -59,23 +115,6 @@ func detectFile(path, repoPath string, repoID int64, repoName string, slnDirs ma
 	}
 	detectCpp(name, dir, repoPath, repoID, repoName, results)
 	detectCsharpFile(name, dir, repoPath, repoID, repoName, slnDirs, results)
-}
-
-// collectSlnDirs pre-scans for .sln files to enforce precedence.
-func collectSlnDirs(repoPath string, slnDirs map[string]bool) {
-	_ = filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() && shouldExcludeDir(info.Name()) {
-			return filepath.SkipDir
-		}
-		if strings.HasSuffix(info.Name(), constants.ExtSln) {
-			slnDirs[filepath.Dir(path)] = true
-		}
-
-		return nil
-	})
 }
 
 // shouldExcludeDir checks if a directory name should be skipped.
@@ -101,4 +140,3 @@ func buildRelativePath(dir, repoPath string) string {
 
 	return rel
 }
-
