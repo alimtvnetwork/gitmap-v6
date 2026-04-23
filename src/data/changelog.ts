@@ -8,7 +8,7 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: "v3.28.2",
+    version: "v3.54.0",
     date: "2026-04-23",
     subtitle: "Scan: single-walk detector, parallel per-repo detection, expanded exclude list, and per-phase benchmark log",
     items: [
