@@ -36,11 +36,22 @@ func runScan(args []string) {
 }
 
 // executeScan performs the directory scan and outputs results.
+//
+// Each phase is wrapped in a benchmark.Phase call so that
+// .gitmap/output/scan-benchmark.log captures wall-clock timings for every
+// stage. This is the file users should attach when reporting "scan is
+// slow" — it pinpoints which phase (walk, DB upsert, project detection,
+// release import, desktop sync, …) actually consumed the time.
 func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFolder, quiet, noVSCodeSync, noAutoTags bool, workers int, cache model.ScanCache) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, dir, err)
 		os.Exit(1)
+	}
+
+	bench := newScanBenchmark(absDir)
+	if !quiet {
+		fmt.Printf("  ▶ gitmap scan v%s — %s\n", constants.Version, absDir)
 	}
 
 	// Enqueue scan as a pending task before execution.
@@ -55,33 +66,66 @@ func executeScan(dir string, cfg model.Config, outFile string, ghDesktop, openFo
 	}
 
 	progress := newScanProgressRenderer(quiet)
-	repos, err := scanner.ScanDirWithOptions(absDir, scanner.ScanOptions{
-		ExcludeDirs: cfg.ExcludeDirs,
-		Workers:     workers,
-		Progress:    progress.Callback(),
+	var repos []scanner.RepoInfo
+	bench.Phase("scan.walk", func() {
+		repos, err = scanner.ScanDirWithOptions(absDir, scanner.ScanOptions{
+			ExcludeDirs: cfg.ExcludeDirs,
+			Workers:     workers,
+			Progress:    progress.Callback(),
+		})
 	})
 	if err != nil {
 		failPendingTask(taskDB, taskID, fmt.Sprintf(constants.ErrScanFailed, absDir, err))
 		fmt.Fprintf(os.Stderr, constants.ErrScanFailed, absDir, err)
 		os.Exit(1)
 	}
-	records := mapper.BuildRecords(repos, cfg.DefaultMode, cfg.Notes)
+	var records []model.ScanRecord
+	bench.Phase("scan.buildRecords", func() {
+		records = mapper.BuildRecords(repos, cfg.DefaultMode, cfg.Notes)
+	})
 	outputDir := resolveOutputDir(cfg.OutputDir, absDir)
 	fmt.Printf(constants.MsgSectionArtifacts, outputDir)
-	writeAllOutputs(records, outputDir, outFile, quiet)
-	saveScanCache(outputDir, cache)
+	bench.Phase("scan.writeOutputs", func() {
+		writeAllOutputs(records, outputDir, outFile, quiet)
+	})
+	bench.Phase("scan.saveCache", func() {
+		saveScanCache(outputDir, cache)
+	})
 	fmt.Print(constants.MsgSectionDatabase)
-	upsertToDB(records, outputDir)
-	tagReposWithScanFolder(absDir, records, quiet)
-	records = alignRecordsWithDB(records, outputDir)
+	bench.Phase("scan.dbUpsertRepos", func() {
+		upsertToDB(records, outputDir)
+	})
+	bench.Phase("scan.tagScanFolder", func() {
+		tagReposWithScanFolder(absDir, records, quiet)
+	})
+	bench.Phase("scan.alignDBIDs", func() {
+		records = alignRecordsWithDB(records, outputDir)
+	})
 	fmt.Print(constants.MsgSectionProjects)
-	detected := detectAllProjects(records)
-	writeProjectJSONFiles(detected, outputDir)
-	upsertProjectsToDB(detected, records, outputDir)
-	importReleases(absDir, outputDir)
-	addToDesktop(records, ghDesktop)
-	syncRecordsToVSCodePM(records, noVSCodeSync, noAutoTags)
+	var detected []detector.DetectionResult
+	bench.Phase("scan.detectProjects", func() {
+		detected = detectAllProjects(records)
+	})
+	bench.Phase("scan.writeProjectJSON", func() {
+		writeProjectJSONFiles(detected, outputDir)
+	})
+	bench.Phase("scan.dbUpsertProjects", func() {
+		upsertProjectsToDB(detected, records, outputDir)
+	})
+	bench.Phase("scan.importReleases", func() {
+		importReleases(absDir, outputDir)
+	})
+	bench.Phase("scan.addToDesktop", func() {
+		addToDesktop(records, ghDesktop)
+	})
+	bench.Phase("scan.vscodePMSync", func() {
+		syncRecordsToVSCodePM(records, noVSCodeSync, noAutoTags)
+	})
 	openOutputFolder(outputDir, openFolder)
+	bench.WriteLog(outputDir)
+	if !quiet {
+		fmt.Printf("  📊 Benchmark log: %s\n", filepath.Join(outputDir, scanBenchmarkFile))
+	}
 	fmt.Print(constants.MsgSectionDone)
 
 	// Mark scan task as completed after all steps succeed.
