@@ -4,6 +4,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"sync"
 
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/constants"
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/detector"
@@ -11,20 +13,84 @@ import (
 	"github.com/alimtvnetwork/gitmap-v6/gitmap/store"
 )
 
-// detectAllProjects runs project detection across all scanned repos.
+// detectionWorkerCap bounds concurrent per-repo detection walks. Detection
+// is I/O bound (lots of os.ReadDir / os.Stat); 8 workers saturate a typical
+// SSD without exhausting file descriptors on Windows where the default
+// per-process handle budget is tighter than POSIX.
+const detectionWorkerCap = 8
+
+// detectAllProjects runs project detection across all scanned repos in
+// parallel. Each repo is walked exactly once by the detector (see
+// detector.DetectProjects); we use a small worker pool so 24 repos don't
+// take 24× the wall clock of a single repo.
 func detectAllProjects(records []model.ScanRecord) []detector.DetectionResult {
+	workers := resolveDetectionWorkers(len(records))
+	jobs := make(chan model.ScanRecord)
+	resultsCh := make(chan []detector.DetectionResult, len(records))
+
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go detectionWorker(jobs, resultsCh, &wg)
+	}
+	for _, rec := range records {
+		jobs <- rec
+	}
+	close(jobs)
+	wg.Wait()
+	close(resultsCh)
+
+	all, repoCount := collectDetectionResults(resultsCh)
+	fmt.Printf(constants.MsgProjectDetectDone, len(all), repoCount)
+
+	return all
+}
+
+// detectionWorker pulls repos off jobs and emits results onto resultsCh.
+// Each repo's detector.DetectProjects call is independent, so the only
+// shared state is the channel buffer.
+func detectionWorker(jobs <-chan model.ScanRecord, resultsCh chan<- []detector.DetectionResult, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for rec := range jobs {
+		resultsCh <- detector.DetectProjects(rec.AbsolutePath, rec.ID, rec.RepoName)
+	}
+}
+
+// collectDetectionResults flattens per-repo results and counts repos that
+// contributed at least one detected project.
+func collectDetectionResults(resultsCh <-chan []detector.DetectionResult) ([]detector.DetectionResult, int) {
 	var all []detector.DetectionResult
 	repoCount := 0
-	for _, rec := range records {
-		results := detector.DetectProjects(rec.AbsolutePath, rec.ID, rec.RepoName)
+	for results := range resultsCh {
 		if len(results) > 0 {
 			repoCount++
 			all = append(all, results...)
 		}
 	}
-	fmt.Printf(constants.MsgProjectDetectDone, len(all), repoCount)
 
-	return all
+	return all, repoCount
+}
+
+// resolveDetectionWorkers picks a worker-pool size bounded by repo count,
+// CPU count, and the hard cap. With 1 repo there's no point spinning up 8
+// goroutines; with 100 repos on a 4-core box the I/O bound pool can still
+// usefully run 8 in flight.
+func resolveDetectionWorkers(repoCount int) int {
+	if repoCount <= 1 {
+		return 1
+	}
+	n := runtime.NumCPU()
+	if n < 1 {
+		n = 1
+	}
+	if n > detectionWorkerCap {
+		n = detectionWorkerCap
+	}
+	if n > repoCount {
+		n = repoCount
+	}
+
+	return n
 }
 
 // upsertProjectsToDB persists detected projects and metadata to SQLite.
